@@ -23,6 +23,7 @@ class StockBalance(models.Model):
 
     class Meta:
         db_table = "inv_balances"
+        ordering = ("-updated_at", "-id")
         unique_together = (("item", "variant", "warehouse", "location"),)
 
     @property
