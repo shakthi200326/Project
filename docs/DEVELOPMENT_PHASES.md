@@ -13,3 +13,4 @@
 | **8** | **File Storage Integration** | Planned | Product image attachments, receipt proof uploads, document previews |
 | **9** | **Accessibility & Polish** | Planned | WCAG 2.2 AA keyboard navigation, high-contrast dark theme, skeleton loaders, micro-interactions |
 | **10** | **Automated Testing & Deployment** | Planned | Pytest concurrency tests, Vitest UI tests, Docker Compose orchestration |
+

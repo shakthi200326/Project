@@ -29,3 +29,4 @@ All uploads pass through `shared/backend/file-storage/services/validator.py`:
 2. Extension allowlist (`.pdf`, `.png`, `.jpg`, `.jpeg`, `.csv`, `.xlsx`, `.docx`).
 3. Magic byte signature verification (verifying `%PDF-`, PNG, JPEG headers).
 4. Maximum file size enforcement (25 MB default).
+

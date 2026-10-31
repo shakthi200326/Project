@@ -50,3 +50,4 @@ When the future Purchase module receives goods:
 - **Operation**: Order cancelled $\rightarrow$ Release Reservation
 - **Endpoint**: `POST /api/v1/inventory/integrations/sales/reservations/{id}/release/`
 - **Inventory Action**: Decrements `reserved_qty`, restores `available_qty`.
+

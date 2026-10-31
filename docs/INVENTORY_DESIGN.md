@@ -46,3 +46,4 @@ balances = StockBalance.objects.select_for_update().filter(
 ```
 Balances are locked in primary key order to eliminate deadlock risks.
 All postings generate an immutable, write-only `StockLedgerEntry` record. Reversals create compensating entries with opposite signs.
+

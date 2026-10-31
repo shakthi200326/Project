@@ -2,6 +2,9 @@
 import os
 import sys
 
+# Bootstrap custom package finders for platform and shared services
+import config._bootstrap
+
 def main():
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
     try:
@@ -15,3 +18,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

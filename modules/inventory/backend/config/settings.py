@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import config._bootstrap
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = BASE_DIR.parent.parent
@@ -17,6 +18,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "corsheaders",
+    # Shared Services
+    "shared_file_storage.apps.FileStorageConfig",
     # Inventory Sub-apps
     "apps.categories",
     "apps.products",
@@ -37,7 +40,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "platform.context-service.middleware.ContextMiddleware",
+    "platform_context.middleware.ContextMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -112,3 +115,4 @@ REST_FRAMEWORK = {
 # Storage
 LOCAL_STORAGE_ROOT = str(PROJECT_ROOT / "uploads")
 STORAGE_PROVIDER = os.environ.get("STORAGE_PROVIDER", "local")
+

@@ -26,3 +26,4 @@ urlpatterns = [
     path("dashboard/kpis/", DashboardKPIView.as_view(), name="inventory-dashboard-kpis"),
     path("", include(router.urls)),
 ]
+

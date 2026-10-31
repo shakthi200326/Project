@@ -64,3 +64,4 @@ class InventoryItemVariant(models.Model):
 
     def __str__(self):
         return f"{self.sku} ({self.variant_name})"
+

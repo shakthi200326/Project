@@ -55,3 +55,4 @@ class StockTransactionLine(models.Model):
 
     def __str__(self):
         return f"{self.transaction.document_number}: {self.item.code} x {self.quantity}"
+

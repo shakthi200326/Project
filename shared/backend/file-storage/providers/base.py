@@ -28,3 +28,4 @@ class BaseStorageProvider(abc.ABC):
     def get_url(self, storage_key: str, expires_in: int = 3600) -> str:
         """Generate a secure download URL or path."""
         pass
+

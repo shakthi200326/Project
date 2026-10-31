@@ -25,3 +25,4 @@ class ModuleRegistry:
     def is_enabled(cls, code: str) -> bool:
         mod = cls.get_module(code)
         return mod.get("enabled", True) if mod else False
+

@@ -26,3 +26,4 @@ class StockReservation(models.Model):
 
     def __str__(self):
         return f"Reservation {self.reference_doc}: {self.item.code} x {self.quantity} ({self.status})"
+

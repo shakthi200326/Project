@@ -86,3 +86,4 @@ class Command(BaseCommand):
                 )
 
         self.stdout.write(self.style.SUCCESS("Successfully seeded enterprise inventory catalog & balances!"))
+

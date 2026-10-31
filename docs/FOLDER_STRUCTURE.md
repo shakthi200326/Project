@@ -84,3 +84,4 @@ projects/
 1. **Never create Purchase and Sales implementation folders during this phase.**
 2. **Database migrations for Inventory must remain within `modules/inventory/backend/apps/.../migrations`.**
 3. **The `database/` directory coordinates cross-cutting views, schemas, and architecture documentation.**
+

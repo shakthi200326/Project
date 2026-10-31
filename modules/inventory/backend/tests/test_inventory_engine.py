@@ -97,3 +97,4 @@ class InventoryPostingServiceTest(TestCase):
 
         with self.assertRaises(ValidationError):
             InventoryPostingService.post_transaction(tx, actor="tester")
+

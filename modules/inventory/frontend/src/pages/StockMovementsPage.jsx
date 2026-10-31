@@ -15,11 +15,13 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { fetchStockMovements } from "../services/api";
+import { StockTransactionModal } from "../components/StockTransactionModal.jsx";
 
 export function StockMovementsPage() {
   const [movements, setMovements] = useState([]);
   const [activeTab, setActiveTab] = useState("ALL");
   const [search, setSearch] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchStockMovements().then((data) => setMovements(data.results || []));
@@ -33,6 +35,10 @@ export function StockMovementsPage() {
       m.warehouse.toLowerCase().includes(search.toLowerCase());
     return matchesTab && matchesSearch;
   });
+
+  const handleTransactionPosted = (newTx) => {
+    setMovements((prev) => [newTx, ...prev]);
+  };
 
   return (
     <div className="space-y-5">
@@ -52,7 +58,10 @@ export function StockMovementsPage() {
             <Download className="h-3.5 w-3.5" />
             <span>Export Register</span>
           </button>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium shadow-xs">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium shadow-xs cursor-pointer"
+          >
             <Plus className="h-4 w-4" />
             <span>New Operation</span>
           </button>
@@ -73,7 +82,7 @@ export function StockMovementsPage() {
             onClick={() => setActiveTab(tab.key)}
             className={`px-3.5 py-2 font-medium border-b-2 transition-colors ${
               activeTab === tab.key
-                ? "border-blue-600 text-blue-600 dark:text-blue-400"
+                ? "border-blue-600 text-blue-600 dark:text-blue-400 font-semibold"
                 : "border-transparent text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-200"
             }`}
           >
@@ -142,7 +151,7 @@ export function StockMovementsPage() {
                     {m.quantity > 0 ? `+${m.quantity}` : m.quantity} {m.unit}
                   </td>
                   <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-700 dark:text-zinc-300">
-                    ${m.unit_cost.toFixed(2)}
+                    ${m.unit_cost?.toFixed(2)}
                   </td>
                   <td className="py-3 px-4 text-center">
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
@@ -160,6 +169,14 @@ export function StockMovementsPage() {
           </table>
         </div>
       </div>
+
+      {/* Transaction Modal */}
+      <StockTransactionModal
+        isOpen={isModalOpen}
+        initialType={activeTab === "ALL" ? "RECEIPT" : activeTab}
+        onClose={() => setIsModalOpen(false)}
+        onPosted={handleTransactionPosted}
+      />
     </div>
   );
 }

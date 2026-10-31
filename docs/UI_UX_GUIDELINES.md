@@ -19,3 +19,4 @@ The Inventory Management module follows the design philosophy of world-class ent
    - Reserved / Auxiliary: Violet (`#8B5CF6`)
 4. **Zero Useless Decoration**: No gratuitous animations or illustrative clutter. Every badge, icon, and button serves an operational purpose.
 5. **No Broken Interactions**: Every button, dropdown, search input, and filter must have a working handler or explicitly show disabled/empty states.
+

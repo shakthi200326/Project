@@ -31,3 +31,4 @@ python manage.py seed_inventory_demo
 # Run development server
 python manage.py runserver 8000
 ```
+

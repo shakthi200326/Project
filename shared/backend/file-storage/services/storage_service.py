@@ -63,3 +63,4 @@ class FileStorageService:
         provider.delete(stored_file.storage_key)
         stored_file.delete()
         return True
+

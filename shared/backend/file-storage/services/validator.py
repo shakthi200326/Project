@@ -78,3 +78,4 @@ def validate_uploaded_file(file_obj: BinaryIO, filename: str, declared_content_t
         "mime_type": inferred_mime,
         "extension": ext,
     }
+

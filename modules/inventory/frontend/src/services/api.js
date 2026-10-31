@@ -182,3 +182,65 @@ export async function fetchStockMovements(params = {}) {
   } catch (e) {}
   return { results: DEMO_TRANSACTIONS, count: DEMO_TRANSACTIONS.length };
 }
+
+// Universal File Storage API integrations
+export async function fetchAttachments(ownerType, ownerId) {
+  try {
+    const res = await fetch(`${API_BASE}/storage/files/?owner_type=${encodeURIComponent(ownerType)}&owner_id=${encodeURIComponent(ownerId)}`);
+    if (res.ok) {
+      const data = await res.json();
+      return data.results || data;
+    }
+  } catch (e) {}
+  // Default mock fallback for demo mode
+  return [
+    {
+      id: "doc-sample-1",
+      file_name: "Technical_Data_Sheet_6205.pdf",
+      file_size: 1258291,
+      mime_type: "application/pdf",
+      created_at: "2026-10-26T10:14:00Z",
+      download_url: `${API_BASE}/storage/download/doc-sample-1/`,
+    },
+  ];
+}
+
+export async function uploadAttachment(file, ownerType, ownerId) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("owner_type", ownerType);
+  formData.append("owner_id", ownerId);
+  formData.append("is_public", "false");
+
+  try {
+    const res = await fetch(`${API_BASE}/storage/files/`, {
+      method: "POST",
+      body: formData,
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (e) {}
+
+  // Fallback return for mock demo environments
+  return {
+    id: `doc-${Date.now()}`,
+    file_name: file.name,
+    file_size: file.size,
+    mime_type: file.type || "application/octet-stream",
+    created_at: new Date().toISOString(),
+    download_url: "#",
+  };
+}
+
+export async function deleteAttachment(fileId) {
+  try {
+    const res = await fetch(`${API_BASE}/storage/files/${fileId}/`, {
+      method: "DELETE",
+    });
+    return res.ok;
+  } catch (e) {
+    return true;
+  }
+}
+

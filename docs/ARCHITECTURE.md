@@ -58,3 +58,4 @@ The core tenet is **complete decoupling from any single ERP or hosting monolith*
 1. **Synchronous REST APIs**: All module boundaries provide OpenAPI 3.0-compliant endpoints with versioned prefixes (`/api/v1/inventory/...`).
 2. **Idempotency Keys**: All non-query mutations (Stock In, Issue, Transfer, Reservation) require an `Idempotency-Key` header to prevent duplicate execution across retries.
 3. **Transactional Outbox / Event Bus**: When stock movements are committed, events (e.g. `inventory.stock_updated`, `inventory.low_stock_triggered`) are written to an atomic outbox table before asynchronous broadcast over Redis/Celery.
+

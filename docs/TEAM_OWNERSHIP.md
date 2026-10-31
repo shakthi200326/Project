@@ -17,3 +17,4 @@
 1. **No Direct Model Imports**: Teams must never import Django models across module boundaries. Communication is strictly via REST APIs, SDK clients, or Event Bus topics.
 2. **Contract-First Development**: Any change to shared interfaces or integration hooks must be committed to `shared/contracts/` before backend or frontend changes.
 3. **Migration Isolation**: Each module owns its migrations in its own `apps/.../migrations` directory.
+

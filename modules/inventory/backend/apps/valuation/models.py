@@ -17,3 +17,4 @@ class InventoryValuation(models.Model):
 
     def __str__(self):
         return f"{self.item.code} @ {self.warehouse.code}: WAV=${self.weighted_average_cost:.2f}, Total=${self.total_value:.2f}"
+

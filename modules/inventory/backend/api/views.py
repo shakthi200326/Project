@@ -115,3 +115,4 @@ class DashboardKPIView(APIView):
             "low_stock_items": low_stock_count or 18,
             "out_of_stock_items": out_of_stock_count or 4,
         })
+

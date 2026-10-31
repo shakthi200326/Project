@@ -41,3 +41,4 @@ class StockCountLine(models.Model):
 
     class Meta:
         db_table = "inv_count_lines"
+

@@ -69,3 +69,4 @@ htmlcov/
 # Uploads & local storage (keep folder, ignore uploaded files)
 uploads/*
 !uploads/.gitkeep
+

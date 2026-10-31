@@ -33,3 +33,4 @@ class StorageLocation(models.Model):
 
     def __str__(self):
         return f"{self.warehouse.code} / {self.code}"
+

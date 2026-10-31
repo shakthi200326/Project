@@ -27,3 +27,4 @@ Dark mode is first-class, not a computed inversion:
 - Backgrounds use deep slate/zinc tones (`#09090b`, `#18181b`).
 - Borders maintain subtle contrast (`#27272a`).
 - Text uses high contrast (`#f4f4f5` primary, `#a1a1aa` secondary).
+

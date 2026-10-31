@@ -64,3 +64,4 @@ class MinioStorageProvider(BaseStorageProvider):
             storage_key,
             expires=timedelta(seconds=expires_in),
         )
+

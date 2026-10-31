@@ -6,3 +6,4 @@ class ContextMiddleware(MiddlewareMixin):
 
     def process_request(self, request):
         request.context = DefaultContextResolver.resolve(request)
+

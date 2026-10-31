@@ -28,3 +28,4 @@
 | `inv_valuation` | Moving weighted average | Item FK, Warehouse FK, Unit Cost, Total Value |
 | `inv_reservations` | Allocated stock locks | Status (PENDING, FULFILLED, CANCELLED) |
 | `inv_counts` | Physical stock reconciliations | Snapshot balance, variance, status |
+

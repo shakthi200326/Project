@@ -35,3 +35,4 @@ class StoredFile(models.Model):
 
     def __str__(self):
         return f"{self.file_name} ({self.owner_type}:{self.owner_id})"
+

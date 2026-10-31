@@ -50,3 +50,4 @@ class S3StorageProvider(BaseStorageProvider):
             Params={"Bucket": self.bucket_name, "Key": storage_key},
             ExpiresIn=expires_in,
         )
+

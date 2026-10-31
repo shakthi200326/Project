@@ -66,3 +66,4 @@ npm run dev
 docker compose up -d
 ```
 Access the application at `http://localhost:5173`.
+

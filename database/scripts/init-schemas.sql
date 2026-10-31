@@ -20,3 +20,4 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 GRANT ALL ON SCHEMA platform TO postgres;
 GRANT ALL ON SCHEMA shared TO postgres;
 GRANT ALL ON SCHEMA inventory TO postgres;
+

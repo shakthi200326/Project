@@ -16,8 +16,11 @@ import {
   AlertCircle,
   XCircle,
   SlidersHorizontal,
+  Eye,
 } from "lucide-react";
 import { fetchProducts } from "../services/api";
+import { CreateProductModal } from "../components/CreateProductModal.jsx";
+import { ProductDetailDrawer } from "../components/ProductDetailDrawer.jsx";
 
 export function ProductsPage() {
   const [products, setProducts] = useState([]);
@@ -25,6 +28,11 @@ export function ProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [selectedIds, setSelectedIds] = useState([]);
+
+  // Modal & Drawer State
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useEffect(() => {
     fetchProducts().then((res) => setProducts(res.results || []));
@@ -54,6 +62,15 @@ export function ProductsPage() {
     );
   };
 
+  const handleProductCreated = (newProduct) => {
+    setProducts((prev) => [newProduct, ...prev]);
+  };
+
+  const handleOpenDetail = (product) => {
+    setSelectedProduct(product);
+    setIsDrawerOpen(true);
+  };
+
   return (
     <div className="space-y-5">
       {/* Page Header */}
@@ -76,7 +93,10 @@ export function ProductsPage() {
             <Download className="h-3.5 w-3.5" />
             <span>Export CSV</span>
           </button>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-colors shadow-xs">
+          <button
+            onClick={() => setIsCreateOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-colors shadow-xs cursor-pointer"
+          >
             <Plus className="h-4 w-4" />
             <span>Create Product</span>
           </button>
@@ -176,8 +196,12 @@ export function ProductsPage() {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
               {filteredProducts.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-50/60 dark:hover:bg-zinc-800/40 transition-colors">
-                  <td className="py-3 px-4">
+                <tr
+                  key={p.id}
+                  onClick={() => handleOpenDetail(p)}
+                  className="hover:bg-slate-50/60 dark:hover:bg-zinc-800/40 transition-colors cursor-pointer"
+                >
+                  <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={selectedIds.includes(p.id)}
@@ -228,11 +252,15 @@ export function ProductsPage() {
                     </span>
                   </td>
                   <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-700 dark:text-zinc-300">
-                    ${p.unit_cost.toFixed(2)}
+                    ${p.unit_cost?.toFixed(2)}
                   </td>
-                  <td className="py-3 px-4 text-center">
-                    <button className="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200">
-                      <MoreVertical className="h-4 w-4" />
+                  <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => handleOpenDetail(p)}
+                      className="p-1 rounded text-slate-400 hover:text-blue-600 dark:hover:text-blue-400"
+                      title="Inspect Product"
+                    >
+                      <Eye className="h-4 w-4" />
                     </button>
                   </td>
                 </tr>
@@ -255,6 +283,20 @@ export function ProductsPage() {
           </div>
         </div>
       </div>
+
+      {/* Creation Modal */}
+      <CreateProductModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onCreated={handleProductCreated}
+      />
+
+      {/* Detail Drawer */}
+      <ProductDetailDrawer
+        product={selectedProduct}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+      />
     </div>
   );
 }

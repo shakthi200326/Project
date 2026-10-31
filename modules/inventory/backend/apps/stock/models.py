@@ -65,3 +65,4 @@ class StockLedgerEntry(models.Model):
 
     def __str__(self):
         return f"[{self.created_at}] {self.transaction_ref}: {self.item.code} {self.quantity_delta:+f}"
+

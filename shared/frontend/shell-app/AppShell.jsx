@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 import { useWorkspace } from "./ContextSelector";
+import { CommandPaletteModal } from "../../../modules/inventory/frontend/src/components/CommandPaletteModal.jsx";
 
 export function AppShell({ children }) {
   const location = useLocation();
@@ -46,6 +47,7 @@ export function AppShell({ children }) {
   const { activeFacility, facilities, setActiveFacility } = useWorkspace();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState({
     catalog: true,
     warehouses: true,
@@ -54,6 +56,17 @@ export function AppShell({ children }) {
     planning: false,
     analytics: false,
   });
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setIsCommandOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const toggleGroup = (key) => {
     setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -242,7 +255,6 @@ export function AppShell({ children }) {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Navigation */}
         <header className="h-15 flex items-center justify-between px-4 lg:px-6 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-          {/* Mobile hamburger */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className="md:hidden p-1.5 rounded-md text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800"
@@ -275,13 +287,17 @@ export function AppShell({ children }) {
           {/* Actions & Utilities */}
           <div className="flex items-center gap-2">
             {/* Global Search / Command Bar trigger */}
-            <div className="relative hidden sm:flex items-center">
+            <div
+              onClick={() => setIsCommandOpen(true)}
+              className="relative hidden sm:flex items-center cursor-pointer select-none"
+            >
               <Search className="absolute left-3 h-3.5 w-3.5 text-slate-400 dark:text-zinc-500" />
-              <input
-                type="text"
-                placeholder="Search catalog, movements (Ctrl+K)..."
-                className="w-64 pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
+              <div className="w-64 pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-400 dark:text-zinc-500 flex items-center justify-between">
+                <span>Quick search (Ctrl+K)...</span>
+                <kbd className="px-1.5 py-0.2 text-[9px] font-mono bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded">
+                  ⌘K
+                </kbd>
+              </div>
             </div>
 
             {/* Notification Bell */}
@@ -308,6 +324,12 @@ export function AppShell({ children }) {
           </div>
         </main>
       </div>
+
+      {/* Global Command Palette Modal */}
+      <CommandPaletteModal
+        isOpen={isCommandOpen}
+        onClose={() => setIsCommandOpen(false)}
+      />
     </div>
   );
 }

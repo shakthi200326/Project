@@ -41,7 +41,42 @@ class InventoryPostingService:
         transaction_obj.posted_at = timezone.now()
         transaction_obj.save(update_fields=["status", "posted_by", "posted_at"])
 
+        # Broadcast decoupled event and audit trail
+        cls._emit_transaction_events(transaction_obj, actor)
+
         return transaction_obj
+
+    @classmethod
+    def _emit_transaction_events(cls, tx: StockTransaction, actor: str):
+        try:
+            from shared_event_bus import publish_event
+            publish_event(
+                event_name=f"inventory.stock.{tx.transaction_type.lower()}",
+                payload={
+                    "transaction_id": tx.id,
+                    "document_number": tx.document_number,
+                    "transaction_type": tx.transaction_type,
+                    "warehouse_id": tx.warehouse_id,
+                    "line_count": tx.lines.count(),
+                    "posted_by": actor,
+                    "posted_at": tx.posted_at.isoformat() if tx.posted_at else None,
+                },
+                context={"warehouse": tx.warehouse.code if tx.warehouse else ""},
+            )
+        except Exception:
+            pass
+
+        try:
+            from shared_audit import audit_log
+            audit_log(
+                action=f"STOCK_POST_{tx.transaction_type}",
+                actor=actor,
+                entity_type="inventory.StockTransaction",
+                entity_id=str(tx.id),
+                changes={"status": "POSTED", "document_number": tx.document_number},
+            )
+        except Exception:
+            pass
 
     @classmethod
     def _get_or_create_locked_balance(cls, item, variant, warehouse, location) -> StockBalance:
@@ -211,3 +246,4 @@ class InventoryPostingService:
         val.weighted_average_cost = new_wav
         val.total_value = val.total_on_hand * val.weighted_average_cost
         val.save()
+

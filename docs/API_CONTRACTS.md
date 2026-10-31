@@ -41,3 +41,4 @@
 - `GET /api/v1/inventory/reports/low-stock/` - Replenishment alerts & reorder suggestions
 - `GET /api/v1/inventory/dashboard/kpis/` - High-level metrics for dashboard cards
 - `GET /api/v1/inventory/dashboard/trends/` - Stock movement trend timeseries
+

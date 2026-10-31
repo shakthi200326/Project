@@ -75,3 +75,4 @@ class ValuationSerializer(serializers.ModelSerializer):
     class Meta:
         model = InventoryValuation
         fields = "__all__"
+

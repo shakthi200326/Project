@@ -16,3 +16,4 @@
   },
   "required": ["organization_id", "user_id"]
 }
+
