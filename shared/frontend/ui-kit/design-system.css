@@ -1,0 +1,3049 @@
+.erp-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* The loading state renders a Spinner beside the label. As an inline
+     element the whitespace between them did the spacing; flex throws that
+     away, so the gap has to be said out loud. */
+  gap: var(--erp-space-sm);
+  min-height: var(--erp-control-height-md);
+  padding-block: 0;
+  padding-inline: var(--erp-control-padding-md);
+  border: none;
+  border-radius: var(--erp-control-radius);
+  background: var(--erp-color-primary-fill);
+  /* `on-primary`, not `surface`. These happen to be the same colour in the
+     light theme, which is why the wrong one went unnoticed -- but they are
+     different in dark mode and in any future theme where a fill is not
+     white-on-brand. `on-primary` is the token the contrast matrix actually
+     measures against `primary`, so this is also what makes that test true
+     of what renders. */
+  color: var(--erp-color-on-primary-fill);
+  font-size: var(--erp-font-size-sm);
+  font-weight: var(--erp-font-weight-medium);
+  cursor: pointer;
+  transition: background var(--erp-transition-fast),
+    box-shadow var(--erp-transition-fast);
+}
+
+/* A darkened fill rather than a faded one. `opacity` on hover washes the
+   button towards the page behind it, which on a coloured surface reads as
+   the control becoming disabled rather than active. */
+.erp-button:hover:not(:disabled) {
+  filter: brightness(0.94);
+}
+
+/* :active lives with the rest of the product's pressed states, below --
+   see that section for why. */
+
+.erp-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The surface everything sits on. Border *and* a faint shadow: the border
+   keeps the edge crisp at any zoom and carries the structure in dark mode,
+   the shadow is what makes the panel read as resting on the page rather
+   than being a rectangle drawn onto it. */
+.erp-card {
+  padding: var(--erp-space-xl);
+  background: linear-gradient(180deg, var(--erp-color-surface) 0%, color-mix(in srgb, var(--erp-color-surface-muted) 20%, var(--erp-color-surface)) 100%);
+  border: 1px solid color-mix(in srgb, var(--erp-color-border) 80%, transparent);
+  border-radius: var(--erp-radius-lg, 12px);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03), 0 4px 14px -2px rgba(15, 23, 42, 0.04);
+  transition: box-shadow var(--erp-transition-fast), border-color var(--erp-transition-fast);
+}
+
+.erp-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--erp-color-surface);
+}
+
+.erp-table th,
+.erp-table td {
+  padding: var(--erp-space-md) var(--erp-space-lg);
+  text-align: start;
+  border-bottom: 1px solid var(--erp-color-border);
+}
+
+/* The column header is a label, not a cell. Small, uppercase, tracked and
+   muted, with no fill behind it -- the row of headings should read as the
+   quietest thing on the screen so the data below it is the loudest. A filled
+   grey band competes with the content it is introducing.
+
+   The heavier bottom rule is what separates the head from the body now that
+   the fill no longer does it. */
+.erp-table th {
+  font-size: var(--erp-font-size-micro);
+  font-weight: var(--erp-font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--erp-color-text-muted);
+  background: transparent;
+  border-bottom-color: var(--erp-color-border-strong);
+  white-space: nowrap;
+}
+
+/* Rows answer the pointer. Without it a long list gives no feedback about
+   which line the eye and the cursor are on, which is the single most common
+   complaint about dense enterprise tables. */
+.erp-table tbody tr {
+  transition: background var(--erp-transition-fast);
+}
+
+.erp-table tbody tr:hover {
+  background: var(--erp-color-surface-muted);
+}
+
+/* The last row's rule would otherwise sit against the card's own edge. */
+.erp-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.erp-button-secondary {
+  background: var(--erp-color-surface);
+  color: var(--erp-color-text);
+  border: 1px solid var(--erp-color-border);
+}
+
+/* A status pill. Uppercase and tracked at micro size, which is what makes a
+   one-word state read as a *label* rather than as a shorter sentence -- the
+   distinction every dense list in the reference material relies on.
+
+   `text-transform` rather than uppercase content, so the accessible name and
+   every test that reads it keep the words as they were written. */
+.erp-badge {
+  display: inline-block;
+  padding: 3px var(--erp-space-sm);
+  border-radius: var(--erp-radius-pill);
+  font-size: var(--erp-font-size-micro);
+  font-weight: var(--erp-font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.erp-badge-success {
+  background: var(--erp-color-success-badge);
+  color: var(--erp-color-success-strong);
+}
+
+/* The status vocabulary now matches `Alert`'s. Before this, `Badge` offered
+   only success, muted and neutral, so a "Failed" or "Overdue" pill had
+   nothing to reach for -- and `tone="warning"` emitted a class with no rule
+   at all, rendering with no status colour. */
+.erp-badge-danger {
+  background: var(--erp-color-danger-badge);
+  color: var(--erp-color-danger-stronger);
+}
+
+.erp-badge-warning {
+  background: var(--erp-color-warning-badge);
+  color: var(--erp-color-warning-strong);
+}
+
+.erp-badge-info {
+  background: var(--erp-color-info-badge);
+  color: var(--erp-color-info-strong);
+}
+
+.erp-badge-muted {
+  background: var(--erp-color-surface-muted);
+  color: var(--erp-color-text-muted);
+}
+
+.erp-badge-neutral {
+  background: var(--erp-color-surface-muted);
+  color: var(--erp-color-text);
+}
+
+/* The empty state. Centred, on the scale, and with room for the action it
+   now carries -- an empty list is where the primary action matters most, and
+   it used to be in the far corner of the page instead. */
+.erp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--erp-space-sm);
+  padding: var(--erp-space-xxl) var(--erp-space-lg);
+  text-align: center;
+}
+
+.erp-empty > * {
+  margin: 0;
+}
+
+/* The action sits a step away from the sentence explaining it. */
+.erp-empty .erp-button {
+  margin-top: var(--erp-space-sm);
+}
+
+.erp-empty-title {
+  font-weight: var(--erp-font-weight-semibold);
+}
+
+.erp-empty-description {
+  max-width: var(--erp-measure);
+  font-size: var(--erp-text-description-size);
+  color: var(--erp-color-text-muted);
+}
+
+/* Wraps. The summary and the controls are a row until there is no room for
+   one, and on a 320px phone there is not: unwrapped, the buttons ran 21px
+   past the viewport and took the whole page's horizontal scroll with them. */
+.erp-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--erp-space-md);
+  padding-top: var(--erp-space-md);
+}
+
+.erp-pagination-summary {
+  font-size: var(--erp-font-size-2xs);
+  color: var(--erp-color-text-muted);
+}
+
+.erp-pagination-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--erp-space-sm);
+}
+
+.erp-pagination-buttons button {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--erp-control-height-sm);
+  padding-block: 0;
+  padding-inline: var(--erp-control-padding-sm);
+  border: 1px solid var(--erp-color-border);
+  border-radius: var(--erp-radius-md);
+  background: var(--erp-color-surface);
+  font-size: var(--erp-font-size-2xs);
+  cursor: pointer;
+}
+
+.erp-pagination-buttons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.erp-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--erp-color-backdrop);
+  z-index: 50;
+}
+
+.erp-modal {
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--erp-color-surface);
+  border-radius: var(--erp-radius-lg);
+}
+
+.erp-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--erp-color-border);
+}
+
+.erp-modal-header h2 {
+  margin: 0;
+  font-size: var(--erp-font-size-lg);
+}
+
+.erp-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: none;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--erp-color-text-muted);
+}
+
+.erp-modal-body {
+  padding: 20px;
+}
+
+.erp-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--erp-space-sm);
+  padding: 16px 20px;
+  border-top: 1px solid var(--erp-color-border);
+}
+
+/* Modern interactive setting card (switch / checkbox tiles) */
+.erp-setting-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--erp-color-border);
+  border-radius: var(--erp-radius-md);
+  background: var(--erp-color-surface-muted);
+  transition: border-color var(--erp-motion-fast), background var(--erp-motion-fast), box-shadow var(--erp-motion-fast);
+}
+
+.erp-setting-card:hover {
+  border-color: var(--erp-color-border-strong);
+  background: var(--erp-color-surface);
+}
+
+.erp-setting-card.is-active {
+  border-color: var(--erp-color-primary);
+  background: var(--erp-color-primary-subtle, rgba(37, 99, 235, 0.04));
+  box-shadow: 0 0 0 1px var(--erp-color-primary);
+}
+
+.erp-setting-desc {
+  margin: 0;
+  padding-left: 24px;
+  font-size: var(--erp-font-size-xs, 12px);
+  color: var(--erp-color-text-muted);
+  line-height: 1.45;
+}
+
+/* Interactive Role Cards Grid */
+.erp-role-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.erp-role-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--erp-color-border);
+  border-radius: var(--erp-radius-md);
+  background: var(--erp-color-surface);
+  transition: border-color var(--erp-motion-fast), background var(--erp-motion-fast), box-shadow var(--erp-motion-fast);
+  cursor: pointer;
+  position: relative;
+}
+
+.erp-role-card:hover:not(.is-inactive) {
+  border-color: var(--erp-color-border-strong);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+.erp-role-card.is-selected {
+  border-color: var(--erp-color-primary);
+  background: var(--erp-color-primary-subtle, rgba(37, 99, 235, 0.04));
+  box-shadow: 0 0 0 1px var(--erp-color-primary);
+}
+
+.erp-role-card.is-inactive {
+  opacity: 0.6;
+  background: var(--erp-color-surface-muted);
+  cursor: not-allowed;
+}
+
+.erp-role-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.erp-role-card-desc {
+  margin: 0;
+  padding-left: 24px;
+  font-size: var(--erp-font-size-xs, 12px);
+  color: var(--erp-color-text-muted);
+  line-height: 1.45;
+}
+
+.erp-role-card-meta {
+  margin-top: auto;
+  padding-left: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.erp-role-card-perm-count {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--erp-color-text-secondary);
+}
+
+/* Effective Permissions Summary Card */
+.erp-effective-permissions-card {
+  grid-column: 1 / -1;
+  border: 1px solid var(--erp-color-border);
+  border-radius: var(--erp-radius-md);
+  background: var(--erp-color-surface-muted);
+  padding: 14px 16px;
+  margin-top: 4px;
+}
+
+.erp-effective-permissions-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.erp-effective-permissions-head h2 {
+  margin: 0;
+  font-size: var(--erp-font-size-sm, 13px);
+  font-weight: var(--erp-font-weight-semibold, 600);
+  color: var(--erp-color-text);
+  letter-spacing: normal;
+}
+
+.erp-effective-permissions-empty {
+  margin: 0;
+  font-size: var(--erp-font-size-xs, 12px);
+  color: var(--erp-color-text-muted);
+  font-style: italic;
+}
+
+.erp-effective-permissions-summary {
+  font-size: var(--erp-font-size-xs, 12px);
+  color: var(--erp-color-text-secondary);
+  line-height: 1.5;
+  margin: 0 0 8px 0;
+  display: none; /* Accessible fallback */
+}
+
+.erp-permissions-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.erp-permission-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-family: var(--erp-font-mono, monospace);
+  font-weight: 500;
+  color: var(--erp-color-text-secondary);
+  background: var(--erp-color-surface);
+  border: 1px solid var(--erp-color-border);
+  border-radius: var(--erp-radius-sm, 4px);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+/* Permission Catalogue Group (used in Role creation) */
+.erp-permission-module-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--erp-color-border);
+  border-radius: var(--erp-radius-md);
+  background: var(--erp-color-surface);
+  margin-bottom: 12px;
+}
+
+.erp-permission-module-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--erp-color-border);
+  padding-bottom: 8px;
+  margin-bottom: 6px;
+}
+
+.erp-permission-module-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--erp-color-text);
+}
+
+.erp-permission-items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 8px 16px;
+}
+/* Search field -- the input keeps the shared input styling, with room kept
+   on its right for the busy note and the clear button. */
+.erp-search-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.erp-search-field input {
+  width: 100%;
+  padding-inline-end: 110px;
+}
+
+/* The browser's own clear control would sit beside ours. */
+.erp-search-field input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.erp-search-busy {
+  position: absolute;
+  inset-inline-end: 34px;
+  font-size: var(--erp-font-size-xs);
+  color: var(--erp-color-text-muted);
+  /* Never in the way of a click aimed at the clear button. */
+  pointer-events: none;
+}
+
+.erp-search-clear {
+  position: absolute;
+  inset-inline-end: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--erp-radius-pill);
+  background: var(--erp-color-surface-muted);
+  color: var(--erp-color-text-muted);
+  font-size: var(--erp-font-size-md);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.erp-search-clear:hover {
+  background: var(--erp-color-border);
+  color: var(--erp-color-text);
+}
+
+/* ---------------------------------------------------------------
+   Stage 2: page structure, states and feedback
+   --------------------------------------------------------------- */
+
+/* The content well.
+
+   A maximum, centred, so a 1920px monitor gains margin rather than more line
+   length -- before this the well was 1676px wide there and a label sat a
+   monitor's width from its value. The rhythm is 24px, the scale's section
+   step; it was 20px, which was not on the scale at all. */
+.erp-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--erp-space-xl);
+  width: 100%;
+  max-width: var(--erp-content-max);
+  margin-inline: auto;
+}
+
+/* A page inside a page -- an Administration screen inside the administration
+   frame -- contributes its rhythm and nothing else. Two wells would mean two
+   maximums and double the gap. */
+.erp-page .erp-page {
+  max-width: none;
+  margin-inline: 0;
+}
+
+.erp-page-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--erp-space-sm);
+}
+
+.erp-page-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--erp-space-sm);
+}
+
+.erp-page-actions-end {
+  justify-content: flex-end;
+}
+
+.erp-page-actions-start {
+  justify-content: flex-start;
+}
+
+.erp-breadcrumbs {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+}
+
+.erp-breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--erp-font-size-2xs);
+  color: var(--erp-color-text-muted);
+}
+
+.erp-breadcrumbs li {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* The separator is decoration, so it is drawn rather than written: a
+   screen reader reading "slash" between every crumb helps nobody. */
+.erp-breadcrumbs li + li::before {
+  content: "/";
+  margin-inline: 6px;
+  color: var(--erp-color-border-strong);
+  font-weight: 400;
+  opacity: 0.75;
+}
+
+.erp-breadcrumbs a {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: var(--erp-radius-sm);
+  color: var(--erp-color-text-secondary);
+  font-weight: var(--erp-font-weight-medium);
+  text-decoration: none;
+  transition: color var(--erp-transition-fast), background var(--erp-transition-fast);
+}
+
+.erp-breadcrumbs a:hover {
+  color: var(--erp-color-primary);
+  background: var(--erp-color-primary-surface);
+  text-decoration: none;
+}
+
+.erp-breadcrumbs a:focus-visible {
+  outline: var(--erp-focus-ring-width) solid var(--erp-focus-ring-color);
+  outline-offset: 1px;
+}
+
+.erp-breadcrumbs [aria-current="page"] {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  color: var(--erp-color-text);
+  font-weight: var(--erp-font-weight-semibold);
+}
+
+.erp-spinner {
+  display: inline-block;
+  border: 2px solid var(--erp-color-border);
+  border-top-color: var(--erp-color-primary);
+  border-radius: var(--erp-radius-pill);
+  animation: erp-spin 700ms linear infinite;
+}
+
+.erp-spinner-sm {
+  width: 12px;
+  height: 12px;
+}
+
+.erp-spinner-md {
+  width: 18px;
+  height: 18px;
+}
+
+.erp-spinner-lg {
+  width: 28px;
+  height: 28px;
+  border-width: 3px;
+}
+
+@keyframes erp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Someone who has asked for less motion gets a still ring rather than no
+   indicator at all. */
+@media (prefers-reduced-motion: reduce) {
+  .erp-spinner {
+    animation: none;
+  }
+}
+
+.erp-loading-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--erp-space-xl) 0;
+  font-size: var(--erp-font-size-sm);
+  color: var(--erp-color-text-muted);
+}
+
+.erp-error-state {
+  padding: var(--erp-space-lg);
+  border: 1px solid var(--erp-color-danger-border);
+  border-radius: var(--erp-radius-lg);
+  background: var(--erp-color-danger-surface);
+}
+
+.erp-error-state-title {
+  margin: 0 0 4px;
+  font-weight: var(--erp-font-weight-semibold);
+  color: var(--erp-color-danger-stronger);
+}
+
+.erp-error-state-message {
+  margin: 0;
+  font-size: var(--erp-font-size-sm);
+  color: var(--erp-color-danger-strong);
+}
+
+.erp-error-state-action {
+  margin-top: var(--erp-space-md);
+}
+
+.erp-button-danger {
+  background: var(--erp-color-danger);
+  color: var(--erp-color-surface);
+}
+
+.erp-confirm-message {
+  margin: 0;
+  font-size: var(--erp-font-size-sm);
+  color: var(--erp-color-text-secondary);
+}
+
+/* Fixed to the viewport: feedback about an action should not scroll away
+   from the person who just performed it. */
+.erp-toasts {
+  position: fixed;
+  inset-inline-end: 20px;
+  bottom: 20px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: var(--erp-space-sm);
+  /* The region is always mounted so the live region exists before the
+     first message does; with nothing in it, it must not swallow clicks. */
+  pointer-events: none;
+}
+
+.erp-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--erp-space-md);
+  min-width: 240px;
+  max-width: 360px;
+  padding: 12px 14px;
+  border: 1px solid var(--erp-color-border);
+  border-inline-start-width: 4px;
+  border-radius: var(--erp-radius-md);
+  background: var(--erp-color-surface);
+  box-shadow: var(--erp-shadow-raised);
+  font-size: var(--erp-font-size-sm);
+  pointer-events: auto;
+}
+
+.erp-toast-success {
+  border-inline-start-color: var(--erp-color-success);
+}
+
+.erp-toast-error {
+  border-inline-start-color: var(--erp-color-danger);
+}
+
+.erp-toast-info {
+  border-inline-start-color: var(--erp-color-info);
+}
+
+.erp-toast-message {
+  flex: 1;
+}
+
+.erp-toast-close {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  background: none;
+  padding: 0;
+  line-height: 1;
+  color: var(--erp-color-text-muted);
+  cursor: pointer;
+}
+
+.erp-context-required-note {
+  margin: 0;
+  font-size: var(--erp-font-size-2xs);
+  color: var(--erp-color-warning-strong);
+}
+
+/* ---------------------------------------------------------------
+   Stage 3: list framework
+   --------------------------------------------------------------- */
+
+/* A sortable header is a button so it is reachable by keyboard; it has to
+   stop looking like one. */
+.erp-table-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: var(--erp-font-weight-semibold);
+  color: inherit;
+  cursor: pointer;
+}
+
+.erp-table-sort:hover {
+  color: var(--erp-color-primary);
+}
+
+.erp-table-sort-marker {
+  font-size: var(--erp-font-size-micro);
+  color: var(--erp-color-text-subtle);
+}
+
+.erp-table th[aria-sort="ascending"] .erp-table-sort-marker,
+.erp-table th[aria-sort="descending"] .erp-table-sort-marker {
+  color: var(--erp-color-primary);
+}
+
+.erp-table-select {
+  width: 36px;
+  text-align: center;
+}
+
+.erp-table-row-selected {
+  background: var(--erp-color-primary-surface);
+}
+
+.erp-toolbar-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--erp-space-sm);
+  margin-inline-start: auto;
+}
+
+.erp-bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--erp-space-md);
+  margin-bottom: var(--erp-space-md);
+  padding: 10px 14px;
+  border: 1px solid var(--erp-color-primary-border);
+  border-radius: var(--erp-radius-md);
+  background: var(--erp-color-primary-surface);
+}
+
+.erp-bulk-count {
+  font-size: var(--erp-font-size-sm);
+  font-weight: var(--erp-font-weight-medium);
+  color: var(--erp-color-primary-strong);
+}
+
+.erp-bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--erp-space-sm);
+}
+
+.erp-bulk-clear {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: var(--erp-font-size-2xs);
+  color: var(--erp-color-primary);
+  cursor: pointer;
+}
+
+.erp-page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--erp-font-size-2xs);
+  color: var(--erp-color-text-muted);
+}
+
+.erp-page-size select {
+  min-height: var(--erp-control-height-sm);
+  padding-block: 0;
+  padding-inline: var(--erp-space-sm);
+  border: 1px solid var(--erp-color-border);
+  border-radius: var(--erp-radius-md);
+  font-size: var(--erp-font-size-2xs);
+  background: var(--erp-color-surface);
+}
+
+/* --- CAP-03 record foundation ------------------------------------- */
+
+/* Present to the ear, absent to the eye. Used where a symbol carries the
+   meaning visually and a screen reader needs the word instead. */
+.erp-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.erp-tablist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--erp-space-xs);
+  border-bottom: 1px solid var(--erp-color-border);
+  margin-bottom: var(--erp-space-lg);
+}
+
+.erp-tab {
+  border: none;
+  background: none;
+  padding: 10px 14px;
+  font-size: var(--erp-font-size-sm);
+  font-weight: var(--erp-font-weight-medium);
+  color: var(--erp-color-text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.erp-tab:hover {
+  color: var(--erp-color-text);
+}
+
+.erp-tab[aria-selected="true"] {
+  color: var(--erp-color-primary);
+  border-bottom-color: var(--erp-color-primary);
+}
+
+.erp-tab[aria-disabled="true"] {
+  color: var(--erp-color-border-strong);
+  cursor: not-allowed;
+}
+
+.erp-tab[aria-disabled="true"]:hover {
+  color: var(--erp-color-border-strong);
+}
+
+/* The panel is focusable so keyboard users can reach text-only content,
+   which means it can show a focus ring -- but only from the keyboard. */
+.erp-tabpanel:focus {
+  outline: none;
+}
+
+.erp-tabpanel:focus-visible {
+  outline: var(--erp-focus-ring-width) solid var(--erp-focus-ring-color);
+  outline-offset: var(--erp-focus-ring-offset);
+}
+
+.erp-record-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--erp-space-lg);
+  margin-bottom: var(--erp-space-xl);
+}
+
+.erp-record-identity {
+  min-width: 0;
+}
+
+.erp-record-kind {
+  margin: 0 0 2px;
+  font-size: var(--erp-font-size-xs);
+  font-weight: var(--erp-font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--erp-color-text-muted);
+}
+
+.erp-record-naming {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.erp-record-title {
+  margin: 0;
+  font-size: var(--erp-font-size-xl);
+  font-weight: var(--erp-font-weight-semibold);
+  color: var(--erp-color-text);
+  overflow-wrap: anywhere;
+}
+
+.erp-record-code {
+  font-size: var(--erp-font-size-sm);
+  color: var(--erp-color-text-muted);
+}
+
+.erp-record-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin: 10px 0 0;
+}
+
+.erp-record-meta-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: var(--erp-font-size-2xs);
+}
+
+.erp-record-meta-item dt {
+  color: var(--erp-color-text-muted);
+}
+
+.erp-record-meta-item dd {
+  margin: 0;
+  color: var(--erp-color-text);
+}
+
+.erp-record-section {
+  display: block;
+  margin-bottom: var(--erp-space-lg);
+}
+
+.erp-record-section-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--erp-space-md);
+  margin-bottom: var(--erp-space-md);
+}
+
+.erp-record-section-title {
+  margin: 0;
+  font-size: var(--erp-heading-section-size);
+  font-weight: var(--erp-heading-section-weight);
+  color: var(--erp-color-text);
+}
+
+.erp-record-section-description {
+  margin: var(--erp-space-xs) 0 0;
+  font-size: var(--erp-text-description-size);
+  color: var(--erp-color-text-muted);
+}
+
+/* Columns are as many as fit at a readable width, so this is one column on
+   a phone and several on a desktop without a breakpoint choosing where. */
+.erp-description-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px 24px;
+  margin: 0;
+}
+
+.erp-description-list-one {
+  grid-template-columns: 1fr;
+}
+
+.erp-field {
+  min-width: 0;
+}
+
+.erp-field-label {
+  font-size: var(--erp-font-size-xs);
+  color: var(--erp-color-text-muted);
+  margin-bottom: 2px;
+}
+
+.erp-field-value {
+  margin: 0;
+  font-size: var(--erp-font-size-sm);
+  color: var(--erp-color-text);
+  /* A long identifier or an address with no spaces must wrap rather than
+     stretch the column it is in. */
+  overflow-wrap: anywhere;
+}
+
+.erp-field-empty {
+  color: var(--erp-color-text-subtle);
+}
+
+/* --- Buttons ------------------------------------------------------- */
+
+/* Size variants only: `display`, `align-items` and `gap` are already set on
+   the base `.erp-button` rule above, which this used to restate. */
+
+.erp-button-sm {
+  min-height: var(--erp-control-height-sm);
+  padding-inline: var(--erp-control-padding-sm);
+  font-size: var(--erp-font-size-2xs);
+}
+
+.erp-button-lg {
+  min-height: var(--erp-control-height-lg);
+  padding-inline: var(--erp-control-padding-lg);
+  font-size: var(--erp-font-size-md);
+}
+
+/* Every glyph from `Icon`. It never shrinks in a flex row: a squeezed icon
+   reads as a different icon. */
+.erp-icon {
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.erp-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--erp-control-height-sm);
+  height: var(--erp-control-height-sm);
+  padding: 0;
+  border: none;
+  border-radius: var(--erp-control-radius);
+  background: none;
+  font-size: var(--erp-font-size-md);
+  line-height: 1;
+  color: var(--erp-color-text-muted);
+  cursor: pointer;
+}
+
+.erp-icon-button:hover:not(:disabled) {
+  background: var(--erp-color-surface-muted);
+  color: var(--erp-color-text);
+}
+
+.erp-icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.erp-icon-button-danger:hover:not(:disabled) {
+  background: var(--erp-color-danger-surface);
+  color: var(--erp-color-danger);
+}
+
+/* --- Action menu --------------------------------------------------- */
+
+.erp-action-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.erp-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  z-index: 40;
+  min-width: 180px;
+  padding: var(--erp-space-xs);
+  border: 1px solid var(--erp-color-border);
+  border-radius: var(--erp-radius-md);
+  background: var(--erp-color-surface);
+  box-shadow: var(--erp-shadow-raised);
+}
+
+.erp-menu-end {
+  inset-inline-end: 0;
+}
+
+.erp-menu-start {
+  inset-inline-start: 0;
+}
+
+.erp-menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--erp-radius-sm);
+  background: none;
+  font-size: var(--erp-font-size-sm);
+  text-align: start;
+  color: var(--erp-color-text);
+  cursor: pointer;
+}
+
+.erp-menu-item:hover:not(:disabled),
+.erp-menu-item:focus-visible {
+  background: var(--erp-color-surface-muted);
+}
+
+.erp-menu-item:disabled {
+  color: var(--erp-color-border-strong);
+  cursor: not-allowed;
+}
+
+.erp-menu-item-danger {
+  color: var(--erp-color-danger);
+}
+
+.erp-menu-item-danger:hover:not(:disabled) {
+  background: var(--erp-color-danger-surface);
+}
+
+/* --- Alert --------------------------------------------------------- */
+
+/* The left bar carries the tone, the same way a toast does, so the two
+   read as one family at a glance. */
+.erp-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--erp-space-md);
+  padding: 12px 14px;
+  border: 1px solid var(--erp-color-border);
+  border-inline-start-width: 4px;
+  border-radius: var(--erp-radius-md);
+  background: var(--erp-color-surface);
+}
+
+.erp-alert-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.erp-alert-title {
+  margin: 0;
+  font-size: var(--erp-font-size-sm);
+  font-weight: var(--erp-font-weight-semibold);
+}
+
+.erp-alert-message {
+  font-size: var(--erp-font-size-sm);
+  color: var(--erp-color-text-secondary);
+}
+
+.erp-alert-title + .erp-alert-message {
+  margin-top: 2px;
+}
+
+.erp-alert-action {
+  margin-top: 10px;
+}
+
+.erp-alert-info {
+  border-inline-start-color: var(--erp-color-info);
+  background: var(--erp-color-info-surface);
+}
+
+.erp-alert-success {
+  border-inline-start-color: var(--erp-color-success);
+  background: var(--erp-color-success-surface);
+}
+
+.erp-alert-warning {
+  border-inline-start-color: var(--erp-color-warning);
+  background: var(--erp-color-warning-surface);
+}
+
+.erp-alert-danger {
+  border-inline-start-color: var(--erp-color-danger);
+  background: var(--erp-color-danger-surface);
+}
+
+/* --- Skeleton ------------------------------------------------------ */
+
+.erp-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.erp-skeleton-line {
+  display: block;
+  height: 12px;
+  border-radius: var(--erp-radius-sm);
+  background: linear-gradient(90deg, var(--erp-color-surface-muted), var(--erp-color-border), var(--erp-color-surface-muted));
+  background-size: 200% 100%;
+  animation: erp-shimmer 1200ms linear infinite;
+}
+
+.erp-skeleton-full {
+  width: 100%;
+}
+
+.erp-skeleton-half {
+  width: 50%;
+}
+
+.erp-skeleton-third {
+  width: 33%;
+}
+
+@keyframes erp-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-skeleton-line {
+    animation: none;
+  }
+}
+
+/* --- Back link ----------------------------------------------------- */
+
+.erp-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 2px 10px;
+  margin-inline-start: -6px;
+  border: 1px solid transparent;
+  border-radius: var(--erp-radius-md);
+  background: transparent;
+  font: inherit;
+  font-size: var(--erp-font-size-2xs);
+  font-weight: var(--erp-font-weight-medium);
+  color: var(--erp-color-text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color var(--erp-transition-fast), background var(--erp-transition-fast), border-color var(--erp-transition-fast);
+}
+
+.erp-back-arrow {
+  display: inline-block;
+  font-size: 14px;
+  line-height: 1;
+  transition: transform var(--erp-transition-fast);
+}
+
+.erp-back-link:hover {
+  color: var(--erp-color-primary);
+  background: var(--erp-color-primary-surface);
+  border-color: var(--erp-color-primary-border);
+  text-decoration: none;
+}
+
+.erp-back-link:hover .erp-back-arrow {
+  transform: translateX(-3px);
+}
+
+.erp-back-link:focus-visible {
+  outline: var(--erp-focus-ring-width) solid var(--erp-focus-ring-color);
+  outline-offset: 1px;
+}
+
+/* --- Numbers ------------------------------------------------------- */
+
+/* Tabular figures: digits of equal width, so a column of amounts lines up
+   on the decimal point and can be scanned rather than read. */
+.erp-number {
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-number-end {
+  display: block;
+  text-align: end;
+}
+
+/* --- Wide tables in narrow windows --------------------------------- */
+
+.erp-table-scroll {
+  overflow-x: auto;
+}
+
+.erp-table-scroll:focus-visible {
+  outline: var(--erp-focus-ring-width) solid var(--erp-focus-ring-color);
+  outline-offset: var(--erp-focus-ring-offset);
+}
+
+/* An ERP table has columns that must not collapse to one word per line;
+   below this width the region around it scrolls instead. */
+.erp-table {
+  min-width: 640px;
+}
+
+/* --- Narrow windows ------------------------------------------------ */
+
+@media (max-width: 640px) {
+  /* The record header and section headers put content and its actions on
+     one line and let them wrap. Narrow, the actions belong under the thing
+     they act on rather than squeezed beside a truncated title. */
+  .erp-record-header,
+  .erp-record-section-header,
+  .erp-page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .erp-page-actions {
+    flex-wrap: wrap;
+  }
+
+  .erp-record-title {
+    font-size: var(--erp-font-size-lg);
+  }
+
+  /* One column, so a label and its value are never a word wide. */
+  .erp-description-list {
+    grid-template-columns: 1fr;
+  }
+
+  /* Tabs scroll sideways rather than stacking into a wall of rows. */
+  .erp-tablist {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .erp-tab {
+    white-space: nowrap;
+  }
+
+  .erp-toasts {
+    inset-inline: var(--erp-space-md);
+  }
+
+  .erp-toast {
+    max-width: none;
+  }
+}
+
+
+/* ---------------------------------------------------------------
+   Pressed states
+   ---------------------------------------------------------------
+
+   Kept together rather than scattered beside each component, because the
+   rule they follow is one rule: a control that can be pressed says so for
+   as long as it is held. The product had hover and disabled everywhere and
+   no `:active` anywhere, which makes a click feel like nothing happened on
+   a slow connection -- the moment feedback matters most.
+
+   The filled controls darken rather than swapping to a named token. One
+   declaration then covers primary, secondary and danger, and a variant
+   added later is pressed-styled without anyone remembering to do it. The
+   quiet controls, which signal with background, deepen that background
+   instead. */
+
+.erp-button:active:not(:disabled) {
+  filter: brightness(0.93);
+}
+
+.erp-icon-button:active:not(:disabled),
+.erp-menu-item:active:not(:disabled),
+.erp-pagination-buttons button:active:not(:disabled) {
+  background: var(--erp-color-border);
+}
+
+.erp-tab:not([aria-disabled="true"]):active,
+.erp-table-sort:active,
+.erp-back-link:active,
+.erp-bulk-clear:active {
+  color: var(--erp-color-primary-strong);
+}
+/* ---------------------------------------------------------------
+   Orphan hooks, now doing something
+   ---------------------------------------------------------------
+
+   Both classes were rendered by a component and matched no rule at all --
+   they looked deliberate and did nothing, which is worse than no class:
+   the next person styles around them. */
+
+/* RecordHeader draws the status badge beside the title and the code, all
+   on one baseline-aligned row. Without this the badge sat a little low
+   against a 24px heading. */
+.erp-record-status {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* LoadingState's wording, beside its spinner. The size and colour came
+   from the parent; naming them here is what lets the message be restyled
+   without touching the row. */
+.erp-loading-message {
+  font-size: var(--erp-font-size-sm);
+  color: var(--erp-color-text-muted);
+}
+
+
+/* ---------------------------------------------------------------
+   Moved here from core/layout/layout.css
+   ---------------------------------------------------------------
+
+   These style design-system components -- `PageHeader`, `ListToolbar` --
+   and shared text utilities. They lived in the shell's stylesheet, which
+   meant the design system did not own its own appearance and a component
+   imported from the barrel rendered unstyled unless `ERPLayout` happened
+   to be mounted. Nothing about them has changed but where they live. */
+
+.erp-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--erp-space-md) var(--erp-space-xl);
+  margin-bottom: 0;
+}
+
+.erp-page-header h1 {
+  margin: 0;
+  font-size: var(--erp-font-size-xl);
+  font-weight: var(--erp-font-weight-bold);
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--erp-color-text);
+}
+
+/* Prose, and only prose, is held to a reading measure. Tables and data grids
+   are deliberately exempt: a column that wraps to keep a measure is a column
+   that has stopped being scannable. */
+/* A band heading: the caption over a *run* of surfaces.
+
+   Distinct from `SectionCard`'s title, which names one surface, and from
+   `RecordSection`, which is a region inside one. This groups several cards
+   under one idea -- "Business overview", "Operations" -- so a dashboard
+   reads as two or three named areas rather than as nine cards in a row.
+
+   An `h2`, so it takes the section role from `base.css` and keeps the
+   document outline honest. The rule is what makes it read as a divider
+   rather than as another card's heading. */
+.erp-section-band {
+  display: flex;
+  align-items: center;
+  gap: var(--erp-space-lg);
+  margin-block: var(--erp-space-sm) 0;
+  color: var(--erp-color-text-secondary);
+}
+
+.erp-section-band::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--erp-color-border);
+}
+
+/* The area a screen belongs to, above its title. A caption, not a heading --
+   see `PageHeader` for why the document keeps exactly one `h1`. */
+.erp-page-eyebrow {
+  margin: 0 0 var(--erp-space-xs);
+  font-size: var(--erp-font-size-micro);
+  font-weight: var(--erp-font-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--erp-color-text-subtle);
+}
+
+/* The title column. `min-width: 0` so a long title wraps rather than pushing
+   the actions off the row. */
+.erp-page-titles {
+  min-width: 0;
+}
+
+.erp-page-description,
+.erp-section-card-description,
+.erp-record-section-description {
+  max-width: var(--erp-measure);
+}
+
+.erp-page-description {
+  margin: var(--erp-space-xs) 0 0;
+  font-size: var(--erp-text-description-size);
+  color: var(--erp-color-text-muted);
+}
+
+/* Filters above a list. The search field takes the slack up to a sensible
+   maximum: left at its intrinsic width it clipped its own placeholder
+   ("Code, name, GSTIN or PA") while most of the toolbar sat empty. It is
+   capped rather than greedy, because a search box the width of a desk is
+   not easier to use than one the width of its longest hint. */
+.erp-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--erp-space-lg);
+  margin-bottom: var(--erp-space-lg);
+}
+
+.erp-toolbar .erp-search {
+  flex: 1 1 260px;
+  max-width: 420px;
+}
+
+.erp-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--erp-space-xs);
+  /* The actions gained inline padding to reach the target floor; this pulls
+     the row back so the first one still lines up with the column above. */
+  margin-inline: calc(-1 * var(--erp-space-sm));
+}
+
+/* The primary way to act on a record in every list in the product, and
+   previously 15px tall -- under half the stated floor, at every width. It
+   keeps the quiet inline look: the hit area comes from padding and a
+   min-height, not from a border or a fill.
+
+   They are *quiet* rather than blue. Two adjacent plain-blue text links read
+   as one run of blue -- "Edit Deactivate" looked like a single thing -- and
+   a row of them competes with the page's actual primary action. Secondary
+   text with a tinted hover says "this is a control" without shouting. */
+.erp-row-actions button {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--erp-target-min);
+  border: none;
+  background: none;
+  padding-inline: var(--erp-space-sm);
+  padding-block: 0;
+  border-radius: var(--erp-radius-sm);
+  font-size: var(--erp-font-size-2xs);
+  font-weight: var(--erp-font-weight-medium);
+  color: var(--erp-color-text-secondary);
+  cursor: pointer;
+}
+
+.erp-row-actions button:hover {
+  background: var(--erp-color-primary-surface);
+  color: var(--erp-color-primary);
+}
+
+/* Destructive row actions say so on hover rather than at rest: a table whose
+   every row carries a red word reads as a table full of problems. */
+.erp-row-action-danger:hover {
+  background: var(--erp-color-danger-surface);
+  color: var(--erp-color-danger-strong);
+}
+
+.erp-row-actions button:active {
+  background: var(--erp-color-border);
+}
+
+
+/* Inline messages. `.erp-error` is used by the forms and the sign-in
+   screen; the other two are available to any screen that needs the same
+   weight of text. */
+.erp-notice {
+  margin: 0 0 var(--erp-space-md);
+  font-size: var(--erp-font-size-sm);
+  color: var(--erp-color-success-strong);
+}
+
+.erp-error {
+  margin: 0 0 var(--erp-space-md);
+  font-size: var(--erp-font-size-sm);
+  color: var(--erp-color-danger);
+}
+
+.erp-muted {
+  font-size: var(--erp-font-size-sm);
+  color: var(--erp-color-text-muted);
+}
+
+/* Rows already on screen stay readable while the next ones are on their
+   way, but plainly out of date. Replacing them with a spinner would make
+   every keystroke flash the table away. */
+.erp-list-refreshing {
+  /* Lighter than it once was: the table loader's overlay now does most of
+     the dimming, and the two together washed the rows out entirely. */
+  opacity: 0.85;
+  transition: opacity var(--erp-transition-fast);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-list-refreshing {
+    transition: none;
+  }
+}
+
+/* --- IconAction / RowActions -----------------------------------------
+   Quiet at rest, so a table of rows each carrying three actions does not
+   read as a wall of controls; the accent appears on hover and focus. The
+   square is the target floor, not the glyph's size. */
+
+.erp-icon-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.erp-icon-action {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: var(--erp-target-min, 32px);
+  height: var(--erp-target-min, 32px);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--erp-radius-sm, 8px);
+  background: transparent;
+  color: var(--erp-color-text-secondary, var(--erp-color-text-muted));
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background var(--erp-transition-fast),
+    color var(--erp-transition-fast),
+    border-color var(--erp-transition-fast);
+}
+
+.erp-icon-action:hover:not(:disabled) {
+  background: var(--erp-color-primary-surface);
+  color: var(--erp-color-primary);
+}
+
+.erp-icon-action:focus-visible {
+  outline: var(--erp-focus-ring-width) solid var(--erp-focus-ring-color);
+  outline-offset: 1px;
+}
+
+/* Destructive actions say so on hover rather than at rest, like the row
+   actions they replace. */
+.erp-icon-action-danger:hover:not(:disabled) {
+  background: var(--erp-color-danger-surface);
+  color: var(--erp-color-danger-strong);
+}
+
+.erp-icon-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-icon-action {
+    transition: none;
+  }
+}
+
+/* --- Password reveal -------------------------------------------------
+   The eye inside a password field's trailing edge; the input keeps its
+   own look and gains room on the right for it. */
+
+.erp-input-reveal {
+  position: relative;
+  display: block;
+}
+
+.erp-input-reveal > input {
+  width: 100%;
+  padding-right: calc(var(--erp-target-min, 32px) + 8px);
+}
+
+.erp-input-reveal > .erp-icon-action {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+}
+
+/* --- TableLoader ----------------------------------------------------
+   A miniature table filling in: a header bar, a grid of cells lit in a
+   diagonal wave, and a scan line sweeping down. Colours are the theme's
+   own tokens, so light, dark and a tenant's brand colour all follow. */
+
+.erp-table-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Roughly the height of a page of rows, so the table arriving does not
+     push the pagination and everything below it down the screen. */
+  min-height: 280px;
+  padding: var(--erp-space-xl) var(--erp-space-lg);
+}
+
+/* Over rows already on screen: covers exactly the area they occupy and
+   takes the clicks, so a row cannot be opened while it is being replaced. */
+.erp-table-loader-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  min-height: 0;
+  padding: var(--erp-space-lg);
+  background: color-mix(in srgb, var(--erp-color-surface) 62%, transparent);
+  backdrop-filter: blur(1.5px);
+  cursor: progress;
+  opacity: 0;
+  /* A quick answer never shows it at all. */
+  animation: erp-table-loader-in 200ms ease-out 250ms forwards;
+}
+
+.erp-table-loader-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--erp-space-md, 12px);
+}
+
+.erp-table-loader-grid {
+  --erp-loader-accent: var(--erp-color-primary-fill, var(--erp-color-primary));
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 18px);
+  grid-auto-rows: 10px;
+  gap: 6px;
+  padding: 10px;
+  overflow: hidden;
+  border: 1px solid var(--erp-color-border);
+  border-radius: var(--erp-radius-lg, 12px);
+  background: var(--erp-color-surface);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--erp-color-text-muted) 12%, transparent),
+    0 10px 28px color-mix(in srgb, var(--erp-loader-accent) 14%, transparent);
+}
+
+.erp-table-loader-head {
+  grid-column: 1 / -1;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--erp-loader-accent) 55%, var(--erp-color-surface));
+}
+
+.erp-table-loader-cell {
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--erp-color-text-muted) 16%, var(--erp-color-surface));
+  animation: erp-table-loader-cell 1.6s ease-in-out infinite;
+  animation-delay: calc(var(--erp-loader-step) * 110ms);
+}
+
+.erp-table-loader-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 14px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, var(--erp-loader-accent) 22%, transparent),
+    transparent
+  );
+  animation: erp-table-loader-scan 1.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  pointer-events: none;
+}
+
+.erp-table-loader-label {
+  font-size: var(--erp-font-size-sm);
+  font-weight: var(--erp-font-weight-medium, 500);
+  color: var(--erp-color-text-muted);
+  letter-spacing: 0.01em;
+  animation: erp-table-loader-label 1.6s ease-in-out infinite;
+}
+
+@keyframes erp-table-loader-in {
+  to { opacity: 1; }
+}
+
+@keyframes erp-table-loader-cell {
+  0%, 60%, 100% {
+    background: color-mix(in srgb, var(--erp-color-text-muted) 16%, var(--erp-color-surface));
+    transform: scaleX(1);
+  }
+  25% {
+    background: var(--erp-loader-accent);
+    transform: scaleX(0.82);
+  }
+}
+
+@keyframes erp-table-loader-scan {
+  0% { transform: translateY(-14px); }
+  100% { transform: translateY(80px); }
+}
+
+@keyframes erp-table-loader-label {
+  0%, 100% { opacity: 0.65; }
+  50% { opacity: 1; }
+}
+
+/* Less motion: the grid holds still with one column lit, and the overlay
+   appears without fading -- still plainly "loading", nothing moving. */
+@media (prefers-reduced-motion: reduce) {
+  .erp-table-loader-cell,
+  .erp-table-loader-scan,
+  .erp-table-loader-label {
+    animation: none;
+  }
+  .erp-table-loader-scan {
+    display: none;
+  }
+  .erp-table-loader-cell:nth-of-type(4n + 2) {
+    background: color-mix(in srgb, var(--erp-loader-accent) 60%, var(--erp-color-surface));
+  }
+  .erp-table-loader-overlay {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* The table under an overlay: the region is told it is busy and the
+   wrapper gives the overlay something to position against. */
+.erp-table-loading {
+  position: relative;
+}
+
+/* ---------------------------------------------------------------
+   CAP-05: record activity
+   ---------------------------------------------------------------
+
+   The audit trail on a record screen. A list rather than a table: the
+   entries are of uneven height -- most have no changes, an update has
+   several -- and a table of mostly-empty cells reads worse than a stack. */
+
+.erp-activity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--erp-space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-activity-entry {
+  padding-inline-start: var(--erp-space-md);
+  /* The rule down the left is what makes a stack read as a timeline. */
+  border-inline-start: 2px solid var(--erp-color-border);
+}
+
+.erp-activity-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--erp-space-sm);
+}
+
+.erp-activity-description {
+  font-size: var(--erp-font-size-sm);
+  font-weight: var(--erp-font-weight-medium);
+  color: var(--erp-color-text);
+  overflow-wrap: anywhere;
+}
+
+/* The timestamp is context rather than content: present, and never the
+   first thing the eye lands on. */
+.erp-activity-heading time {
+  margin-inline-start: auto;
+  font-size: var(--erp-font-size-2xs);
+  color: var(--erp-color-text-muted);
+  white-space: nowrap;
+}
+
+.erp-activity-actor {
+  margin: var(--erp-space-xs) 0 0;
+  font-size: var(--erp-font-size-2xs);
+  color: var(--erp-color-text-muted);
+}
+
+.erp-activity-changes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--erp-space-xs);
+  margin: var(--erp-space-sm) 0 0;
+}
+
+.erp-activity-change {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--erp-space-sm);
+  font-size: var(--erp-font-size-2xs);
+}
+
+.erp-activity-change dt {
+  min-width: 120px;
+  color: var(--erp-color-text-muted);
+}
+
+.erp-activity-change dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--erp-space-xs);
+  margin: 0;
+  /* A stored JSON value can be long and have nowhere natural to break. */
+  overflow-wrap: anywhere;
+}
+
+.erp-activity-was {
+  color: var(--erp-color-text-muted);
+  text-decoration: line-through;
+}
+
+.erp-activity-arrow {
+  color: var(--erp-color-text-subtle);
+}
+
+.erp-activity-now {
+  color: var(--erp-color-text);
+}
+
+@media (max-width: 640px) {
+  /* The field name stops reserving a column nothing else can use. */
+  .erp-activity-change dt {
+    min-width: 0;
+  }
+}
+
+/* ---------------------------------------------------------------
+   Tooltip
+   ---------------------------------------------------------------
+
+   Positioned by the anchor around the trigger, so it needs no measuring
+   and no dependency. It cannot flip away from a viewport edge; that is the
+   cost of staying dependency-free, and it is why a tooltip must never hold
+   anything a user has to read. */
+
+.erp-tooltip-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.erp-tooltip {
+  position: absolute;
+  z-index: 50;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 240px;
+  padding: var(--erp-space-xs) var(--erp-space-sm);
+  border-radius: var(--erp-radius-md);
+  background: var(--erp-color-text);
+  color: var(--erp-color-surface);
+  font-size: var(--erp-font-size-xs);
+  font-weight: var(--erp-font-weight-regular);
+  line-height: 1.4;
+  /* Never in the way of the pointer heading for the control it describes. */
+  pointer-events: none;
+  white-space: normal;
+}
+
+.erp-tooltip-top {
+  bottom: calc(100% + var(--erp-space-xs));
+}
+
+.erp-tooltip-bottom {
+  top: calc(100% + var(--erp-space-xs));
+}
+
+/* ---------------------------------------------------------------
+   SearchSelect
+   --------------------------------------------------------------- */
+
+.erp-search-select {
+  position: relative;
+}
+
+.erp-search-select-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* The shared field styling, with room kept on the right for the busy
+   indicator and the clear button. */
+.erp-search-select-input {
+  width: 100%;
+  padding: 10px var(--erp-space-xxl) 10px var(--erp-space-md);
+  border: 1px solid var(--erp-color-border);
+  border-radius: var(--erp-radius-md);
+  font-size: var(--erp-font-size-sm);
+  background: var(--erp-color-surface);
+}
+
+.erp-search-select-input:focus {
+  border-color: var(--erp-color-primary);
+}
+
+.erp-search-select-input:disabled {
+  background: var(--erp-color-background);
+  color: var(--erp-color-text-muted);
+}
+
+.erp-search-select-input[aria-invalid="true"] {
+  border-color: var(--erp-color-danger);
+}
+
+.erp-search-select-busy {
+  position: absolute;
+  inset-inline-end: var(--erp-space-xxl);
+  display: inline-flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.erp-search-select-clear {
+  position: absolute;
+  inset-inline-end: var(--erp-space-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--erp-radius-pill);
+  background: var(--erp-color-surface-muted);
+  color: var(--erp-color-text-muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.erp-search-select-clear:hover {
+  background: var(--erp-color-border);
+  color: var(--erp-color-text);
+}
+
+.erp-search-select-clear:active {
+  background: var(--erp-color-border-strong);
+}
+
+.erp-search-select-list {
+  position: absolute;
+  top: calc(100% + var(--erp-space-xs));
+  inset-inline: 0;
+  z-index: 40;
+  /* Long enough to scan, short enough that the answer is to keep typing. */
+  max-height: 260px;
+  overflow-y: auto;
+  margin: 0;
+  padding: var(--erp-space-xs);
+  border: 1px solid var(--erp-color-border);
+  border-radius: var(--erp-radius-md);
+  background: var(--erp-color-surface);
+  box-shadow: var(--erp-shadow-raised);
+  list-style: none;
+}
+
+.erp-search-select-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--erp-space-sm) var(--erp-space-sm);
+  border-radius: var(--erp-radius-sm);
+  cursor: pointer;
+}
+
+/* The keyboard's position, which is not the same thing as the selection --
+   arrowing past an option does not choose it. */
+.erp-search-select-active {
+  background: var(--erp-color-surface-muted);
+}
+
+.erp-search-select-option[aria-selected="true"] {
+  background: var(--erp-color-primary-surface);
+}
+
+.erp-search-select-label {
+  font-size: var(--erp-font-size-sm);
+  color: var(--erp-color-text);
+}
+
+/* The second line: a code beside a name, a city beside a street. In an ERP
+   the label on its own is very often ambiguous. */
+.erp-search-select-description {
+  font-size: var(--erp-text-helper-size);
+  color: var(--erp-color-text-muted);
+}
+
+.erp-search-select-note {
+  padding: var(--erp-space-sm);
+  font-size: var(--erp-font-size-2xs);
+  color: var(--erp-color-text-muted);
+}
+
+/* ---------------------------------------------------------------
+   Record reference
+   --------------------------------------------------------------- */
+
+.erp-record-link {
+  color: var(--erp-color-primary);
+  text-decoration: none;
+}
+
+.erp-record-link:hover {
+  text-decoration: underline;
+}
+
+.erp-record-link:active {
+  color: var(--erp-color-primary-strong);
+}
+
+/* A reference with nothing to point at: still readable, plainly not a link. */
+.erp-record-link-empty {
+  color: var(--erp-color-text-muted);
+}
+
+/* The seam between picking an existing record and describing a new one.
+   Quiet on purpose: it separates two paths through one dialog, and a
+   heavier rule would read as two forms. */
+.erp-pick-divider {
+  margin: 0;
+  font-size: var(--erp-font-size-2xs);
+  color: var(--erp-color-text-muted);
+}
+
+/* --- Section card ------------------------------------------------------
+ *
+ * The titled panel every dashboard widget and administration block sits in.
+ * The heading row was written twice before this existed -- once for each --
+ * and had already begun to disagree about its type scale.
+ */
+
+.erp-section-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--erp-space-lg);
+  margin-bottom: var(--erp-space-lg);
+}
+
+/* Takes the slack so a long title wraps rather than squeezing the action. */
+.erp-section-card-heading {
+  min-width: 0;
+}
+
+.erp-section-card-title {
+  margin: 0;
+  font-size: var(--erp-heading-section-size);
+  font-weight: var(--erp-heading-section-weight);
+  color: var(--erp-color-text);
+}
+
+.erp-section-card-description {
+  margin: var(--erp-space-xs) 0 0;
+  font-size: var(--erp-text-description-size);
+  color: var(--erp-color-text-muted);
+}
+
+/* Not an error, and deliberately not drawn as one: "your organization does
+   not use Sales" is a fact to read, not a failure to act on. */
+.erp-section-card-unavailable {
+  margin: 0;
+  padding: var(--erp-space-lg) 0;
+  font-size: var(--erp-font-size-sm);
+  color: var(--erp-color-text-muted);
+}
+
+/* --- Tables on a phone -------------------------------------------------
+ *
+ * An ERP table is wide, and a phone is not. Scrolling sideways through
+ * columns you cannot see is the worst of the options: the reader loses the
+ * row they were on, and the first column -- almost always the one naming
+ * the record -- scrolls away with everything else.
+ *
+ * So below a phone width the table stops being a grid and becomes a list of
+ * cards, one per row, with each value named by its own column heading. The
+ * markup is untouched: it is still one `<table>` with one `<thead>`, still
+ * announced as a table with its columns, and `data-label` on each cell
+ * carries the heading text that CSS draws beside the value.
+ *
+ * The heading row itself is hidden *visually only* -- `position: absolute`
+ * rather than `display: none`, because a `<thead>` removed from the box tree
+ * takes the table's column semantics with it in several screen readers.
+ */
+
+@media (max-width: 640px) {
+  /* Nothing to scroll any more, and no minimum to enforce. */
+  .erp-table-scroll {
+    overflow-x: visible;
+  }
+
+  .erp-table,
+  .erp-table tbody,
+  .erp-table tr,
+  .erp-table td {
+    display: block;
+    width: auto;
+    min-width: 0;
+  }
+
+  /* The same treatment `.erp-visually-hidden` applies, rather than a second
+     copy of the technique: `inset-inline-start: 0` is what keeps the hidden
+     head from reporting a box wider than the viewport, which is the detail
+     a hand-rolled version usually misses. */
+  .erp-table thead {
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .erp-table tbody tr {
+    margin-bottom: var(--erp-space-md);
+    padding: var(--erp-space-xs) var(--erp-space-lg);
+    border: 1px solid var(--erp-color-border);
+    border-radius: var(--erp-radius-lg);
+    background: var(--erp-color-surface);
+  }
+
+  .erp-table tbody tr:last-child {
+    margin-bottom: 0;
+  }
+
+  /* The label sits *above* its value, not beside it.
+
+     Beside it is the prettier shape and it worked down to about 420px. Below
+     that it failed badly: the label never wraps, so at 320px -- inside a card
+     inside a card, each with its own padding -- the value was left roughly
+     60px and broke mid-word, one to three characters per line
+     ("qa6388 / 93@exa / mple.tes / t"). An ERP's values are long by nature:
+     email addresses, legal entity names, lists of role codes.
+
+     Stacking costs vertical space, which on a phone is the cheap axis, and
+     buys a value that always has the full width of its card. It also needs no
+     fourth breakpoint: one rule that is correct from 640px down to 320px
+     beats two rules with a seam between them. */
+  .erp-table tbody td {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    padding: var(--erp-space-sm) 0;
+    border-bottom: 1px solid var(--erp-color-border);
+    text-align: start;
+    overflow-wrap: anywhere;
+  }
+
+  .erp-table tbody td > * {
+    min-width: 0;
+  }
+
+  .erp-table tbody tr td:last-child {
+    border-bottom: 0;
+  }
+
+  .erp-table tbody td::before {
+    content: attr(data-label);
+    flex: none;
+    font-size: var(--erp-font-size-micro);
+    font-weight: var(--erp-font-weight-semibold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--erp-color-text-muted);
+    text-align: start;
+  }
+
+  /* A cell with no heading -- the row-actions column, the select box -- has
+     nothing to name, so it takes the full width rather than sitting against
+     an empty label. */
+  .erp-table tbody td:not([data-label])::before {
+    content: none;
+  }
+
+  .erp-table tbody td:not([data-label]) {
+    justify-content: flex-end;
+  }
+
+  .erp-table .erp-table-select {
+    justify-content: flex-start;
+  }
+}
+
+/* ===================================================================
+   Dashboard figures: MetricStrip, Metric, Composition
+
+   Shared by the platform and the tenant dashboards. Everything is a
+   design token, and the four knobs a page may want to turn are custom
+   properties on the group, so a screen with its own accent (the platform
+   console) can tune it without a second copy of these rules.
+   =================================================================== */
+
+.erp-metrics-group {
+  --erp-metrics-border: color-mix(in srgb, var(--erp-color-border) 75%, transparent);
+  --erp-metrics-radius: 16px;
+  --erp-metrics-shadow: 0 1px 3px rgba(15, 23, 42, 0.03), 0 8px 24px -4px rgba(15, 23, 42, 0.05);
+  --erp-metrics-lead-surface: linear-gradient(135deg, color-mix(in srgb, var(--erp-color-primary) 7%, var(--erp-color-surface)) 0%, color-mix(in srgb, var(--erp-color-primary) 1.5%, var(--erp-color-surface)) 100%);
+  --erp-metrics-hover: color-mix(in srgb, var(--erp-color-primary) 4%, var(--erp-color-surface));
+  border: 1px solid var(--erp-metrics-border);
+  border-radius: var(--erp-metrics-radius);
+  background: var(--erp-color-surface);
+  box-shadow: var(--erp-metrics-shadow);
+  /* Clips the hairline grid to the rounded corners. */
+  overflow: hidden;
+  transition: box-shadow var(--erp-transition-normal), border-color var(--erp-transition-normal);
+}
+
+.erp-metrics {
+  display: grid;
+  /* `--erp-metrics-columns` is set inline by MetricStrip, and an inline
+     custom property beats anything a media query can say. So the
+     breakpoints set a different variable and this reads it first: the
+     narrow count wins without needing `!important`. */
+  grid-template-columns: repeat(
+    var(--erp-metrics-at-width, var(--erp-metrics-columns, 4)),
+    minmax(0, 1fr)
+  );
+  /* The dividing rules: the grid's own gap, with the group's border colour
+     showing through it. Correct at every column count, with no item having
+     to know whether it starts a row. */
+  gap: 1px;
+  background: color-mix(in srgb, var(--erp-color-border) 60%, transparent);
+}
+
+.erp-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  grid-column: span 1;
+  margin: 0;
+  padding: 18px 22px;
+  min-width: 0;
+  border: 0;
+  background: var(--erp-color-surface);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  transition: all var(--erp-transition-fast);
+}
+
+.erp-metric-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--erp-color-text-secondary);
+  font-size: var(--erp-font-size-xs, 12.5px);
+  font-weight: var(--erp-font-weight-medium);
+  letter-spacing: 0.01em;
+}
+
+/* Neutral by default: a glyph beside label. Tone is spent only where color is fact */
+.erp-metric-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--erp-color-text-subtle) 10%, transparent);
+  color: var(--erp-color-text-subtle);
+  flex-shrink: 0;
+}
+.erp-metric-success .erp-metric-icon {
+  color: var(--erp-color-success-strong);
+  background: var(--erp-color-success-badge);
+}
+.erp-metric-warning .erp-metric-icon {
+  color: var(--erp-color-warning-strong);
+  background: var(--erp-color-warning-badge);
+}
+.erp-metric-danger .erp-metric-icon {
+  color: var(--erp-color-danger-strong);
+  background: var(--erp-color-danger-badge);
+}
+.erp-metric-info .erp-metric-icon {
+  color: var(--erp-color-info-strong);
+  background: var(--erp-color-info-badge);
+}
+.erp-metric-accent .erp-metric-icon,
+.erp-metric.is-lead .erp-metric-icon {
+  color: var(--erp-color-primary);
+  background: var(--erp-color-primary-surface);
+}
+
+.erp-metric-value {
+  color: var(--erp-color-text);
+  font-size: clamp(22px, 2.2vw, 26px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.erp-metric-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--erp-space-xs);
+  color: var(--erp-color-text-muted);
+  font-size: var(--erp-font-size-2xs, 11.5px);
+  line-height: 1.4;
+}
+
+.erp-metric-trail { display: block; margin-top: 2px; }
+
+/* The figure the band is actually about. */
+.erp-metric.is-lead {
+  grid-column: span 2;
+  padding: 20px 24px;
+  background: var(--erp-metrics-lead-surface);
+  position: relative;
+}
+.erp-metric.is-lead::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 3.5px;
+  background: var(--erp-color-primary);
+}
+.erp-metric.is-lead .erp-metric-label {
+  color: var(--erp-color-primary-strong, var(--erp-color-primary));
+  font-weight: 600;
+}
+.erp-metric.is-lead .erp-metric-value {
+  font-size: clamp(28px, 3.2vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.erp-metric.is-interactive {
+  cursor: pointer;
+  transition: all var(--erp-transition-fast);
+}
+.erp-metric.is-interactive:hover {
+  background: var(--erp-metrics-hover);
+}
+.erp-metric.is-interactive:hover .erp-metric-value {
+  color: var(--erp-color-primary-strong);
+}
+.erp-metric.is-interactive:focus-visible {
+  outline: var(--erp-focus-ring-width) solid var(--erp-focus-ring-color);
+  /* Inward: the group clips its corners, so an outset ring would be cut. */
+  outline-offset: calc(var(--erp-focus-ring-offset) * -1);
+}
+
+/* --- Composition ---------------------------------------------------- */
+
+.erp-composition {
+  display: flex;
+  flex-direction: column;
+  gap: var(--erp-space-md);
+}
+
+.erp-composition-bar {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  border-radius: var(--erp-radius-pill);
+  overflow: hidden;
+}
+.erp-composition-bar > span { min-width: 3px; }
+
+.erp-composition-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: var(--erp-space-sm) var(--erp-space-lg);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.erp-composition-legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--erp-space-sm);
+  min-width: 0;
+}
+.erp-comp-swatch { flex: none; width: 8px; height: 8px; border-radius: 3px; }
+.erp-composition-label {
+  flex: 1;
+  overflow: hidden;
+  color: var(--erp-color-text-secondary);
+  font-size: var(--erp-font-size-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.erp-composition-value {
+  color: var(--erp-color-text);
+  font-size: var(--erp-font-size-sm);
+  font-weight: var(--erp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-comp-success { background: var(--erp-color-success); }
+.erp-comp-info { background: var(--erp-color-info); }
+.erp-comp-warning { background: var(--erp-color-warning); }
+.erp-comp-danger { background: var(--erp-color-danger); }
+.erp-comp-neutral { background: var(--erp-color-border-strong); }
+.erp-comp-accent { background: var(--erp-color-primary); }
+
+@media (max-width: 1380px) {
+  /* On standard desktop/laptop displays with sidebars, 6 columns cramps figures.
+     Three columns allows lead and standard cards to breathe comfortably. */
+  .erp-metrics[style*="--erp-metrics-columns: 6"] {
+    --erp-metrics-at-width: 3;
+  }
+}
+
+@media (max-width: 1100px) {
+  /* Two across on a tablet; a lead figure spans both and so keeps a whole
+     row to itself. */
+  .erp-metrics { --erp-metrics-at-width: 2; }
+}
+
+@media (max-width: 640px) {
+  /* One figure per row on a phone: a value truncated to half a 320px
+     screen is not a figure anybody can read. The lead gives up its second
+     column here, or the grid would grow an implicit one. */
+  .erp-metrics { --erp-metrics-at-width: 1; }
+  .erp-metric { padding: var(--erp-space-md) var(--erp-space-lg); }
+  .erp-metric.is-lead { grid-column: span 1; padding: var(--erp-space-lg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-metric.is-interactive { transition: none; }
+}
+
+/* ===========================================================================
+   Day 2: Shared Administration UI Foundation Standardizations
+   =========================================================================== */
+
+/* --- Page Header Extensions ---------------------------------------------- */
+.erp-page-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--erp-space-sm);
+}
+
+.erp-page-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--erp-space-sm);
+  margin-top: var(--erp-space-xs);
+}
+
+.erp-page-meta-item {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--erp-radius-pill);
+  background: var(--erp-color-surface-muted);
+  border: 1px solid var(--erp-color-border);
+  font-size: var(--erp-font-size-2xs);
+  color: var(--erp-color-text-secondary);
+}
+
+.erp-page-meta-label {
+  color: var(--erp-color-text-muted);
+  margin-inline-end: 4px;
+}
+
+.erp-page-meta-val {
+  font-weight: var(--erp-font-weight-medium);
+  color: var(--erp-color-text);
+}
+
+.erp-page-command-bar {
+  margin-top: var(--erp-space-md);
+}
+
+/* --- Standardized CommandBar --------------------------------------------- */
+.erp-command-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--erp-space-sm);
+  padding: var(--erp-space-sm) var(--erp-space-md);
+  background: var(--erp-color-surface);
+  border: 1px solid var(--erp-color-border);
+  border-radius: var(--erp-radius-lg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.erp-command-main-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--erp-space-md);
+}
+
+.erp-command-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--erp-space-sm);
+}
+
+.erp-command-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--erp-space-sm);
+  margin-inline-start: auto;
+}
+
+.erp-command-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: var(--erp-font-weight-semibold);
+}
+
+.erp-command-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Filter pills in CommandBar */
+.erp-command-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background: var(--erp-color-surface-muted);
+  border: 1px solid var(--erp-color-border);
+  border-radius: var(--erp-radius-pill);
+}
+
+.erp-command-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: none;
+  background: transparent;
+  border-radius: var(--erp-radius-pill);
+  font-size: var(--erp-font-size-2xs);
+  font-weight: var(--erp-font-weight-medium);
+  color: var(--erp-color-text-secondary);
+  cursor: pointer;
+  transition: all var(--erp-transition-fast);
+}
+
+.erp-command-filter-pill:hover {
+  color: var(--erp-color-text);
+  background: var(--erp-color-surface);
+}
+
+.erp-command-filter-pill.is-active {
+  background: var(--erp-color-surface);
+  color: var(--erp-color-primary-strong);
+  font-weight: var(--erp-font-weight-semibold);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.erp-command-filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: var(--erp-radius-pill);
+  background: var(--erp-color-surface-muted);
+  font-size: 10px;
+  color: inherit;
+}
+
+.erp-command-filter-pill.is-active .erp-command-filter-count {
+  background: var(--erp-color-primary-surface);
+  color: var(--erp-color-primary-strong);
+}
+
+.erp-command-search-wrap {
+  width: 240px;
+}
+
+.erp-command-search input {
+  min-height: var(--erp-control-height-sm);
+  font-size: var(--erp-font-size-2xs);
+}
+
+.erp-command-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--erp-control-height-sm);
+  height: var(--erp-control-height-sm);
+  padding: 0;
+  border: 1px solid var(--erp-color-border);
+  border-radius: var(--erp-radius-md);
+  background: var(--erp-color-surface);
+  color: var(--erp-color-text-secondary);
+  cursor: pointer;
+  transition: all var(--erp-transition-fast);
+}
+
+.erp-command-icon-btn:hover:not(:disabled) {
+  background: var(--erp-color-surface-muted);
+  color: var(--erp-color-text);
+}
+
+.erp-command-icon-btn.is-active {
+  background: var(--erp-color-primary-surface);
+  color: var(--erp-color-primary-strong);
+  border-color: var(--erp-color-primary-border);
+}
+
+.erp-command-viewmode {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Bulk Selection Mode in CommandBar */
+.erp-command-bar.has-selection {
+  background: var(--erp-color-primary-surface);
+  border-color: var(--erp-color-primary-border);
+}
+
+.erp-command-selection-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--erp-space-md);
+  width: 100%;
+}
+
+.erp-command-selection-info {
+  display: flex;
+  align-items: center;
+  gap: var(--erp-space-md);
+}
+
+.erp-command-selection-count {
+  font-size: var(--erp-font-size-sm);
+  font-weight: var(--erp-font-weight-medium);
+  color: var(--erp-color-primary-strong);
+}
+
+.erp-command-selection-clear {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: var(--erp-font-size-2xs);
+  color: var(--erp-color-primary-strong);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.erp-command-selection-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--erp-space-sm);
+}
+
+/* --- Shared Slide-Over Drawer --------------------------------------------- */
+.erp-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--erp-color-backdrop, rgba(15, 23, 42, 0.45));
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.erp-drawer {
+  width: 100%;
+  max-width: var(--erp-drawer-width, 560px);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--erp-color-surface);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+  outline: none;
+  animation: erp-drawer-slide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes erp-drawer-slide {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.erp-drawer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--erp-space-md);
+  padding: var(--erp-space-lg);
+  border-bottom: 1px solid var(--erp-color-border);
+}
+
+.erp-drawer-title {
+  margin: 0;
+  font-size: var(--erp-font-size-lg);
+  font-weight: var(--erp-font-weight-semibold);
+  color: var(--erp-color-text);
+}
+
+.erp-drawer-subtitle {
+  margin: var(--erp-space-xs) 0 0;
+  font-size: var(--erp-font-size-xs);
+  color: var(--erp-color-text-muted);
+}
+
+.erp-drawer-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--erp-color-border);
+  border-radius: var(--erp-radius-md);
+  background: var(--erp-color-surface);
+  color: var(--erp-color-text-secondary);
+  cursor: pointer;
+  transition: all var(--erp-transition-fast);
+}
+
+.erp-drawer-close:hover {
+  background: var(--erp-color-surface-muted);
+  color: var(--erp-color-text);
+}
+
+.erp-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--erp-space-lg);
+}
+
+.erp-drawer-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--erp-space-sm);
+  padding: var(--erp-space-md) var(--erp-space-lg);
+  border-top: 1px solid var(--erp-color-border);
+  background: var(--erp-color-surface-muted);
+}
+
+/* --- Shared Stat Cards & Grid -------------------------------------------- */
+.erp-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--erp-stat-columns, 4), minmax(0, 1fr));
+  gap: var(--erp-space-md);
+}
+
+.erp-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--erp-space-xs);
+  padding: var(--erp-space-md) var(--erp-space-lg);
+  background: var(--erp-color-surface);
+  border: 1px solid var(--erp-color-border);
+  border-radius: var(--erp-radius-lg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  text-align: start;
+  transition: all var(--erp-transition-fast);
+}
+
+.erp-stat-card.is-clickable {
+  cursor: pointer;
+}
+
+.erp-stat-card.is-clickable:hover {
+  border-color: var(--erp-color-primary-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.erp-stat-top {
+  display: flex;
+  align-items: center;
+  gap: var(--erp-space-sm);
+}
+
+.erp-stat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--erp-radius-md);
+  background: var(--erp-color-surface-muted);
+  color: var(--erp-color-primary);
+}
+
+.erp-stat-tone-accent .erp-stat-icon {
+  background: var(--erp-color-primary-surface);
+  color: var(--erp-color-primary);
+}
+
+.erp-stat-tone-success .erp-stat-icon {
+  background: var(--erp-color-success-badge);
+  color: var(--erp-color-success-strong);
+}
+
+.erp-stat-tone-warning .erp-stat-icon {
+  background: var(--erp-color-warning-badge);
+  color: var(--erp-color-warning-strong);
+}
+
+.erp-stat-tone-danger .erp-stat-icon {
+  background: var(--erp-color-danger-badge);
+  color: var(--erp-color-danger-stronger);
+}
+
+.erp-stat-label {
+  font-size: var(--erp-font-size-2xs);
+  font-weight: var(--erp-font-weight-medium);
+  color: var(--erp-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.erp-stat-value {
+  font-size: var(--erp-font-size-2xl, 24px);
+  font-weight: var(--erp-font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--erp-color-text);
+  letter-spacing: -0.02em;
+}
+
+.erp-stat-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--erp-space-sm);
+  font-size: var(--erp-font-size-2xs);
+  color: var(--erp-color-text-muted);
+}
+
+.erp-stat-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: var(--erp-font-weight-semibold);
+  border-radius: var(--erp-radius-pill);
+  padding: 1px 6px;
+}
+
+.erp-stat-delta.is-up {
+  color: var(--erp-color-success-strong);
+  background: var(--erp-color-success-badge);
+}
+
+.erp-stat-delta.is-down {
+  color: var(--erp-color-danger-stronger);
+  background: var(--erp-color-danger-badge);
+}
+
+@media (max-width: 900px) {
+  .erp-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .erp-stat-grid {
+    grid-template-columns: 1fr;
+  }
+  .erp-command-search-wrap {
+    width: 100%;
+  }
+  .erp-command-right {
+    width: 100%;
+  }
+}
+

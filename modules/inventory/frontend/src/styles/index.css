@@ -1,0 +1,25 @@
+@import "tailwindcss";
+@import "../../../../../shared/frontend/ui-kit/tokens.css";
+@import "../../../../../shared/frontend/ui-kit/theme.css";
+@import "../../../../../shared/frontend/ui-kit/design-system.css";
+
+/* Tabular figures for numbers, currency, quantities, and serials */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(82, 82, 91, 0.5);
+}

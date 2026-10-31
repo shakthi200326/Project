@@ -1,0 +1,213 @@
+from decimal import Decimal
+from django.db import transaction
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from apps.stock.models import StockBalance, StockLedgerEntry
+from apps.movements.models import StockTransaction, StockTransactionLine
+from apps.valuation.models import InventoryValuation
+
+class InventoryPostingService:
+    """
+    Core concurrency-safe inventory posting engine.
+    Guarantees atomic balance mutations, immutable ledger recording,
+    and moving weighted-average valuation.
+    """
+
+    @classmethod
+    @transaction.atomic
+    def post_transaction(cls, transaction_obj: StockTransaction, actor: str = "system") -> StockTransaction:
+        if transaction_obj.status != StockTransaction.Status.DRAFT:
+            raise ValidationError("Only DRAFT transactions can be posted.")
+
+        lines = list(transaction_obj.lines.select_related("item", "variant", "location").all())
+        if not lines:
+            raise ValidationError("Transaction must have at least one line.")
+
+        # Sort items to lock in consistent primary key order (eliminating deadlocks)
+        lines.sort(key=lambda l: (l.item_id, l.location_id or 0))
+
+        for line in lines:
+            if transaction_obj.transaction_type == StockTransaction.TransactionType.RECEIPT:
+                cls._process_receipt(transaction_obj, line, actor)
+            elif transaction_obj.transaction_type == StockTransaction.TransactionType.ISSUE:
+                cls._process_issue(transaction_obj, line, actor)
+            elif transaction_obj.transaction_type == StockTransaction.TransactionType.TRANSFER:
+                cls._process_transfer(transaction_obj, line, actor)
+            elif transaction_obj.transaction_type == StockTransaction.TransactionType.ADJUSTMENT:
+                cls._process_adjustment(transaction_obj, line, actor)
+
+        transaction_obj.status = StockTransaction.Status.POSTED
+        transaction_obj.posted_by = actor
+        transaction_obj.posted_at = timezone.now()
+        transaction_obj.save(update_fields=["status", "posted_by", "posted_at"])
+
+        return transaction_obj
+
+    @classmethod
+    def _get_or_create_locked_balance(cls, item, variant, warehouse, location) -> StockBalance:
+        balance, _ = StockBalance.objects.get_or_create(
+            item=item,
+            variant=variant,
+            warehouse=warehouse,
+            location=location,
+            defaults={
+                "on_hand_qty": Decimal("0.0000"),
+                "reserved_qty": Decimal("0.0000"),
+                "blocked_qty": Decimal("0.0000"),
+            },
+        )
+        return StockBalance.objects.select_for_update().get(pk=balance.pk)
+
+    @classmethod
+    def _process_receipt(cls, tx: StockTransaction, line: StockTransactionLine, actor: str):
+        if line.quantity <= 0:
+            raise ValidationError(f"Receipt quantity for {line.item.code} must be strictly positive.")
+
+        balance = cls._get_or_create_locked_balance(line.item, line.variant, tx.warehouse, line.location)
+        balance.on_hand_qty += line.quantity
+        balance.save(update_fields=["on_hand_qty", "updated_at"])
+
+        # Recalculate Moving Weighted Average (WAV)
+        cls._update_valuation_on_receipt(line.item, tx.warehouse, line.quantity, line.unit_cost)
+
+        # Append immutable ledger record
+        StockLedgerEntry.objects.create(
+            item=line.item,
+            variant=line.variant,
+            warehouse=tx.warehouse,
+            location=line.location,
+            movement_type=StockLedgerEntry.MovementType.RECEIPT,
+            quantity_delta=line.quantity,
+            balance_after=balance.on_hand_qty,
+            unit_cost=line.unit_cost,
+            total_value_delta=line.quantity * line.unit_cost,
+            transaction_ref=tx.document_number,
+            actor=actor,
+        )
+
+    @classmethod
+    def _process_issue(cls, tx: StockTransaction, line: StockTransactionLine, actor: str):
+        qty_to_issue = abs(line.quantity)
+        if qty_to_issue <= 0:
+            raise ValidationError(f"Issue quantity for {line.item.code} must be strictly positive.")
+
+        balance = cls._get_or_create_locked_balance(line.item, line.variant, tx.warehouse, line.location)
+        if balance.available_qty < qty_to_issue:
+            raise ValidationError(
+                f"Insufficient available stock for {line.item.code} in {tx.warehouse.code}. "
+                f"Requested: {qty_to_issue}, Available: {balance.available_qty} (On-hand: {balance.on_hand_qty}, Reserved: {balance.reserved_qty})"
+            )
+
+        balance.on_hand_qty -= qty_to_issue
+        balance.save(update_fields=["on_hand_qty", "updated_at"])
+
+        # Lookup valuation cost
+        val, _ = InventoryValuation.objects.get_or_create(item=line.item, warehouse=tx.warehouse)
+        cost = val.weighted_average_cost if val.weighted_average_cost > 0 else line.unit_cost
+
+        val.total_on_hand = max(Decimal("0.0000"), val.total_on_hand - qty_to_issue)
+        val.total_value = val.total_on_hand * val.weighted_average_cost
+        val.save(update_fields=["total_on_hand", "total_value"])
+
+        StockLedgerEntry.objects.create(
+            item=line.item,
+            variant=line.variant,
+            warehouse=tx.warehouse,
+            location=line.location,
+            movement_type=StockLedgerEntry.MovementType.ISSUE,
+            quantity_delta=-qty_to_issue,
+            balance_after=balance.on_hand_qty,
+            unit_cost=cost,
+            total_value_delta=-(qty_to_issue * cost),
+            transaction_ref=tx.document_number,
+            actor=actor,
+        )
+
+    @classmethod
+    def _process_transfer(cls, tx: StockTransaction, line: StockTransactionLine, actor: str):
+        if not tx.destination_warehouse:
+            raise ValidationError("Transfers require a destination warehouse.")
+        qty = abs(line.quantity)
+
+        # 1. Source Deduction
+        source_bal = cls._get_or_create_locked_balance(line.item, line.variant, tx.warehouse, line.location)
+        if source_bal.available_qty < qty:
+            raise ValidationError(f"Insufficient available stock at source warehouse {tx.warehouse.code}.")
+        source_bal.on_hand_qty -= qty
+        source_bal.save(update_fields=["on_hand_qty", "updated_at"])
+
+        # 2. Destination Addition
+        dest_bal = cls._get_or_create_locked_balance(
+            line.item, line.variant, tx.destination_warehouse, line.destination_location
+        )
+        dest_bal.on_hand_qty += qty
+        dest_bal.save(update_fields=["on_hand_qty", "updated_at"])
+
+        # Ledger entries
+        StockLedgerEntry.objects.create(
+            item=line.item,
+            variant=line.variant,
+            warehouse=tx.warehouse,
+            location=line.location,
+            movement_type=StockLedgerEntry.MovementType.TRANSFER_OUT,
+            quantity_delta=-qty,
+            balance_after=source_bal.on_hand_qty,
+            unit_cost=line.unit_cost,
+            total_value_delta=-(qty * line.unit_cost),
+            transaction_ref=tx.document_number,
+            actor=actor,
+        )
+
+        StockLedgerEntry.objects.create(
+            item=line.item,
+            variant=line.variant,
+            warehouse=tx.destination_warehouse,
+            location=line.destination_location,
+            movement_type=StockLedgerEntry.MovementType.TRANSFER_IN,
+            quantity_delta=qty,
+            balance_after=dest_bal.on_hand_qty,
+            unit_cost=line.unit_cost,
+            total_value_delta=qty * line.unit_cost,
+            transaction_ref=tx.document_number,
+            actor=actor,
+        )
+
+    @classmethod
+    def _process_adjustment(cls, tx: StockTransaction, line: StockTransactionLine, actor: str):
+        delta = line.quantity
+        balance = cls._get_or_create_locked_balance(line.item, line.variant, tx.warehouse, line.location)
+        if delta < 0 and balance.available_qty < abs(delta):
+            raise ValidationError(f"Adjustment cannot reduce stock below zero for {line.item.code}.")
+
+        balance.on_hand_qty += delta
+        balance.save(update_fields=["on_hand_qty", "updated_at"])
+
+        StockLedgerEntry.objects.create(
+            item=line.item,
+            variant=line.variant,
+            warehouse=tx.warehouse,
+            location=line.location,
+            movement_type=StockLedgerEntry.MovementType.ADJUSTMENT,
+            quantity_delta=delta,
+            balance_after=balance.on_hand_qty,
+            unit_cost=line.unit_cost,
+            total_value_delta=delta * line.unit_cost,
+            transaction_ref=tx.document_number,
+            actor=actor,
+        )
+
+    @classmethod
+    def _update_valuation_on_receipt(cls, item, warehouse, qty: Decimal, unit_cost: Decimal):
+        val, _ = InventoryValuation.objects.get_or_create(item=item, warehouse=warehouse)
+        q_current = val.total_on_hand
+        wav_current = val.weighted_average_cost
+
+        if q_current <= Decimal("0.0000"):
+            new_wav = unit_cost
+        else:
+            new_wav = ((q_current * wav_current) + (qty * unit_cost)) / (q_current + qty)
+
+        val.total_on_hand = q_current + qty
+        val.weighted_average_cost = new_wav
+        val.total_value = val.total_on_hand * val.weighted_average_cost
+        val.save()

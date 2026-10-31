@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BusinessModuleEvents",
+  "description": "Standard transactional events emitted across the ecosystem",
+  "definitions": {
+    "StockUpdatedEvent": {
+      "type": "object",
+      "properties": {
+        "event_id": { "type": "string", "format": "uuid" },
+        "event_type": { "type": "string", "enum": ["inventory.stock_updated"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "item_id": { "type": "string" },
+            "item_code": { "type": "string" },
+            "warehouse_id": { "type": "string" },
+            "location_id": { "type": "string" },
+            "on_hand_delta": { "type": "number" },
+            "available_delta": { "type": "number" },
+            "current_on_hand": { "type": "number" },
+            "current_available": { "type": "number" },
+            "reference_doc": { "type": "string" }
+          },
+          "required": ["item_id", "warehouse_id", "current_on_hand", "current_available"]
+        }
+      },
+      "required": ["event_id", "event_type", "timestamp", "payload"]
+    },
+    "LowStockAlertEvent": {
+      "type": "object",
+      "properties": {
+        "event_id": { "type": "string", "format": "uuid" },
+        "event_type": { "type": "string", "enum": ["inventory.low_stock_alert"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "item_id": { "type": "string" },
+            "item_name": { "type": "string" },
+            "warehouse_id": { "type": "string" },
+            "current_stock": { "type": "number" },
+            "reorder_point": { "type": "number" },
+            "reorder_quantity": { "type": "number" }
+          },
+          "required": ["item_id", "current_stock", "reorder_point"]
+        }
+      },
+      "required": ["event_id", "event_type", "timestamp", "payload"]
+    }
+  }
+}

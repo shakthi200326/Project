@@ -1,0 +1,435 @@
+/**
+ * The ONE ERP design tokens.
+ *
+ * Every colour, space, size and radius the product uses is declared here, once.
+ * Nothing below this file should contain a raw hex value: a component that
+ * hard-codes one is a component that cannot be re-themed, and 148 of them was
+ * the state this file was written to end.
+ *
+ * The names are **semantic, not literal**. `--erp-color-primary` rather than
+ * `--erp-color-blue-600`, because the day the brand colour stops being blue,
+ * a literal name is a lie in every rule that uses it.
+ *
+ * Scales are the ones the product already had -- the slate/blue palette the
+ * CSS had settled on, the spacing steps from `tokens/spacing.js`, the type
+ * scale from `tokens/typography.js`. Nothing has been redesigned; the values
+ * have been given names and a single home.
+ *
+ * `tokens/*.js` re-export these as `var(--...)` strings, so JavaScript that
+ * needs a token gets the live value rather than a copy that can drift.
+ *
+ * Deliberately one theme. Dark mode, theme switching and per-company
+ * branding are a later capability; what this layer does is make them a
+ * matter of redeclaring these properties rather than editing every rule.
+ */
+
+:root {
+  /* Tell the browser what this page is, so a UA that forces its own dark
+     treatment does not invent one for us. Honest for a single-theme
+     product; the day a dark theme exists this becomes `light dark`. */
+  color-scheme: light;
+
+  /* --- Neutrals ------------------------------------------------------- */
+
+  /* Cards, dialogs, table bodies -- anything that sits above the page. */
+  --erp-color-surface: #ffffff;
+  /* The page itself, and the settled look of a read-only field. */
+  --erp-color-background: #f8fafc;
+  /* Hover on a quiet control, table headers, a muted badge. */
+  --erp-color-surface-muted: #f1f5f9;
+  --erp-color-surface-tint: #f1f5f9;
+  --erp-color-border-subtle: #f1f5f9;
+
+  --erp-color-border: #e2e8f0;
+  --erp-color-border-strong: #cbd5e1;
+
+  --erp-color-text: #0f172a;
+  --erp-color-text-secondary: #334155;
+  --erp-color-text-muted: #64748b;
+  /* Placeholder-weight: present, deliberately not competing for attention. */
+  --erp-color-text-subtle: #94a3b8;
+
+  /* --- Brand ---------------------------------------------------------- */
+
+  /* The one value a rebrand would start from. */
+  --erp-color-primary: #2563eb;
+  --erp-color-primary-strong: #1e3a8a;
+  --erp-color-primary-surface: #eff6ff;
+  --erp-color-primary-border: #bfdbfe;
+  /* Text drawn on top of a primary fill. */
+  --erp-color-on-primary: #ffffff;
+
+  /* The fill behind a primary button, as its own role.
+     In light these are simply `primary` and `on-primary`. In dark they are
+     not: there `--erp-color-primary` is a light tint chosen to be readable
+     *as text* on a dark ground, and using it as a fill made the primary
+     button the palest element on the screen -- quieter than the read-only
+     context strip beside it. A button is a surface, not text, and wants the
+     saturated shade with white on it. */
+  --erp-color-primary-fill: var(--erp-color-primary);
+  --erp-color-on-primary-fill: var(--erp-color-on-primary);
+
+  /* --- Status --------------------------------------------------------- */
+
+  --erp-color-success: #16a34a;
+  --erp-color-success-strong: #166534;
+  --erp-color-success-surface: #f0fdf4;
+  --erp-color-success-badge: #dcfce7;
+
+  /* A badge ground is more tinted than an alert surface: a pill has to read
+     as a label at 11px, which a near-white fill does not do. Paired with the
+     `-strong` foreground of the same status and guarded by the contrast
+     matrix. */
+  --erp-color-warning-badge: #fef3c7;
+  --erp-color-warning: #d97706;
+  --erp-color-warning-strong: #b45309;
+  --erp-color-warning-surface: #fffbeb;
+
+  --erp-color-danger-badge: #fee2e2;
+  --erp-color-danger: #dc2626;
+  --erp-color-danger-strong: #b91c1c;
+  --erp-color-danger-stronger: #991b1b;
+  --erp-color-danger-surface: #fef2f2;
+  --erp-color-danger-border: #fecaca;
+  --erp-color-on-danger: #ffffff;
+
+  --erp-color-info: #0284c7;
+  /* `info` had no `-strong`: it was the one status with no foreground dark
+     enough to carry small text on its own tint. */
+  --erp-color-info-strong: #075985;
+  --erp-color-info-surface: #f0f9ff;
+  --erp-color-info-badge: #e0f2fe;
+
+  /* --- Elevation and overlay ------------------------------------------ */
+
+  --erp-color-backdrop: rgba(15, 23, 42, 0.45);
+
+  /* Two levels, not one. `sm` is what a card rests at -- barely there, but
+     enough that a panel reads as sitting *on* the page rather than being cut
+     out of it, which is what makes a light interface feel built rather than
+     drawn. `raised` is for something genuinely above the page: a menu, a
+     dialog, a toast.
+
+     Both are softer and more diffuse than the single hard shadow they
+     replace. A tight dark shadow reads as a 2014 admin template; the depth
+     in a modern enterprise interface comes from a wide, faint one. */
+  --erp-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04),
+    0 1px 3px rgba(15, 23, 42, 0.06);
+  --erp-shadow-raised: 0 4px 6px -2px rgba(15, 23, 42, 0.05),
+    0 12px 24px -4px rgba(15, 23, 42, 0.1);
+
+  /* --- Typography ------------------------------------------------------ */
+
+  /* Inter where it is available, then the platform's own UI face. The stack
+     resolves the contradiction this file was partly written to fix: the
+     product declared Inter in a token nothing read, and rendered in bare
+     Arial. Inter is not bundled -- adding a webfont is a decision with
+     network and offline consequences for an ERP, and is not this cleanup's
+     to make. When it is made, this one line is where it lands. */
+  --erp-font-sans: Inter, "Segoe UI", system-ui, -apple-system,
+    "Helvetica Neue", Arial, sans-serif;
+
+  --erp-font-size-xs: 12px;
+  --erp-font-size-sm: 14px;
+  --erp-font-size-md: 16px;
+  --erp-font-size-lg: 18px;
+  --erp-font-size-xl: 24px;
+  --erp-font-size-xxl: 32px;
+
+  /* Smaller than xs, for the two places a label has to shrink: a table
+     header and the sidebar's group captions. */
+  --erp-font-size-micro: 11px;
+  /* Between xs and sm. Pagination summaries, breadcrumbs, help text. */
+  --erp-font-size-2xs: 13px;
+
+  --erp-font-weight-regular: 400;
+  --erp-font-weight-medium: 500;
+  --erp-font-weight-semibold: 600;
+  --erp-font-weight-bold: 700;
+
+  /* --- Spacing --------------------------------------------------------- */
+
+  --erp-space-xs: 4px;
+  --erp-space-sm: 8px;
+  --erp-space-md: 12px;
+  --erp-space-lg: 16px;
+  --erp-space-xl: 24px;
+  --erp-space-xxl: 32px;
+  --erp-space-xxxl: 48px;
+
+  /* --- Radius ---------------------------------------------------------- */
+
+  /* Rounder than before, at every step. The corner radius is the single
+     value that does most of the work in how a product reads: 4/6/8 is the
+     bootstrap-era default and looks like it, while 6/8/14 reads as the
+     current generation of enterprise software without costing a pixel of
+     density.
+
+     `sm` is for something small and inline -- a badge's square sibling, a
+     swatch. `md` is every control: button, input, select. `lg` is a surface:
+     a card, a panel, a dialog. */
+  --erp-radius-sm: 6px;
+  --erp-radius-md: 8px;
+  --erp-radius-lg: 14px;
+  --erp-radius-pill: 999px;
+
+  /* --- Focus ----------------------------------------------------------- */
+
+  /* One ring, everywhere. Before this, form controls set `outline: none`
+     and signalled focus with a 1px border-colour change that a keyboard
+     user could easily miss -- see base.css for where this is applied. */
+  --erp-focus-ring-color: var(--erp-color-primary);
+  --erp-focus-ring-width: 2px;
+  --erp-focus-ring-offset: 2px;
+
+  /* --- Shell ----------------------------------------------------------- */
+
+  --erp-header-height: 60px;
+  /* Wide enough for a two-line workspace block and a grouped navigation
+     without the longest entry ("Number Sequences") wrapping. */
+  --erp-sidebar-width: 244px;
+
+  /* --- Navigation ------------------------------------------------------
+     The one place the chrome is styled.
+
+     Every rule in `layout.css` reads these and nothing else, so the rail,
+     the top bar and the mobile drawer cannot drift apart: changing the
+     active pill here changes it in all three. They are deliberately
+     *roles*, not literals -- each points at a colour role rather than a hex
+     value, so the six palettes and dark mode carry through without this
+     block knowing anything about them.
+
+     This is a common theme, not a customization surface. Nothing below is
+     exposed in Settings; Appearance still offers exactly colour, mode and
+     navigation placement. */
+
+  /* Comfortably over the 32px target floor, on a phone as much as a
+     desktop, without turning a twelve-entry rail into a scroll. */
+  --erp-nav-item-height: 38px;
+  --erp-nav-item-radius: var(--erp-control-radius);
+  --erp-nav-item-gap: 2px;
+  --erp-nav-item-padding: var(--erp-space-md);
+
+  /* The glyph beside a navigation label. 18px against a 14px label: large
+     enough to be recognised by shape at a glance, small enough that the word
+     is still what you read. Quiet by default and accented when current, so
+     the icon carries the state as well as the pill does. */
+  --erp-nav-icon-size: 18px;
+  --erp-nav-icon-gap: 10px;
+  --erp-nav-icon-color: var(--erp-color-text-subtle);
+  --erp-nav-icon-active-color: var(--erp-nav-item-active-color);
+
+  --erp-nav-item-color: var(--erp-color-text-secondary);
+  --erp-nav-item-hover-surface: var(--erp-color-surface-muted);
+  --erp-nav-item-hover-color: var(--erp-color-text);
+  --erp-nav-item-active-surface: var(--erp-color-primary-surface);
+  --erp-nav-item-active-color: var(--erp-color-primary);
+
+  /* The marker on the current entry. Carried as well by weight and colour,
+     so it is not the only thing saying "you are here". */
+  --erp-nav-indicator-size: 3px;
+
+  --erp-nav-caption-color: var(--erp-color-text-subtle);
+  --erp-nav-caption-tracking: 0.08em;
+
+  /* The rail sits on the page's own ground rather than on a white panel:
+     a rail the same colour as the cards beside it reads as a second
+     surface competing with the content. */
+  --erp-nav-surface: var(--erp-color-background);
+  --erp-nav-border: var(--erp-color-border);
+
+  /* --- Header ---------------------------------------------------------- */
+
+  --erp-header-surface: var(--erp-color-surface);
+  --erp-header-border: var(--erp-color-border);
+  /* Translucency is applied only where `backdrop-filter` is supported --
+     see `layout.css`. Without it the header stays solid, which is correct
+     rather than degraded. */
+  --erp-header-blur: 12px;
+  --erp-header-opacity: 82%;
+
+  /* --- Drawer (narrow screens) ----------------------------------------- */
+
+  --erp-drawer-width: 288px;
+  --erp-drawer-surface: var(--erp-color-surface);
+
+  /* --- Typographic roles -------------------------------------------------
+     What a piece of text *is*, rather than how big it is. Components pick a
+     role; the role picks the size. That indirection is the whole point --
+     before it, "small muted explanatory text" was fourteen class names at
+     four different sizes (11, 12, 13 and 14px) in the same muted colour,
+     so a description under a page title was 14px on one screen and 13px on
+     the next.
+
+     There are deliberately *two* muted roles, not one. A page or section
+     description and a field hint are genuinely different things; 13px and
+     11px for the same job were not. */
+
+  /* Sits directly under a page or section title and says what it is. */
+  --erp-text-description-size: var(--erp-font-size-sm);
+  /* Field help, captions, inline hints, metadata. */
+  --erp-text-helper-size: var(--erp-font-size-xs);
+  --erp-text-muted-color: var(--erp-color-text-muted);
+
+  /* Headings. `h1` was already 24/700 everywhere; `h2` was 18px on one
+     screen and 16px on the rest, and there was no subsection level at all. */
+  --erp-heading-page-size: var(--erp-font-size-xl);
+  --erp-heading-page-weight: var(--erp-font-weight-bold);
+  --erp-heading-section-size: var(--erp-font-size-md);
+  --erp-heading-section-weight: var(--erp-font-weight-semibold);
+  --erp-heading-subsection-size: var(--erp-font-size-sm);
+  --erp-heading-subsection-weight: var(--erp-font-weight-semibold);
+
+  /* --- Breakpoints -------------------------------------------------------
+     Three widths, each with a stated job. Custom properties cannot be used
+     inside a media query, so these are documented constants rather than
+     tokens -- the discipline is that there is a right answer to reach for,
+     and that a new module uses one of these rather than inventing a fourth.
+
+       sm   640px   one column; tables become cards; headers stack
+       md   900px   the shell's rail becomes the drawer; grids go 2-up
+       lg  1200px   full layout, side-by-side panels
+
+     Migrated from five values across three files (1100, 900, 720, 640,
+     560): 1100 -> lg, 720 -> sm, 560 -> sm.
+
+     There is deliberately no `xl`. A 1600px step was proposed, but nothing
+     in the product needs one yet and an unused breakpoint is a value that
+     drifts before it is ever exercised. Add it with the screen that wants
+     it. */
+
+  /* --- Measure and content width -----------------------------------------
+     Two constraints the product had none of.
+
+     Content was `max-width: none`, so at a 1920px monitor the well was
+     1676px wide and a label sat a monitor's width from its value. Prose had
+     no measure either: one section description rendered 1038px wide, about
+     173 characters per line, against a comfortable 60-75.
+
+     `--erp-measure` applies to prose only. Tables and data grids are
+     deliberately exempt -- a column that wraps to keep a reading measure is
+     a column that has stopped being scannable. */
+
+  --erp-content-max: 1440px;
+  --erp-measure: 68ch;
+
+  /* --- Surfaces ----------------------------------------------------------
+     A quiet ground for read-only context. Before this the administration
+     context strip used `--erp-color-primary-surface`, which made metadata
+     as loud as the selected navigation item -- and, in dark mode, louder
+     than the primary button. */
+
+  --erp-surface-muted-border: var(--erp-color-border);
+  --erp-surface-muted-bg: var(--erp-color-surface-muted);
+
+  /* --- Control sizing ----------------------------------------------------
+     The layer the spacing scale was missing.
+
+     `4 / 8 / 12 / 16 / 24` is a *layout* scale and has no correct answer for
+     "the vertical padding of a 38px input" -- which is why components were
+     reaching for 5, 6, 9, 10, 11, 14 and 20px, and why `10px` was used more
+     often than `12px`. Controls size themselves from these instead, so the
+     grid stays a grid and a button, an input and a select finally agree on
+     how tall they are.
+
+     Before this there were seven heights: 15, 20, 29, 34, 36, 38 and 40. */
+
+  --erp-control-height-compact: 30px;
+  --erp-control-height-sm: 32px;
+  --erp-control-height-md: 34px;
+  --erp-control-height-lg: 40px;
+
+  --erp-control-padding-sm: var(--erp-space-md);
+  --erp-control-padding-md: var(--erp-space-lg);
+  --erp-control-padding-lg: var(--erp-space-xl);
+
+  /* --- Forms -------------------------------------------------------------
+     What a field looks like, named as its own role so `forms.css` has
+     something to point at -- but resolving to the shared control sizing
+     rather than to anything of its own.
+
+     That last part is the decision. A field is not special: on a form, in
+     a dialog, in a list toolbar or in a filter bar, it sits beside a
+     button, a select and another field, and all four have to agree on how
+     tall they are or the row looks assembled rather than designed. One
+     pass gave form fields 38px against the product's 34px on the
+     reasoning that a field being filled in wants more room than one being
+     glanced at; what it actually bought was a two-pixel misalignment
+     everywhere the two met, and an ERP form four pixels less dense per
+     row for forty rows.
+
+     Density on a form is bought from the spacing instead -- see the
+     `--erp-form-*` block below, which is the only thing that varies. */
+
+  --erp-field-height: var(--erp-control-height-md);
+  --erp-field-radius: var(--erp-control-radius);
+  --erp-field-padding-x: 10px;
+  --erp-field-surface: var(--erp-color-surface);
+  --erp-field-border: var(--erp-color-border);
+
+  /* The halo around a focused field.
+
+     Mixed from the brand colour rather than written as a literal, which is
+     the defect this replaces: the ring was `rgba(37, 99, 235, 0.14)` -- the
+     default blue, frozen -- so a tenant on the green or purple palette got
+     a blue ring around every green-bordered field, and a tenant using the
+     custom brand picker got a ring that had nothing to do with their
+     brand at all. */
+  --erp-field-ring: 0 0 0 3px
+    color-mix(in srgb, var(--erp-color-primary) 18%, transparent);
+  --erp-field-ring-danger: 0 0 0 3px
+    color-mix(in srgb, var(--erp-color-danger) 16%, transparent);
+
+  /* --- Form density ------------------------------------------------------
+     How tightly a form packs, as four numbers rather than as forty
+     hard-coded gaps.
+
+     These four were declared here long before anything read them -- every
+     grid in the form stylesheet had its own literal, which is why the
+     two-column and three-column grids had drifted to different row gaps
+     for no reason anybody could state. They are now the only place form
+     spacing is decided, so making every screen in the product tighter or
+     roomier is an edit to this block.
+
+     The values are chosen for data entry, not for reading. An ERP form is
+     twelve to forty fields and the person filling it in has the next one
+     in mind already; every row of whitespace is a field pushed below the
+     fold. What stops that becoming cramped is the floor underneath it:
+     controls stay at the product's shared 34px, labels stay at 12px, and
+     anything you have to hit -- a checkbox, a radio, a switch -- keeps
+     `--erp-target-min` whatever the gaps do. Density is bought out of the
+     space between things, never out of the things themselves. */
+
+  /* Label to its control. Tight on purpose: the label belongs to the
+     field under it, and at 8px it starts to read as floating between the
+     field above and the field below. */
+  --erp-form-label-gap: 3px;
+  /* Field to the field beneath it. */
+  --erp-form-row-gap: 12px;
+  /* Column to column. Wider than the row gap, which is what tells the eye
+     the grid is columns of fields rather than one run of them. */
+  --erp-form-col-gap: 18px;
+  /* Section to section, and the padding inside one. */
+  --erp-form-section-gap: 12px;
+  --erp-form-section-padding: 13px 14px 14px;
+
+  /* One radius for everything you can click or type into. This is also what
+     the navigation's own 10px reconciles to -- it was a fifth value in a
+     four-value vocabulary. */
+  --erp-control-radius: var(--erp-radius-md);
+
+  /* --- Interactive targets ---------------------------------------------
+     The floor, as a token rather than as a sentence in a document. Applied
+     by the rules that need it instead of being restated per component.
+
+     A control may *look* smaller than this -- a switch track is 20px and
+     should stay 20px -- but the thing a finger or a trackpad has to hit
+     must not be. Where the two differ, the control keeps its visual size
+     and gains the hit area through padding. */
+
+  --erp-target-min: 32px;
+
+  /* --- Motion ---------------------------------------------------------- */
+
+  --erp-transition-fast: 120ms ease-in-out;
+}

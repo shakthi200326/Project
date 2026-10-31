@@ -1,0 +1,341 @@
+/**
+ * The themes: what each choice on the Appearance screen actually means.
+ *
+ * `tokens.css` declares every custom property once, with the product's
+ * default look. This file redeclares *some of them* under attribute
+ * selectors, and that is the whole theming mechanism:
+ *
+ *     <html data-erp-mode="dark" data-erp-color="purple">
+ *
+ * Nothing else in the product knows a theme exists. No component has a
+ * variant per colour, no React code computes a shade, and no stylesheet
+ * outside this one contains a hex value. A component drawn with
+ * `var(--erp-color-primary)` was already themed before this file was
+ * written -- it just had one theme to choose from.
+ *
+ * ## Why attributes rather than classes
+ *
+ * Custom properties inherit, so these rules work on any element, not only
+ * on `:root`. Putting the same attributes on a container re-themes that
+ * subtree and nothing else, which is how the Appearance screen previews a
+ * theme without applying it. A class would work identically; attributes are
+ * used because the value is one of a closed set and `data-erp-color="teal"`
+ * says that, while `.theme-teal` does not.
+ *
+ * ## Two rules for anyone adding a colour
+ *
+ * **1. `--erp-color-on-primary` is chosen, never assumed.** It is the text
+ * drawn on a primary fill, and white does not survive every hue: orange and
+ * teal at a usable saturation carry white at around 3:1. In dark mode the
+ * fills are light, so the text on them is near-black for every colour.
+ *
+ * **2. Every value here was checked against its background.** Primary is at
+ * least 4.5:1 against the surface it sits on, because it is link text as
+ * well as a button fill, and on-primary is at least 4.5:1 against primary.
+ * `theme.contrast.test.jsx` re-checks the whole matrix, so a value
+ * changed carelessly fails a test rather than shipping.
+ *
+ * ## `data-erp-mode` is always resolved
+ *
+ * It is only ever `light` or `dark`. The stored preference may be `system`,
+ * but the browser is the only thing that knows what the device prefers, so
+ * `ThemeProvider` resolves it through `matchMedia` and writes the answer.
+ * The preference itself is on `data-erp-mode-preference`, which styles
+ * nothing and exists so the state is visible in the DOM. This is why there
+ * is no `@media (prefers-color-scheme)` block below: it would be a second
+ * copy of every dark rule, kept in step by hand.
+ */
+
+/* ===========================================================================
+   Mode
+   ===========================================================================
+
+   Light is `tokens.css` and needs nothing here. Dark redeclares the neutral
+   ramp, the status colours and the elevation treatment.
+
+   Dark mode is not an inversion. The roles are preserved -- `surface` is
+   still what sits *above* `background` -- but every value is re-picked,
+   because the light palette's greens and reds do not read on a dark ground
+   and a filter cannot fix that. */
+
+:root[data-erp-mode="light"] {
+  color-scheme: light;
+}
+
+:root[data-erp-mode="dark"] {
+  --erp-color-primary-fill: #2563eb;
+  --erp-color-on-primary-fill: #ffffff;
+  /* So native scrollbars, form widgets and the browser's own UI match the
+     page rather than staying light around a dark document. */
+  color-scheme: dark;
+
+  /* --- Neutrals ------------------------------------------------------- */
+
+  --erp-color-surface: #1e293b;
+  --erp-color-background: #0f172a;
+  --erp-color-surface-muted: #273549;
+  --erp-color-surface-tint: #273549;
+  --erp-color-border-subtle: #334155;
+
+  /* Borders carry more of the structure in dark mode than in light, where
+     a shadow can do some of the work. These sit at roughly the same visual
+     weight against their surface as the light borders do against white. */
+  --erp-color-border: #334155;
+  --erp-color-border-strong: #64748b;
+
+  --erp-color-text: #f1f5f9;
+  --erp-color-text-secondary: #cbd5e1;
+  --erp-color-text-muted: #94a3b8;
+  --erp-color-text-subtle: #64748b;
+
+  /* --- Brand ---------------------------------------------------------- */
+
+  /* Blue, the default, restated here so the dark theme is complete even for
+     a document carrying no `data-erp-color` at all. */
+  --erp-color-primary: #60a5fa;
+  --erp-color-primary-strong: #93c5fd;
+  --erp-color-primary-surface: #172554;
+  --erp-color-primary-border: #1e40af;
+  /* Near-black, not white: every dark-mode primary is a light fill. */
+  --erp-color-on-primary: #0f172a;
+
+  /* --- Status --------------------------------------------------------- */
+
+  --erp-color-success: #4ade80;
+  --erp-color-success-strong: #86efac;
+  --erp-color-success-surface: #052e16;
+  --erp-color-success-badge: #14532d;
+
+  --erp-color-warning-badge: #422006;
+  --erp-color-warning: #fbbf24;
+  --erp-color-warning-strong: #fcd34d;
+  --erp-color-warning-surface: #422006;
+
+  --erp-color-danger-badge: #450a0a;
+  --erp-color-danger: #f87171;
+  --erp-color-danger-strong: #fca5a5;
+  --erp-color-danger-stronger: #fecaca;
+  --erp-color-danger-surface: #450a0a;
+  --erp-color-danger-border: #7f1d1d;
+  --erp-color-on-danger: #450a0a;
+
+  --erp-color-info: #38bdf8;
+  --erp-color-info-strong: #7dd3fc;
+  --erp-color-info-surface: #082f49;
+  --erp-color-info-badge: #082f49;
+
+  /* --- Elevation and overlay ------------------------------------------ */
+
+  /* Darker and heavier than the light backdrop: a translucent slate over a
+     dark page is barely a backdrop at all. */
+  --erp-color-backdrop: rgba(2, 6, 23, 0.7);
+
+  /* Heavier than the light values, and deliberately: a shadow on a dark
+     ground has almost nothing to darken, so the separation has to come from
+     a deeper, wider one. Borders carry more of the structure here, which is
+     why the dark border tokens above are a step stronger. */
+  --erp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.25);
+  --erp-shadow-raised: 0 4px 6px -2px rgba(0, 0, 0, 0.3),
+    0 12px 28px -4px rgba(0, 0, 0, 0.45);
+}
+
+/* ===========================================================================
+   Colour
+   ===========================================================================
+
+   Five properties per colour per mode, and nothing else. Every other brand
+   surface in the product -- the active navigation item, a focus ring, a
+   chart line, a link, a primary button -- is already drawn from one of
+   these, which is why adding a colour is this small.
+
+   Blue is omitted for light mode on purpose: it is what `tokens.css`
+   already declares, so `data-erp-color="blue"` needs no rule and the
+   default theme costs nothing to render. */
+
+:root[data-erp-color="green"] {
+  --erp-color-primary-fill: #047857;
+  --erp-color-on-primary-fill: #ffffff;
+
+  --erp-color-primary: #047857;
+  --erp-color-primary-strong: #065f46;
+  --erp-color-primary-surface: #ecfdf5;
+  --erp-color-primary-border: #a7f3d0;
+  --erp-color-on-primary: #ffffff;
+}
+
+:root[data-erp-color="purple"] {
+  --erp-color-primary-fill: #7c3aed;
+  --erp-color-on-primary-fill: #ffffff;
+
+  --erp-color-primary: #7c3aed;
+  --erp-color-primary-strong: #5b21b6;
+  --erp-color-primary-surface: #f5f3ff;
+  --erp-color-primary-border: #ddd6fe;
+  --erp-color-on-primary: #ffffff;
+}
+
+/* A step darker than the orange most palettes would reach for. The obvious
+   choice fails as link text on white at around 3.6:1, and a brand colour
+   that cannot be a link is not a brand colour for this product. */
+:root[data-erp-color="orange"] {
+  --erp-color-primary-fill: #c2410c;
+  --erp-color-on-primary-fill: #ffffff;
+
+  --erp-color-primary: #c2410c;
+  --erp-color-primary-strong: #9a3412;
+  --erp-color-primary-surface: #fff7ed;
+  --erp-color-primary-border: #fed7aa;
+  --erp-color-on-primary: #ffffff;
+}
+
+/* Rose rather than a pure red, deliberately. `--erp-color-danger` is red,
+   and a primary button that looks like the delete button is a usability
+   problem rather than a theme. This stays clearly on the pink side of it. */
+:root[data-erp-color="red"] {
+  --erp-color-primary-fill: #be123c;
+  --erp-color-on-primary-fill: #ffffff;
+
+  --erp-color-primary: #be123c;
+  --erp-color-primary-strong: #9f1239;
+  --erp-color-primary-surface: #fff1f2;
+  --erp-color-primary-border: #fecdd3;
+  --erp-color-on-primary: #ffffff;
+}
+
+:root[data-erp-color="teal"] {
+  --erp-color-primary-fill: #0f766e;
+  --erp-color-on-primary-fill: #ffffff;
+
+  --erp-color-primary: #0f766e;
+  --erp-color-primary-strong: #115e59;
+  --erp-color-primary-surface: #f0fdfa;
+  --erp-color-primary-border: #99f6e4;
+  --erp-color-on-primary: #ffffff;
+}
+
+/* --- Colour in dark mode ---------------------------------------------------
+ *
+ * Every fill becomes light and every text-on-fill becomes dark. The two
+ * attributes together outrank the single-attribute rules above by
+ * specificity, so source order is not what is holding this up.
+ *
+ * Blue is present here where it was absent above, because the dark defaults
+ * in the mode block need something to be overridden *by* when a document
+ * carries `data-erp-color="blue"` explicitly -- and restating it is clearer
+ * than relying on the two being the same. */
+
+:root[data-erp-mode="dark"][data-erp-color="blue"] {
+  --erp-color-primary-fill: #2563eb;
+  --erp-color-on-primary-fill: #ffffff;
+  --erp-color-primary: #60a5fa;
+  --erp-color-primary-strong: #93c5fd;
+  --erp-color-primary-surface: #172554;
+  --erp-color-primary-border: #1e40af;
+  --erp-color-on-primary: #0f172a;
+}
+
+:root[data-erp-mode="dark"][data-erp-color="green"] {
+  --erp-color-primary-fill: #047857;
+  --erp-color-on-primary-fill: #ffffff;
+  --erp-color-primary: #34d399;
+  --erp-color-primary-strong: #6ee7b7;
+  --erp-color-primary-surface: #022c22;
+  --erp-color-primary-border: #065f46;
+  --erp-color-on-primary: #022c22;
+}
+
+:root[data-erp-mode="dark"][data-erp-color="purple"] {
+  --erp-color-primary-fill: #7c3aed;
+  --erp-color-on-primary-fill: #ffffff;
+  --erp-color-primary: #a78bfa;
+  --erp-color-primary-strong: #c4b5fd;
+  --erp-color-primary-surface: #2e1065;
+  --erp-color-primary-border: #5b21b6;
+  --erp-color-on-primary: #1e1b4b;
+}
+
+:root[data-erp-mode="dark"][data-erp-color="orange"] {
+  --erp-color-primary-fill: #c2410c;
+  --erp-color-on-primary-fill: #ffffff;
+  --erp-color-primary: #fb923c;
+  --erp-color-primary-strong: #fdba74;
+  --erp-color-primary-surface: #431407;
+  --erp-color-primary-border: #9a3412;
+  --erp-color-on-primary: #431407;
+}
+
+:root[data-erp-mode="dark"][data-erp-color="red"] {
+  --erp-color-primary-fill: #be123c;
+  --erp-color-on-primary-fill: #ffffff;
+  /* Two steps lighter than the obvious rose-400. That one sits within about
+     eight degrees of hue of `--erp-color-danger` on a dark ground, which the
+     contrast matrix flagged: a primary button and a delete button that are
+     the same colour is a usability problem rather than a theme. This keeps
+     the hue and separates them by lightness instead. */
+  --erp-color-primary: #fda4af;
+  --erp-color-primary-strong: #fecdd3;
+  --erp-color-primary-surface: #4c0519;
+  --erp-color-primary-border: #9f1239;
+  --erp-color-on-primary: #4c0519;
+}
+
+:root[data-erp-mode="dark"][data-erp-color="teal"] {
+  --erp-color-primary-fill: #0f766e;
+  --erp-color-on-primary-fill: #ffffff;
+  --erp-color-primary: #2dd4bf;
+  --erp-color-primary-strong: #5eead4;
+  --erp-color-primary-surface: #042f2e;
+  --erp-color-primary-border: #115e59;
+  --erp-color-on-primary: #042f2e;
+}
+
+/* ===========================================================================
+   Swatches
+   ===========================================================================
+
+   The Appearance screen has to show what each colour *is* before it has been
+   chosen, so it cannot read `--erp-color-primary` -- that is the colour in
+   force, not the colour on offer. These are the same values as above, named
+   so one element can render any of them.
+
+   The one place in the product where a colour is addressed by its own name
+   rather than by its role, and it is correct here for the same reason it is
+   wrong everywhere else: the swatch's job *is* to be that colour. */
+
+.erp-swatch[data-erp-swatch="blue"] {
+  --erp-swatch-color: #2563eb;
+}
+.erp-swatch[data-erp-swatch="green"] {
+  --erp-swatch-color: #047857;
+}
+.erp-swatch[data-erp-swatch="purple"] {
+  --erp-swatch-color: #7c3aed;
+}
+.erp-swatch[data-erp-swatch="orange"] {
+  --erp-swatch-color: #c2410c;
+}
+.erp-swatch[data-erp-swatch="red"] {
+  --erp-swatch-color: #be123c;
+}
+.erp-swatch[data-erp-swatch="teal"] {
+  --erp-swatch-color: #0f766e;
+}
+
+:root[data-erp-mode="dark"] .erp-swatch[data-erp-swatch="blue"] {
+  --erp-swatch-color: #60a5fa;
+}
+:root[data-erp-mode="dark"] .erp-swatch[data-erp-swatch="green"] {
+  --erp-swatch-color: #34d399;
+}
+:root[data-erp-mode="dark"] .erp-swatch[data-erp-swatch="purple"] {
+  --erp-swatch-color: #a78bfa;
+}
+:root[data-erp-mode="dark"] .erp-swatch[data-erp-swatch="orange"] {
+  --erp-swatch-color: #fb923c;
+}
+:root[data-erp-mode="dark"] .erp-swatch[data-erp-swatch="red"] {
+  --erp-swatch-color: #fb7185;
+}
+:root[data-erp-mode="dark"] .erp-swatch[data-erp-swatch="teal"] {
+  --erp-swatch-color: #2dd4bf;
+}

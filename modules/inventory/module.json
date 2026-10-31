@@ -1,0 +1,30 @@
+{
+  "code": "inventory",
+  "name": "Inventory Management",
+  "version": "3.1.0",
+  "description": "Universal enterprise inventory management engine with multi-warehouse, serial/batch tracking, valuation, and immutable ledger.",
+  "type": "business_module",
+  "enabled": true,
+  "author": "Universal Business Modules Team",
+  "backend_app": "modules.inventory.backend",
+  "frontend_entry": "modules/inventory/frontend/src/app",
+  "database_schema": "inventory",
+  "dependencies": [],
+  "future_integrations": [
+    { "module": "purchase", "contracts": ["purchase.receipt"] },
+    { "module": "sales", "contracts": ["sales.reservation", "sales.dispatch", "sales.release"] }
+  ],
+  "permissions": [
+    "inventory.view_catalog",
+    "inventory.manage_catalog",
+    "inventory.view_warehouses",
+    "inventory.manage_warehouses",
+    "inventory.view_stock",
+    "inventory.post_movement",
+    "inventory.reverse_movement",
+    "inventory.manage_reservations",
+    "inventory.manage_reconciliation",
+    "inventory.view_valuation",
+    "inventory.manage_configuration"
+  ]
+}

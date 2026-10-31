@@ -1,0 +1,101 @@
+/**
+ * The document-level styles the whole product relies on.
+ *
+ * These were in `core/layout/layout.css`, which is imported by `ERPLayout`.
+ * That made the box model and the product's typeface dependent on one
+ * component being mounted -- the sign-in screen sits outside the shell and
+ * was, on paper, getting neither. The bundler hid it; the arrangement was
+ * still wrong. They belong to the design system, which every screen loads.
+ *
+ * Deliberately small. This is a reset and three document facts, not a
+ * utility layer.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--erp-font-sans);
+  font-size: var(--erp-font-size-sm);
+  color: var(--erp-color-text);
+  background: var(--erp-color-background);
+  /* Inter and most UI faces look thin without it on macOS. */
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Headings ---------------------------------------------------------------
+ *
+ * Three levels, from the role tokens, applied once.
+ *
+ * Every heading in the product today is styled by whichever component
+ * renders it, so nothing is currently falling back to the browser default.
+ * That is luck, not design: a `<h2>` in a component that forgets to style it
+ * gets the UA default -- around 21px at 700, with `0.83em` margins that are
+ * off the spacing scale entirely. This closes that door rather than waiting
+ * for somebody to walk through it.
+ *
+ * Margins are zeroed because every container here owns its own spacing; a
+ * heading that brings its own margin fights the gap of the flex column it
+ * sits in.
+ */
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  line-height: 1.3;
+}
+
+h1 {
+  font-size: var(--erp-heading-page-size);
+  font-weight: var(--erp-heading-page-weight);
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-size: var(--erp-heading-section-size);
+  font-weight: var(--erp-heading-section-weight);
+}
+
+h3,
+h4 {
+  font-size: var(--erp-heading-subsection-size);
+  font-weight: var(--erp-heading-subsection-weight);
+}
+
+/* --- Focus -----------------------------------------------------------------
+ *
+ * One ring for everything focusable, applied once rather than per component.
+ *
+ * `:focus-visible` rather than `:focus`, so a mouse click on a button does
+ * not leave a ring behind while a Tab to the same button does. Browsers
+ * already make that judgement; this only says what the ring looks like.
+ *
+ * Form controls previously set `outline: none` and signalled focus with a
+ * 1px border-colour change. That is the defect this replaces: it was easy
+ * to miss, and on the fields it mattered most -- a search box, a form in a
+ * dialog -- there was nothing else to see. The border change is kept, since
+ * it reads well alongside the ring; the outline is no longer removed.
+ */
+
+:focus-visible {
+  outline: var(--erp-focus-ring-width) solid var(--erp-focus-ring-color);
+  outline-offset: var(--erp-focus-ring-offset);
+}
+
+/* Containers that take focus on the user's behalf rather than by Tab -- a
+ * dialog panel when it opens -- should not draw a ring: there is nothing
+ * there to act on, and the dialog itself is the visible change.
+ *
+ * Scoped to the one element that does it, not written as a blanket
+ * `[tabindex="-1"]` rule. A menu item is also `tabindex="-1"` and is moved
+ * between by the arrow keys, where the ring is exactly what the user needs.
+ */
+.erp-modal:focus {
+  outline: none;
+}

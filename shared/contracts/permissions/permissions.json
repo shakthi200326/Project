@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EcosystemPermissionsCatalogue",
+  "modules": {
+    "inventory": [
+      { "codename": "inventory.view_catalog", "name": "Can view products and catalog" },
+      { "codename": "inventory.manage_catalog", "name": "Can create and edit products, categories, variants" },
+      { "codename": "inventory.view_warehouses", "name": "Can view warehouses and locations" },
+      { "codename": "inventory.manage_warehouses", "name": "Can create and edit warehouses and locations" },
+      { "codename": "inventory.view_stock", "name": "Can view stock balances and ledger" },
+      { "codename": "inventory.post_movement", "name": "Can post stock in, out, transfer, and adjustments" },
+      { "codename": "inventory.reverse_movement", "name": "Can reverse posted stock transactions" },
+      { "codename": "inventory.manage_reservations", "name": "Can create, release, and fulfill reservations" },
+      { "codename": "inventory.manage_reconciliation", "name": "Can create stock counts and post adjustments" },
+      { "codename": "inventory.view_valuation", "name": "Can view stock valuation and cost analytics" },
+      { "codename": "inventory.manage_configuration", "name": "Can edit inventory settings and reorder rules" }
+    ],
+    "storage": [
+      { "codename": "storage.upload_file", "name": "Can upload files to storage" },
+      { "codename": "storage.view_file", "name": "Can view and download files" },
+      { "codename": "storage.delete_file", "name": "Can delete stored files" }
+    ]
+  }
+}

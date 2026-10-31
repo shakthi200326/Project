@@ -1,0 +1,1456 @@
+/**
+ * Every form in ONE ERP, in one file.
+ *
+ * These rules were spread through `design-system.css` among the tables,
+ * badges and toasts -- the input sat at line 72, the textarea that has to
+ * match it at line 1591, and the two had already drifted apart on padding
+ * and on what focus looks like. A form is the screen a user spends minutes
+ * on rather than seconds, and it is worth being able to see all of it at
+ * once.
+ *
+ * ## What the redesign is
+ *
+ * Three things, in order of how much they change:
+ *
+ * **Sections became cards.** A twelve-field record used to be one grid
+ * with grey uppercase captions ruled off by hairlines. Now each group is a
+ * panel with a numbered chip, a readable title and its own ground, and the
+ * one you are typing in lifts -- `:focus-within` does that, so the form
+ * follows the cursor without a line of JavaScript.
+ *
+ * **Controls got a real focus state**, not more room. The brand-coloured
+ * halo is mixed from the theme rather than frozen at the default blue,
+ * and checkboxes and radios are drawn rather than left to the browser --
+ * which is the single biggest thing that made the old screens read as a
+ * 2014 admin template. The control itself stays at the product's shared
+ * 34px; see the note on `.erp-form`.
+ *
+ * **The page learned where it is.** The header stays put, the section
+ * stepper under it tracks what you are filling in, and the action bar is
+ * always at the bottom of the viewport with its Save in reach.
+ *
+ * ## Density
+ *
+ * Density is the point. This is an ERP: the person filling a form in has
+ * the next field in mind already, and every row of whitespace is a field
+ * pushed below the fold. Nothing here trades a field per screen for air.
+ *
+ * Where the tightening happens is the space *between* things, never the
+ * things themselves -- the four `--erp-form-*` tokens own every gap and
+ * every pad in this file, so the whole product gets tighter or roomier
+ * from one block in `tokens.css`. Underneath them sits a floor that the
+ * tokens cannot cross: controls at 34px, labels at 12px, and a
+ * `--erp-target-min` hit area on anything you have to click. A form can
+ * be dense or it can be unusable, and the difference between the two is
+ * entirely in which of those two groups you take the pixels from.
+ *
+ * Colour comes from `tokens.css`, which means the six palettes, dark mode
+ * and the custom brand picker all carry through here without this file
+ * knowing they exist. The two exceptions are deliberate and are the same
+ * exception twice: the tick inside a checked box and the thumb on a switch
+ * track are white in both modes, because both are a mark on a saturated
+ * brand fill rather than text on a surface -- which is why the primary
+ * button's label is white in dark mode too.
+ */
+
+/* ===========================================================================
+   The form shell
+   =========================================================================== */
+
+/* One field size, everywhere.
+
+   An earlier pass gave a field inside a form four more pixels than one in
+   a list toolbar, on the reasoning that a field being filled in wants
+   more room than a field being glanced at. That was wrong twice over. It
+   made an ERP form less dense exactly where density is the point -- forty
+   fields, and every one of them four pixels further from the next -- and
+   it broke the alignment that makes a toolbar look built, because a 38px
+   field beside a 34px button is visibly off by two pixels top and bottom.
+
+   So the override is gone and `--erp-field-height` resolves to the
+   product's shared control height for every field in the product. What
+   the form still gets to itself is its spacing, which is where density
+   actually lives; see the `--erp-form-*` tokens. */
+.erp-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--erp-form-section-gap);
+}
+
+/* A full-page create or edit screen (`RecordForm`).
+
+   Full width, which is a reversal: the form used to be capped at 1180px
+   and centred, on the argument that a field is read left-to-right and a
+   1600px input is no easier to use than a 640px one. That argument is
+   true of a *field* and was being applied to the *form*, which is not the
+   same thing -- an ERP record is twelve to forty fields laid out in two,
+   three and four columns, and capping the container made those columns
+   narrow rather than making the form readable. A four-column row of dates
+   and amounts at 1180px is four cramped columns and two empty gutters.
+
+   What keeps an individual field from becoming a 1600px text box is the
+   column count the section asked for, which is where that decision
+   belongs: a module that wants one wide field says `columns={1}`.
+
+   The panel is what says where the document begins and ends. Its shadow
+   is wide and faint -- depth in a current interface comes from a large
+   soft shadow, not a tight dark one. */
+.erp-record-form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--erp-color-border) 85%, transparent);
+  border-radius: var(--erp-radius-lg);
+  background: var(--erp-color-surface);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
+    0 12px 32px -12px rgba(15, 23, 42, 0.12);
+  position: relative;
+  /* Not `hidden`: the sticky header and action bar inside need a scroll
+     container that is the page, and an `overflow` of anything but
+     `visible` on an ancestor silently kills `position: sticky`. */
+  overflow: visible;
+}
+
+/* And the page around it, which caps itself at `--erp-content-max` so a
+   dashboard does not run a metric strip the width of a 32" monitor. A
+   form is the one screen where that cap is wrong, so `RecordForm` opts
+   its page out of it rather than every other screen having to opt in.
+
+   Written with the class twice so it outscores `.erp-page` on
+   specificity rather than on which stylesheet happens to load last. */
+.erp-page.erp-page-form {
+  max-width: none;
+}
+
+/* The trail above the panel. Outside it, because where you are in the
+   product is a fact about the page, not about the document on it. */
+.erp-record-form-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--erp-space-sm);
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+
+/* ===========================================================================
+   The header
+   ===========================================================================
+
+   Sticky, so the name of the thing being edited is still on screen at the
+   bottom of a long form. Three sections in and "what am I filling in
+   again" is a real question, and scrolling back up to answer it loses your
+   place in the form.
+
+   The tinted ground is what separates it from the fields once it is
+   floating over them; a transparent header sticking over inputs reads as a
+   rendering bug. */
+.erp-record-form-head {
+  position: sticky;
+  /* Below the shell's own chrome, which is sticky too: a 60px header, 64px
+     inside administration, plus a navigation bar that exists only in the
+     top layout and rewraps to two rows on a narrow window. `RecordForm`
+     measures the lot and publishes the total here; a form rendered outside
+     the shell gets the 0 in the fallback, which is the right answer. */
+  top: var(--erp-form-sticky-top, 0px);
+  z-index: 22;
+  padding: 12px 18px 11px;
+  border-bottom: 1px solid var(--erp-color-border);
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    var(--erp-color-surface) 0%,
+    color-mix(in srgb, var(--erp-color-surface-muted) 45%, var(--erp-color-surface)) 100%
+  );
+}
+
+/* The title block is `PageHeader`, which brings its own `h1` and spacing.
+   A form's title is the document's name rather than the page's, so it is
+   stepped down here -- 24px bold is the right size for "Customers" at the
+   top of a list and too loud for "Edit customer" inside a panel. */
+.erp-record-form-head .erp-page-heading {
+  gap: 2px;
+}
+
+.erp-record-form-head h1 {
+  font-size: var(--erp-font-size-lg);
+  font-weight: var(--erp-font-weight-semibold);
+  letter-spacing: -0.015em;
+}
+
+.erp-record-form-head .erp-page-eyebrow {
+  font-size: var(--erp-font-size-micro);
+  letter-spacing: 0.07em;
+}
+
+.erp-record-form-head .erp-page-description {
+  max-width: var(--erp-measure);
+  font-size: var(--erp-font-size-2xs);
+}
+
+/* ===========================================================================
+   The section stepper
+   ===========================================================================
+
+   A jump list, and a map. A four-section purchase order is four screens of
+   scrolling, and without this the only way to reach "Totals" is to roll
+   past everything between -- which is also the only way to find out how
+   much form is left.
+
+   Sticky directly under the header, so both of the "where am I" answers
+   travel together. */
+.erp-form-stepper {
+  position: sticky;
+  /* Under the form's header, which is under the shell's. A hair of overlap
+     rather than a gap: a 1px seam between two sticky bars shows the
+     content sliding through it. */
+  top: calc(
+    var(--erp-form-sticky-top, 0px) + var(--erp-form-head-height, 62px) - 1px
+  );
+  z-index: 21;
+  display: flex;
+  gap: 6px;
+  padding: 6px 18px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  border-bottom: 1px solid var(--erp-color-border);
+  background: color-mix(
+    in srgb,
+    var(--erp-color-surface-muted) 55%,
+    var(--erp-color-surface)
+  );
+}
+
+.erp-form-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 0 12px 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--erp-radius-pill);
+  background: transparent;
+  color: var(--erp-color-text-muted);
+  font-family: inherit;
+  font-size: var(--erp-font-size-xs);
+  font-weight: var(--erp-font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--erp-transition-fast),
+    color var(--erp-transition-fast), border-color var(--erp-transition-fast);
+}
+
+.erp-form-step:hover {
+  background: var(--erp-color-surface);
+  border-color: var(--erp-color-border);
+  color: var(--erp-color-text);
+}
+
+/* The current section, by where the page is scrolled to. Carried by fill,
+   border and weight together rather than by colour alone -- one of these
+   on its own is a state a colour-blind user has to infer. */
+.erp-form-step.is-active {
+  background: var(--erp-color-surface);
+  border-color: var(--erp-color-primary-border);
+  color: var(--erp-color-primary);
+  font-weight: var(--erp-font-weight-semibold);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+/* The number in the chip. Reuses the section's own index, so the stepper
+   and the section headings agree about what "3" means. */
+.erp-form-step-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--erp-radius-pill);
+  background: var(--erp-color-surface-muted);
+  color: var(--erp-color-text-muted);
+  font-size: 10px;
+  font-weight: var(--erp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  transition: background var(--erp-transition-fast),
+    color var(--erp-transition-fast);
+}
+
+.erp-form-step.is-active .erp-form-step-index {
+  background: var(--erp-color-primary);
+  color: var(--erp-color-on-primary-fill);
+}
+
+/* A section with a failed field in it. The stepper is the only place the
+   problem is visible once it has scrolled off, which is the whole reason
+   to mark it here. */
+.erp-form-step.has-error {
+  color: var(--erp-color-danger);
+  border-color: var(--erp-color-danger-border);
+}
+
+.erp-form-step.has-error .erp-form-step-index {
+  background: var(--erp-color-danger-badge);
+  color: var(--erp-color-danger-strong);
+}
+
+/* ===========================================================================
+   The body and its grids
+   =========================================================================== */
+
+.erp-record-form-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--erp-space-md);
+  padding: 14px 18px 18px;
+}
+
+/* Two columns, and the exceptions that span both.
+
+   A textarea is the interesting case: it is a field like any other, but at
+   half width it is a letterbox, and the thing it holds -- notes, an
+   address, terms -- is the one field on the form that is genuinely read as
+   prose. `:has()` catches it without the caller having to remember. */
+.erp-record-form-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--erp-form-col-gap);
+  row-gap: var(--erp-form-row-gap);
+  align-items: start;
+}
+
+.erp-record-form-fields > :not(.erp-input-group):not(.erp-checkbox-group),
+.erp-record-form-fields > .erp-input-group:has(textarea),
+.erp-record-form-fields > .erp-col-span-full {
+  grid-column: 1 / -1;
+}
+
+/* Multi-column grid utilities, for a module laying out its own block of
+   fields outside a section. */
+.erp-form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--erp-form-col-gap);
+  row-gap: var(--erp-form-row-gap);
+  align-items: start;
+}
+
+.erp-form-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: var(--erp-form-col-gap);
+  row-gap: var(--erp-form-row-gap);
+  align-items: start;
+}
+
+.erp-form-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: var(--erp-space-md);
+  row-gap: var(--erp-form-row-gap);
+  align-items: start;
+}
+
+.erp-col-span-1 { grid-column: span 1; }
+.erp-col-span-2 { grid-column: span 2; }
+.erp-col-span-3 { grid-column: span 3; }
+.erp-col-span-full { grid-column: 1 / -1; }
+
+/* ===========================================================================
+   Sections
+   ===========================================================================
+
+   Still a `<fieldset>` with a `<legend>`, for the reason `FormSection.jsx`
+   gives at length: a screen reader announces the legend as part of every
+   control inside it, so "Price" in a group called "Commercial" is read as
+   "Commercial, Price" without the field carrying the word. A `div` and an
+   `h3` look identical and say nothing.
+
+   What changed is everything around that. The group used to be ruled off
+   from the next one by a hairline and captioned in grey uppercase at 12px;
+   it is now a panel with a ground of its own, which is the difference
+   between a form that looks like a database table and one that looks like
+   a document. */
+.erp-form-section {
+  grid-column: 1 / -1;
+  display: block;
+  min-width: 0;
+  margin: 0;
+  padding: var(--erp-form-section-padding);
+  border: 1px solid color-mix(in srgb, var(--erp-color-border) 75%, transparent);
+  border-radius: var(--erp-radius-lg);
+  background: color-mix(
+    in srgb,
+    var(--erp-color-surface-muted) 32%,
+    var(--erp-color-surface)
+  );
+  /* Cleared by the stepper's jump so a section does not land underneath
+     the sticky bars it was scrolled to from. The 56px is the stepper plus
+     a little air; the other two are measured. */
+  scroll-margin-top: calc(
+    var(--erp-form-sticky-top, 0px) + var(--erp-form-head-height, 62px) + 46px
+  );
+  transition: border-color var(--erp-transition-fast),
+    background var(--erp-transition-fast), box-shadow var(--erp-transition-fast);
+}
+
+.erp-form-section + .erp-form-section {
+  margin-top: var(--erp-form-section-gap);
+}
+
+/* The section being filled in lifts out of the stack.
+
+   `:focus-within` and nothing else -- no state, no handler, no prop. The
+   form follows the cursor because the browser already knows where it is.
+   The effect is deliberately small: enough to answer "which group am I
+   in" at a glance, not enough to be a movement on the page every time
+   focus crosses a boundary. */
+.erp-form-section:focus-within {
+  border-color: var(--erp-color-primary-border);
+  /* Towards the brand rather than towards the card colour. Lifting to
+     `surface` reads as "active" in light mode and as the opposite in
+     dark, where the card is the darker of the two -- the section you are
+     typing in would be the one that receded. `primary-surface` is a pale
+     tint in light and a deep brand shade in dark, so mixing towards it
+     moves the panel the same direction in both. */
+  background: color-mix(
+    in srgb,
+    var(--erp-color-primary-surface) 45%,
+    var(--erp-color-surface)
+  );
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 24px -14px rgba(15, 23, 42, 0.22);
+}
+
+/* A legend is laid out by the browser as a notch cut into the fieldset's
+   border. Everything here is undoing that so it can be an ordinary block
+   at the top of the panel. */
+.erp-form-section-legend {
+  display: block;
+  float: none;
+  width: 100%;
+  margin: 0 0 9px;
+  padding: 0;
+}
+
+.erp-form-section-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* The step number.
+
+   Most forms in the product were already numbering their sections by
+   typing "1." into the title, which meant the number was prose: it could
+   not be styled, could not be reused by the stepper, and went wrong the
+   moment a section was inserted. `FormSection` now takes the number off
+   the title and renders it here instead. */
+.erp-form-section-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border-radius: var(--erp-radius-sm);
+  background: var(--erp-color-primary-surface);
+  border: 1px solid var(--erp-color-primary-border);
+  color: var(--erp-color-primary);
+  font-size: var(--erp-font-size-micro);
+  font-weight: var(--erp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-form-section-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  color: var(--erp-color-primary);
+}
+
+.erp-form-section-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* Sentence case at a readable size, not grey uppercase at 12px.
+
+   Tracked uppercase is a *label* treatment -- it is right for a table
+   column header, which is a word introducing a column of data. A section
+   title is a heading introducing a piece of a document, and setting it
+   like a column header is what made these screens read as a database
+   front-end. */
+.erp-form-section-title {
+  display: block;
+  color: var(--erp-color-text);
+  font-size: var(--erp-font-size-sm);
+  font-weight: var(--erp-font-weight-semibold);
+  letter-spacing: -0.005em;
+  text-transform: none;
+}
+
+.erp-form-section-description {
+  display: block;
+  max-width: var(--erp-measure);
+  color: var(--erp-color-text-muted);
+  font-size: var(--erp-font-size-xs);
+  font-weight: var(--erp-font-weight-regular);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.erp-form-section-badge {
+  flex: 0 0 auto;
+  padding: 2px 9px;
+  border: 1px solid var(--erp-color-border);
+  border-radius: var(--erp-radius-pill);
+  background: var(--erp-color-surface);
+  color: var(--erp-color-text-muted);
+  font-size: var(--erp-font-size-micro);
+  font-weight: var(--erp-font-weight-medium);
+}
+
+.erp-form-section-action {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+}
+
+.erp-form-section-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--erp-form-col-gap);
+  row-gap: var(--erp-form-row-gap);
+  align-items: start;
+}
+
+.erp-form-section-fields.erp-form-fields--3col {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: var(--erp-form-col-gap);
+}
+
+.erp-form-section-fields.erp-form-fields--4col {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: var(--erp-space-md);
+  row-gap: var(--erp-form-row-gap);
+}
+
+.erp-form-section-fields.erp-form-fields--1col {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.erp-form-section-fields > :not(.erp-input-group):not(.erp-checkbox-group),
+.erp-form-section-fields > .erp-input-group:has(textarea),
+.erp-form-section-fields > .erp-col-span-full {
+  grid-column: 1 / -1;
+}
+
+/* ===========================================================================
+   The field frame
+   =========================================================================== */
+
+.erp-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--erp-form-label-gap);
+  position: relative;
+  min-width: 0;
+}
+
+/* The direct child only, and that matters.
+
+   A radio set is a `<fieldset class="erp-input-group">` whose options are
+   each a `<label>` -- so written as a descendant this rule outscored
+   `.erp-radio` on specificity and set every radio option in 12px
+   semibold secondary, the treatment meant for the caption above a field
+   rather than for the choice beside a dot. */
+.erp-input-group > label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--erp-color-text-secondary);
+  font-size: var(--erp-font-size-xs);
+  font-weight: var(--erp-font-weight-semibold);
+  line-height: 1.3;
+}
+
+/* A label with something beside it -- a badge, an inline action -- is a
+   row rather than a word, and the two have to be pushed apart. */
+.erp-field-label-text {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.erp-field-badge {
+  padding: 1px 7px;
+  border-radius: var(--erp-radius-pill);
+  background: var(--erp-color-surface-muted);
+  color: var(--erp-color-text-muted);
+  font-size: var(--erp-font-size-micro);
+  font-weight: var(--erp-font-weight-medium);
+}
+
+.erp-field-action {
+  margin-inline-start: auto;
+  font-size: var(--erp-font-size-micro);
+  font-weight: var(--erp-font-weight-medium);
+}
+
+/* Help and error sit under the control they describe, in that order, so
+   they read as "what to put here" then "what went wrong". */
+.erp-field-help {
+  color: var(--erp-color-text-muted);
+  font-size: var(--erp-text-helper-size);
+  font-weight: var(--erp-font-weight-regular);
+  line-height: 1.4;
+}
+
+/* The marker is decoration -- the control carries `required`, so a screen
+   reader is already told and an asterisk read out as "star" on top of that
+   is noise. A dot rather than a glyph: at 12px an asterisk sits high and
+   looks like a footnote reference. */
+.erp-field-required {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-inline-start: 3px;
+  border-radius: 50%;
+  background: var(--erp-color-danger);
+  vertical-align: middle;
+}
+
+/* Announced when it appears, and visible as more than red text: a 12px red
+   sentence under a field is the easiest thing on a long form to miss. */
+.erp-field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  color: var(--erp-color-danger);
+  font-size: var(--erp-font-size-xs);
+  font-weight: var(--erp-font-weight-medium);
+  line-height: 1.4;
+}
+
+.erp-field-error::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+  margin-top: 1px;
+  background-color: currentColor;
+  /* A warning triangle, drawn as a mask so it takes `currentColor` and
+     follows the danger token through every theme rather than being a
+     second copy of the colour baked into a data URI. */
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z'/%3E%3Cline x1='12' y1='9' x2='12' y2='13'/%3E%3Cline x1='12' y1='17' x2='12.01' y2='17'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+/* A fieldset carries default borders, padding and margin that no other
+   group in the product has; the grouping on a radio set is semantic, not
+   visual. */
+.erp-field-group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.erp-field-legend {
+  padding: 0;
+  color: var(--erp-color-text-secondary);
+  font-size: var(--erp-font-size-xs);
+  font-weight: var(--erp-font-weight-semibold);
+}
+
+/* ===========================================================================
+   Text controls
+   ===========================================================================
+
+   One rule for all three, which is the point. The input, the select and
+   the textarea had three separate declarations of what a form control
+   looks like, and they already disagreed: the input had a focus halo, the
+   textarea had only a border colour change. */
+
+.erp-input-group input,
+.erp-input-group select,
+.erp-input-group textarea {
+  width: 100%;
+  padding-inline: var(--erp-field-padding-x);
+  border: 1px solid var(--erp-field-border);
+  border-radius: var(--erp-field-radius);
+  background-color: var(--erp-field-surface);
+  color: var(--erp-color-text);
+  font-family: inherit;
+  font-size: var(--erp-font-size-sm);
+  box-sizing: border-box;
+  transition: border-color var(--erp-transition-fast),
+    box-shadow var(--erp-transition-fast),
+    background-color var(--erp-transition-fast);
+}
+
+.erp-input-group input,
+.erp-input-group select {
+  height: var(--erp-field-height);
+  min-height: var(--erp-field-height);
+  padding-block: 0;
+}
+
+.erp-input-group input::placeholder,
+.erp-input-group textarea::placeholder {
+  color: var(--erp-color-text-subtle);
+}
+
+/* Numbers in a form are read down a column and compared -- a quantity
+   against a quantity, a total against a total -- and proportional digits
+   make that comparison harder than it needs to be. */
+.erp-input-group input[type="number"],
+.erp-input-group input[inputmode="numeric"],
+.erp-input-group input[inputmode="decimal"] {
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-input-group input:hover:not(:disabled):not(:read-only),
+.erp-input-group select:hover:not(:disabled),
+.erp-input-group textarea:hover:not(:disabled):not(:read-only) {
+  border-color: var(--erp-color-border-strong);
+}
+
+/* The focus treatment, in one place for every control.
+
+   The native outline is replaced rather than removed: a 3px brand halo
+   plus a brand border is a stronger indicator than the 2px ring it stands
+   in for, and it hugs the field's own corner radius instead of drawing a
+   rectangle around it. `forced-colors` below puts the outline back, since
+   a halo built from `box-shadow` is not painted in a forced palette. */
+.erp-input-group input:focus,
+.erp-input-group select:focus,
+.erp-input-group textarea:focus {
+  outline: none;
+  border-color: var(--erp-color-primary);
+  box-shadow: var(--erp-field-ring);
+}
+
+.erp-input-group input:disabled,
+.erp-input-group select:disabled,
+.erp-input-group textarea:disabled {
+  background-color: var(--erp-color-background);
+  color: var(--erp-color-text-muted);
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+/* Read-only is not disabled: the value stays readable, selectable and
+   reachable by keyboard, and only looks settled rather than greyed out.
+   Computed fields -- a weighted pipeline value, a line total -- are the
+   common case, so this has to look like an answer rather than a refusal. */
+.erp-input-group input:read-only,
+.erp-input-group textarea:read-only {
+  background-color: color-mix(
+    in srgb,
+    var(--erp-color-surface-muted) 70%,
+    var(--erp-color-surface)
+  );
+  border-color: color-mix(in srgb, var(--erp-color-border) 70%, transparent);
+  color: var(--erp-color-text);
+  cursor: default;
+}
+
+/* Invalid, as more than a red line. The tint is what makes a failed field
+   findable while scrolling a form that has just refused to save. */
+.erp-input-group input[aria-invalid="true"],
+.erp-input-group select[aria-invalid="true"],
+.erp-input-group textarea[aria-invalid="true"] {
+  border-color: var(--erp-color-danger);
+  background-color: color-mix(
+    in srgb,
+    var(--erp-color-danger-surface) 75%,
+    var(--erp-color-surface)
+  );
+}
+
+.erp-input-group input[aria-invalid="true"]:focus,
+.erp-input-group select[aria-invalid="true"]:focus,
+.erp-input-group textarea[aria-invalid="true"]:focus {
+  border-color: var(--erp-color-danger);
+  box-shadow: var(--erp-field-ring-danger);
+}
+
+/* The chevron is drawn here rather than left to the platform, because the
+   native one differs on every OS and sits at a different distance from the
+   edge on each -- which is visible the moment a select is next to an input
+   in a four-column row. */
+.erp-input-group select {
+  padding-inline-end: 30px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  cursor: pointer;
+}
+
+[dir="rtl"] .erp-input-group select {
+  background-position: left 10px center;
+}
+
+.erp-input-group textarea {
+  min-height: 64px;
+  padding-block: 9px;
+  line-height: 1.5;
+  /* Vertical only: a textarea dragged wider than its column breaks the
+     form around it. */
+  resize: vertical;
+}
+
+/* A date or time field's native picker button is a tiny grey glyph that
+   does not change on hover, so it reads as decoration rather than as
+   something to click. */
+.erp-input-group input[type="date"]::-webkit-calendar-picker-indicator,
+.erp-input-group input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+.erp-input-group input[type="time"]::-webkit-calendar-picker-indicator {
+  padding: 3px;
+  border-radius: var(--erp-radius-sm);
+  opacity: 0.55;
+  cursor: pointer;
+  transition: opacity var(--erp-transition-fast),
+    background var(--erp-transition-fast);
+}
+
+.erp-input-group input[type="date"]::-webkit-calendar-picker-indicator:hover,
+.erp-input-group
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+.erp-input-group input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  background: var(--erp-color-surface-muted);
+}
+
+/* A character budget, under a textarea that has one. Right-aligned on the
+   same line as the help text so it costs no vertical space. */
+.erp-field-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--erp-space-md);
+}
+
+.erp-field-counter {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+  color: var(--erp-color-text-subtle);
+  font-size: var(--erp-font-size-micro);
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-field-counter.is-near-limit {
+  color: var(--erp-color-warning-strong);
+  font-weight: var(--erp-font-weight-medium);
+}
+
+/* ===========================================================================
+   Affixes
+   ===========================================================================
+
+   A currency symbol or a unit, inside the field rather than beside it. The
+   symbol is part of the value being typed, and a separate grey box glued
+   to the left of the input says it is part of the furniture. */
+
+.erp-input-affix-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.erp-input-affix-wrapper input,
+.erp-input-affix-wrapper select {
+  width: 100%;
+}
+
+.erp-input-prefix,
+.erp-input-suffix {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--erp-color-text-muted);
+  font-size: var(--erp-font-size-xs);
+  font-weight: var(--erp-font-weight-medium);
+  /* Never in the way of a click aimed at the field behind it. */
+  pointer-events: none;
+  user-select: none;
+  z-index: 2;
+}
+
+.erp-input-prefix {
+  inset-inline-start: 11px;
+}
+
+.erp-input-suffix {
+  inset-inline-end: 11px;
+}
+
+.erp-input-affix-wrapper.has-prefix input,
+.erp-input-affix-wrapper.has-prefix select {
+  padding-inline-start: 28px;
+}
+
+.erp-input-affix-wrapper.has-suffix input {
+  padding-inline-end: 32px;
+}
+
+/* ===========================================================================
+   Choice controls
+   ===========================================================================
+
+   Drawn rather than left to the browser. This is the single change that
+   does most for how current the product looks: a native checkbox is
+   rendered by the OS, ignores the brand colour entirely, is 13px on
+   Windows and 16px on a Mac, and is the one control on the page that
+   cannot be told what theme it is in. */
+
+.erp-input-group input[type="checkbox"],
+.erp-input-group input[type="radio"],
+.erp-checkbox-group input[type="checkbox"],
+.erp-radio input[type="radio"] {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 1.5px solid var(--erp-color-border-strong);
+  background-color: var(--erp-color-surface);
+  background-position: center;
+  background-repeat: no-repeat;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  transition: background-color var(--erp-transition-fast),
+    border-color var(--erp-transition-fast),
+    box-shadow var(--erp-transition-fast);
+}
+
+.erp-input-group input[type="checkbox"],
+.erp-checkbox-group input[type="checkbox"] {
+  border-radius: 5px;
+}
+
+.erp-input-group input[type="radio"],
+.erp-radio input[type="radio"] {
+  border-radius: 50%;
+}
+
+.erp-checkbox-group input[type="checkbox"]:hover:not(:disabled),
+.erp-radio input[type="radio"]:hover:not(:disabled) {
+  border-color: var(--erp-color-primary);
+}
+
+.erp-checkbox-group input[type="checkbox"]:checked,
+.erp-input-group input[type="checkbox"]:checked {
+  border-color: var(--erp-color-primary);
+  background-color: var(--erp-color-primary);
+  /* White, not `on-primary-fill`: the tick is a mark on a brand fill and
+     the fill is saturated in both modes, which is the same reason the
+     primary button's label is white in dark mode. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+  background-size: 12px;
+}
+
+.erp-checkbox-group input[type="checkbox"]:indeterminate,
+.erp-input-group input[type="checkbox"]:indeterminate {
+  border-color: var(--erp-color-primary);
+  background-color: var(--erp-color-primary);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.4' stroke-linecap='round'%3E%3Cline x1='6' y1='12' x2='18' y2='12'/%3E%3C/svg%3E");
+  background-size: 12px;
+}
+
+.erp-radio input[type="radio"]:checked,
+.erp-input-group input[type="radio"]:checked {
+  border-color: var(--erp-color-primary);
+  /* The dot is the border: a 4.5px ring of surface between a brand fill
+     and a brand edge. One box rather than a pseudo-element, which keeps
+     the control a single paintable thing in forced-colors mode. */
+  border-width: 5px;
+  background-color: var(--erp-color-primary);
+  box-shadow: inset 0 0 0 2px var(--erp-color-surface);
+}
+
+.erp-checkbox-group input[type="checkbox"]:focus-visible,
+.erp-radio input[type="radio"]:focus-visible,
+.erp-input-group input[type="checkbox"]:focus-visible,
+.erp-input-group input[type="radio"]:focus-visible {
+  outline: none;
+  box-shadow: var(--erp-field-ring);
+}
+
+.erp-checkbox-group input[type="checkbox"]:disabled,
+.erp-radio input[type="radio"]:disabled {
+  background-color: var(--erp-color-surface-muted);
+  border-color: var(--erp-color-border);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* The box and its label are one target. A label sitting next to a 17px
+   box is the difference between a 17px hit area and a comfortable one,
+   and the padding is what lifts the row to the target floor without
+   making the box itself bigger. */
+.erp-checkbox-group label,
+.erp-radio {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: var(--erp-target-min);
+  padding-block: 2px;
+  color: var(--erp-color-text);
+  font-size: var(--erp-font-size-sm);
+  font-weight: var(--erp-font-weight-medium);
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.erp-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* A checkbox's help text lines up under its label, not under its box. */
+.erp-checkbox-group .erp-field-help,
+.erp-checkbox-group .erp-field-error {
+  padding-inline-start: 26px;
+}
+
+.erp-radio-set {
+  display: flex;
+  gap: 2px 22px;
+}
+
+.erp-radio-set-vertical {
+  flex-direction: column;
+}
+
+.erp-radio-set-horizontal {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+/* --- Switch ---------------------------------------------------------- */
+
+.erp-switch-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* The track stays small -- that is what a switch should look like -- but
+   the button around it reaches the target floor. */
+.erp-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--erp-target-min);
+  min-width: var(--erp-target-min);
+  padding: 0;
+  border: none;
+  background: none;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.erp-switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.erp-switch-track {
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  padding: 2px;
+  border-radius: var(--erp-radius-pill);
+  background: var(--erp-color-border-strong);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.12);
+  transition: background var(--erp-transition-fast);
+}
+
+.erp-switch[aria-checked="true"] .erp-switch-track {
+  background: var(--erp-color-primary);
+}
+
+.erp-switch:focus-visible .erp-switch-track {
+  box-shadow: var(--erp-field-ring);
+}
+
+.erp-switch-thumb {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--erp-radius-pill);
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.3);
+  transition: transform var(--erp-transition-fast);
+}
+
+.erp-switch[aria-checked="true"] .erp-switch-thumb {
+  transform: translateX(16px);
+}
+
+.erp-switch:active:not(:disabled) .erp-switch-track {
+  filter: brightness(0.93);
+}
+
+.erp-switch-label {
+  font-size: var(--erp-font-size-sm);
+  font-weight: var(--erp-font-weight-medium);
+}
+
+/* ===========================================================================
+   Line items
+   ===========================================================================
+
+   The grid inside a sales order, a purchase order or a journal entry. A
+   row here is a record being typed, not a record being read, so the
+   controls lose their chrome: a table of forty bordered boxes is a wall,
+   and the cell boundaries already say where one value ends. */
+
+.erp-form-table-card {
+  width: 100%;
+  margin-top: 2px;
+  border: 1px solid var(--erp-color-border);
+  border-radius: var(--erp-radius-md);
+  background: var(--erp-color-surface);
+  overflow-x: auto;
+}
+
+.erp-form-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--erp-font-size-2xs);
+}
+
+.erp-form-table th {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--erp-color-border);
+  background: var(--erp-color-surface-muted);
+  color: var(--erp-color-text-muted);
+  font-size: var(--erp-font-size-micro);
+  font-weight: var(--erp-font-weight-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-align: start;
+  white-space: nowrap;
+}
+
+.erp-form-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--erp-color-border) 60%, transparent);
+  vertical-align: middle;
+}
+
+.erp-form-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.erp-form-table tbody tr:hover {
+  background: color-mix(
+    in srgb,
+    var(--erp-color-surface-muted) 45%,
+    transparent
+  );
+}
+
+/* Borderless until touched. The row is the structure; the box around each
+   value is noise repeated forty times. */
+.erp-form-table td input,
+.erp-form-table td select {
+  width: 100%;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: var(--erp-radius-sm);
+  background: transparent;
+  color: var(--erp-color-text);
+  font-family: inherit;
+  font-size: var(--erp-font-size-2xs);
+  transition: border-color var(--erp-transition-fast),
+    background var(--erp-transition-fast),
+    box-shadow var(--erp-transition-fast);
+}
+
+.erp-form-table td input[type="number"] {
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.erp-form-table td input:hover:not(:disabled):not(:read-only),
+.erp-form-table td select:hover:not(:disabled) {
+  border-color: var(--erp-color-border);
+  background: var(--erp-color-surface);
+}
+
+.erp-form-table td input:focus,
+.erp-form-table td select:focus {
+  outline: none;
+  border-color: var(--erp-color-primary);
+  background: var(--erp-color-surface);
+  box-shadow: var(--erp-field-ring);
+}
+
+.erp-form-table td input:read-only {
+  color: var(--erp-color-text-muted);
+}
+
+/* The totals block, bottom-right of a line-item grid where every
+   accounting document in the world puts it. */
+.erp-form-summary-box {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 280px;
+  margin-inline-start: auto;
+  padding: 14px 16px;
+  border: 1px solid var(--erp-color-border);
+  border-radius: var(--erp-radius-md);
+  background: color-mix(
+    in srgb,
+    var(--erp-color-surface-muted) 55%,
+    var(--erp-color-surface)
+  );
+}
+
+.erp-form-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--erp-space-lg);
+  color: var(--erp-color-text-secondary);
+  font-size: var(--erp-font-size-2xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-form-summary-row.erp-summary-total {
+  padding-top: 8px;
+  border-top: 1px solid var(--erp-color-border-strong);
+  color: var(--erp-color-text);
+  font-size: var(--erp-font-size-md);
+  font-weight: var(--erp-font-weight-bold);
+}
+
+/* ===========================================================================
+   The action bar
+   ===========================================================================
+
+   Pinned to the bottom of the viewport for the whole length of the form.
+   The alternative -- actions at the end of the document -- means the way
+   to save a four-section record is to scroll to the end of it, and means
+   there is no answer to "have I changed anything" without doing that.
+
+   Save is first in the markup so it is the form's default submit, and so a
+   keyboard reaches the thing it came here to do before the way out of it.
+   Source order is what matters there; `order` would break it. */
+.erp-record-form-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--erp-space-md);
+  padding: 9px 18px;
+  border-top: 1px solid var(--erp-color-border);
+  border-end-start-radius: inherit;
+  border-end-end-radius: inherit;
+  background: color-mix(in srgb, var(--erp-color-surface) 86%, transparent);
+  box-shadow: 0 -4px 16px -8px rgba(15, 23, 42, 0.18);
+}
+
+/* Translucency only where the blur behind it is real. Without the filter
+   an 86% surface is just a washed-out bar with the fields showing
+   through, which is worse than an opaque one. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .erp-record-form-actions {
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .erp-record-form-actions {
+    background: var(--erp-color-surface);
+  }
+}
+
+/* The primary action, given the weight it has earned: this is the one
+   button on the screen the user came here to press.
+
+   Weight and width, not height. An earlier pass made it 40px against the
+   34px everything else in the product is, which bought prominence by
+   breaking the one rule that makes a toolbar look built. Semibold, a
+   wider pad and a brand-tinted shadow say "primary" without the bar
+   having to be six pixels taller than it needs to be. */
+.erp-record-form-actions .erp-button:not(.erp-button-secondary) {
+  padding-inline: var(--erp-space-xl);
+  font-weight: var(--erp-font-weight-semibold);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12),
+    0 6px 16px -8px color-mix(in srgb, var(--erp-color-primary) 70%, transparent);
+}
+
+/* "You have changes that are not saved yet."
+
+   Said once, quietly, next to the button that resolves it -- rather than
+   as a dialog when you try to leave, which is the usual implementation and
+   arrives too late to be information. */
+.erp-record-form-dirty {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 11px 3px 9px;
+  border: 1px solid var(--erp-color-warning);
+  border-radius: var(--erp-radius-pill);
+  background: var(--erp-color-warning-badge);
+  color: var(--erp-color-warning-strong);
+  font-size: var(--erp-font-size-micro);
+  font-weight: var(--erp-font-weight-medium);
+  white-space: nowrap;
+}
+
+.erp-record-form-dirty::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.erp-form-shortcut-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-inline-start: auto;
+  color: var(--erp-color-text-subtle);
+  font-size: var(--erp-font-size-micro);
+  user-select: none;
+}
+
+.erp-form-shortcut-hint kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  border: 1px solid var(--erp-color-border-strong);
+  border-radius: var(--erp-radius-sm);
+  background: var(--erp-color-surface-muted);
+  color: var(--erp-color-text-muted);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: var(--erp-font-weight-semibold);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.08);
+}
+
+/* ===========================================================================
+   Narrow screens
+   ===========================================================================
+
+   One column, everywhere. Two 160px fields side by side on a phone are not
+   two columns, they are two fields nobody can read. */
+
+@media (max-width: 900px) {
+  .erp-form-section-fields.erp-form-fields--3col,
+  .erp-form-section-fields.erp-form-fields--4col,
+  .erp-form-grid-3,
+  .erp-form-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .erp-record-form-fields,
+  .erp-form-section-fields,
+  .erp-form-grid-2,
+  .erp-form-grid-3,
+  .erp-form-grid-4 {
+    grid-template-columns: minmax(0, 1fr) !important;
+    column-gap: 0;
+  }
+
+  .erp-record-form-fields > *,
+  .erp-form-section-fields > * {
+    min-width: 0;
+    grid-column: 1 !important;
+  }
+
+  .erp-record-form-head { padding: 14px 14px 12px; }
+  .erp-form-stepper { padding: 7px 14px; }
+  .erp-record-form-body { padding: 14px; }
+  .erp-form-section { padding: 14px; }
+  .erp-record-form-actions { padding: 10px 14px; }
+
+  /* The hint is a desktop affordance; on a phone it is a lie. */
+  .erp-form-shortcut-hint { display: none; }
+
+  /* Save and Cancel share the row rather than wrapping to two. */
+  .erp-record-form-actions .erp-button { flex: 1 1 auto; }
+
+  .erp-form-summary-box { min-width: 0; }
+}
+
+/* ===========================================================================
+   Preferences
+   =========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-form-section,
+  .erp-form-step,
+  .erp-form-step-index,
+  .erp-switch-track,
+  .erp-switch-thumb,
+  .erp-input-group input,
+  .erp-input-group select,
+  .erp-input-group textarea {
+    transition: none;
+  }
+}
+
+/* In a forced palette, `box-shadow` and `background-image` are not painted
+   -- which is every focus halo, every tick and every radio dot above. The
+   outline comes back, and the choice controls fall back to the ones the
+   platform draws, which a forced palette does render. */
+@media (forced-colors: active) {
+  .erp-input-group input:focus,
+  .erp-input-group select:focus,
+  .erp-input-group textarea:focus,
+  .erp-form-table td input:focus,
+  .erp-form-table td select:focus {
+    outline: var(--erp-focus-ring-width) solid Highlight;
+    outline-offset: 1px;
+  }
+
+  .erp-input-group input[type="checkbox"],
+  .erp-input-group input[type="radio"],
+  .erp-checkbox-group input[type="checkbox"],
+  .erp-radio input[type="radio"] {
+    appearance: auto;
+    -webkit-appearance: auto;
+    width: auto;
+    height: auto;
+  }
+
+  .erp-form-step.is-active {
+    border-color: Highlight;
+  }
+}

@@ -1,0 +1,705 @@
+/**
+ * The dashboard design language, shared by the platform console and the
+ * tenant workspace.
+ *
+ * Two screens, two audiences, one product. An operator looking at the
+ * estate and a finance clerk looking at their own organization should
+ * never be able to tell that two different people built what they are
+ * looking at -- so the section headers, the figure rows, the panels, the
+ * severity marks and the list rows are defined once, here, and both
+ * screens compose them.
+ *
+ * Prefix is `erp-db-`. The two screens keep their own stylesheets for what
+ * is genuinely theirs (the platform's health strip, the tenant's workspace
+ * identity), and reach for these for everything that is not.
+ *
+ * ## The rules this encodes
+ *
+ * **A figure row is one surface, not a row of boxes.** The single thing
+ * that makes an enterprise dashboard look generic is six identical white
+ * cards in a row, each with its own border and shadow, each claiming the
+ * same importance. Here a group of figures shares one surface and is
+ * divided by hairlines, and exactly one figure per row may be promoted.
+ * Emphasis is a budget: spend it on the number the page is about.
+ *
+ * **Hierarchy comes from size and weight, not from colour.** Colour is
+ * reserved for state -- a severity, a trend, a brand accent on the thing
+ * you are meant to click. A dashboard where every panel has a coloured
+ * header has no hierarchy at all, only decoration.
+ *
+ * **Density with air.** These are working screens read many times a day.
+ * The spacing scale below is tighter than a marketing page and looser than
+ * a data grid, and it is consistent: every section is separated by the
+ * same step, every panel padded by the same step.
+ *
+ * ## Colour
+ *
+ * The brief for this language asks for indigo/violet accents with
+ * restrained cyan highlights. That is what the default palette already is
+ * -- `--erp-color-primary` is #2563eb and `--erp-color-info` is #0284c7 --
+ * so the accents below are *named roles pointing at those tokens* rather
+ * than literals. The product ships six brand palettes, a dark mode and a
+ * per-tenant colour picker, and a dashboard that hard-coded indigo would
+ * silently opt out of all three. A tenant on teal gets a teal dashboard,
+ * which is the correct behaviour and still reads as the same design.
+ */
+
+:root {
+  /* The accent: the brand, as the dashboard's own role name. */
+  --erp-db-accent: var(--erp-color-primary);
+  --erp-db-accent-fill: var(--erp-color-primary-fill);
+  --erp-db-accent-soft: var(--erp-color-primary-surface);
+  --erp-db-accent-edge: var(--erp-color-primary-border);
+
+  /* The second hue, used sparingly: a comparison series, a secondary
+     highlight. Never for state -- the status ramp owns that. */
+  --erp-db-highlight: var(--erp-color-info);
+
+  /* The ground a dashboard sits on, and the surface its panels are. */
+  --erp-db-surface: var(--erp-color-surface);
+  --erp-db-inset: color-mix(
+    in srgb,
+    var(--erp-color-surface-muted) 55%,
+    var(--erp-color-surface)
+  );
+  --erp-db-edge: color-mix(in srgb, var(--erp-color-border) 80%, transparent);
+
+  /* One radius for a panel, one for the small things inside it. */
+  --erp-db-radius: 14px;
+  --erp-db-radius-sm: 9px;
+
+  /* The rhythm. Section to section, panel padding, row gap. */
+  --erp-db-section-gap: 20px;
+  --erp-db-pad: 16px;
+  --erp-db-gap: 14px;
+
+  /* Barely there. A dashboard panel is a plane on the page, not an object
+     floating above it -- the border does the separating and the shadow
+     only stops the plane looking printed on. */
+  --erp-db-shadow: 0 1px 2px rgba(15, 23, 42, 0.03),
+    0 8px 20px -14px rgba(15, 23, 42, 0.18);
+}
+
+/* ===========================================================================
+   The page
+   =========================================================================== */
+
+.erp-db {
+  display: flex;
+  flex-direction: column;
+  gap: var(--erp-db-section-gap);
+}
+
+/* ===========================================================================
+   A section
+   ===========================================================================
+
+   A titled region of the page. The title is the smallest thing that can
+   still be a heading -- these are signposts between regions, not headlines
+   competing with the figures underneath them. */
+
+/* One gap for everything inside a section: heading to content, and
+   content block to content block. A section that holds a figure band and
+   a panel grid needs the second; a section that holds one grid needs the
+   first; and `gap` cannot tell them apart, so 12px is the step that reads
+   correctly as both. */
+.erp-db-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.erp-db-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--erp-db-gap);
+  flex-wrap: wrap;
+}
+
+.erp-db-section-title {
+  margin: 0;
+  color: var(--erp-color-text);
+  font-size: var(--erp-font-size-sm);
+  font-weight: var(--erp-font-weight-semibold);
+  letter-spacing: -0.005em;
+}
+
+.erp-db-section-subtitle {
+  margin: 0;
+  min-width: 0;
+  color: var(--erp-color-text-muted);
+  font-size: var(--erp-font-size-xs);
+}
+
+/* Pushed to the end of the header row, whatever is in it. */
+.erp-db-section-action {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--erp-space-sm);
+}
+
+/* ===========================================================================
+   A figure row
+   ===========================================================================
+
+   One surface, several figures, hairlines between them. See the note at
+   the top about why this is not six cards.
+
+   The column count is a custom property rather than a class per number, so
+   a screen asks for `style={{ "--erp-db-cols": 5 }}` and the row still
+   collapses on its own at narrow widths. */
+
+.erp-db-stats {
+  display: grid;
+  grid-template-columns: repeat(var(--erp-db-cols, 4), minmax(0, 1fr));
+  border: 1px solid var(--erp-db-edge);
+  border-radius: var(--erp-db-radius);
+  background: var(--erp-db-surface);
+  box-shadow: var(--erp-db-shadow);
+  overflow: hidden;
+}
+
+.erp-db-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: var(--erp-db-pad);
+  /* The hairline is a border on the item, not a gap in the grid: a gap
+     would show the page through the surface and turn the row back into
+     separate cards. The first in each visual row loses its own. */
+  border-inline-start: 1px solid var(--erp-db-edge);
+}
+
+.erp-db-stat:first-child {
+  border-inline-start: 0;
+}
+
+.erp-db-stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--erp-color-text-muted);
+  font-size: var(--erp-font-size-micro);
+  font-weight: var(--erp-font-weight-semibold);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.erp-db-stat-label svg {
+  flex: 0 0 auto;
+  color: var(--erp-color-text-subtle);
+}
+
+.erp-db-stat-value {
+  color: var(--erp-color-text);
+  font-size: 22px;
+  font-weight: var(--erp-font-weight-semibold);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  /* Figures are read down a column and compared against each other. */
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-db-stat-note {
+  color: var(--erp-color-text-muted);
+  font-size: var(--erp-font-size-micro);
+  line-height: 1.4;
+}
+
+/* The one figure the row is about.
+
+   Exactly one per row, and the promotion is deliberate: a tinted ground, a
+   brand rule down its edge and a larger figure. If two things in a row are
+   promoted then nothing is, which is the state most dashboards are in. */
+.erp-db-stat.is-lead {
+  position: relative;
+  background: linear-gradient(
+    180deg,
+    var(--erp-db-accent-soft) 0%,
+    color-mix(in srgb, var(--erp-db-accent-soft) 35%, var(--erp-db-surface)) 100%
+  );
+}
+
+.erp-db-stat.is-lead::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  background: var(--erp-db-accent);
+}
+
+.erp-db-stat.is-lead .erp-db-stat-value {
+  font-size: 28px;
+  color: var(--erp-db-accent);
+}
+
+.erp-db-stat.is-lead .erp-db-stat-label {
+  color: color-mix(in srgb, var(--erp-db-accent) 80%, var(--erp-color-text));
+}
+
+/* A figure that is a link. The whole tile, so the target is the tile. */
+a.erp-db-stat {
+  text-decoration: none;
+  transition: background var(--erp-transition-fast);
+}
+
+a.erp-db-stat:hover {
+  background: var(--erp-db-inset);
+}
+
+a.erp-db-stat.is-lead:hover {
+  background: var(--erp-db-accent-soft);
+}
+
+a.erp-db-stat:focus-visible {
+  outline: var(--erp-focus-ring-width) solid var(--erp-focus-ring-color);
+  outline-offset: calc(var(--erp-focus-ring-offset) * -1);
+}
+
+/* A figure nobody is allowed to see, or that has not been measured. Said
+   in words, never drawn as a zero -- "you cannot see this" and "there are
+   none" are different facts and a dash collapses them into one. */
+.erp-db-stat-blocked {
+  color: var(--erp-color-text-subtle);
+  font-size: var(--erp-font-size-xs);
+  font-style: italic;
+  line-height: 1.35;
+}
+
+/* A movement against a previous period. Only ever rendered where the
+   comparison is real -- see the dashboards' own notes. */
+.erp-db-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--erp-font-size-micro);
+  font-weight: var(--erp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-db-delta.is-up { color: var(--erp-color-success); }
+.erp-db-delta.is-down { color: var(--erp-color-danger); }
+.erp-db-delta.is-flat { color: var(--erp-color-text-muted); }
+
+/* ===========================================================================
+   A panel
+   =========================================================================== */
+
+.erp-db-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--erp-db-edge);
+  border-radius: var(--erp-db-radius);
+  background: var(--erp-db-surface);
+  box-shadow: var(--erp-db-shadow);
+}
+
+.erp-db-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px var(--erp-db-pad);
+  border-bottom: 1px solid var(--erp-db-edge);
+}
+
+.erp-db-panel-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--erp-db-radius-sm);
+  background: var(--erp-db-accent-soft);
+  color: var(--erp-db-accent);
+}
+
+.erp-db-panel-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.erp-db-panel-title {
+  margin: 0;
+  color: var(--erp-color-text);
+  font-size: var(--erp-font-size-2xs);
+  font-weight: var(--erp-font-weight-semibold);
+}
+
+.erp-db-panel-subtitle {
+  color: var(--erp-color-text-muted);
+  font-size: var(--erp-font-size-micro);
+}
+
+.erp-db-panel-action {
+  margin-inline-start: auto;
+  flex: 0 0 auto;
+}
+
+.erp-db-panel-body {
+  padding: var(--erp-db-pad);
+  min-width: 0;
+}
+
+/* A body that holds rows rather than content: the rows bring their own
+   padding and their own dividers. */
+.erp-db-panel-body.is-flush {
+  padding: 0;
+}
+
+/* ===========================================================================
+   Layout
+   ===========================================================================
+
+   Three templates and no more. A dashboard whose every row is two equal
+   columns has told the reader that everything on it matters equally, which
+   is the thing a dashboard exists not to say. */
+
+.erp-db-grid {
+  display: grid;
+  gap: var(--erp-db-gap);
+  align-items: start;
+  min-width: 0;
+}
+
+/* A main thing and a side thing. The default, and the one to reach for. */
+.erp-db-grid.is-primary {
+  grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr);
+}
+
+/* Two things of genuinely equal weight. */
+.erp-db-grid.is-even {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.erp-db-grid.is-thirds {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* ===========================================================================
+   Rows in a panel
+   ===========================================================================
+
+   Alerts, renewals, activity, anything at-risk. One row shape for all of
+   them, because they are all "a thing, what about it, and where to go". */
+
+.erp-db-rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-db-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 11px var(--erp-db-pad);
+  border-top: 1px solid var(--erp-db-edge);
+  min-width: 0;
+}
+
+.erp-db-rows > .erp-db-row:first-child,
+.erp-db-rows > li:first-child > .erp-db-row {
+  border-top: 0;
+}
+
+a.erp-db-row {
+  text-decoration: none;
+  color: inherit;
+  transition: background var(--erp-transition-fast);
+}
+
+a.erp-db-row:hover {
+  background: var(--erp-db-inset);
+}
+
+a.erp-db-row:focus-visible {
+  outline: var(--erp-focus-ring-width) solid var(--erp-focus-ring-color);
+  outline-offset: calc(var(--erp-focus-ring-offset) * -1);
+}
+
+.erp-db-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.erp-db-row-title {
+  color: var(--erp-color-text);
+  font-size: var(--erp-font-size-2xs);
+  font-weight: var(--erp-font-weight-medium);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.erp-db-row-note {
+  color: var(--erp-color-text-muted);
+  font-size: var(--erp-font-size-micro);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+/* The right-hand end of a row: an amount, a date, a count. Right-aligned
+   and tabular so a column of them can be compared down the panel. */
+.erp-db-row-end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex: 0 0 auto;
+  text-align: end;
+}
+
+.erp-db-row-value {
+  color: var(--erp-color-text);
+  font-size: var(--erp-font-size-2xs);
+  font-weight: var(--erp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.erp-db-row-meta {
+  color: var(--erp-color-text-subtle);
+  font-size: var(--erp-font-size-micro);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ===========================================================================
+   Severity
+   ===========================================================================
+
+   One vocabulary for "how bad is this", used by both screens so a red mark
+   means the same thing on each. Shape as well as colour: the icon plate
+   differs in tint and the text carries the word, so severity is never
+   signalled by hue alone. */
+
+.erp-db-sev {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  margin-top: 1px;
+  border-radius: var(--erp-db-radius-sm);
+}
+
+.erp-db-sev.is-critical {
+  background: var(--erp-color-danger-badge);
+  color: var(--erp-color-danger-strong);
+}
+
+.erp-db-sev.is-warning {
+  background: var(--erp-color-warning-badge);
+  color: var(--erp-color-warning-strong);
+}
+
+.erp-db-sev.is-info {
+  background: var(--erp-color-info-badge);
+  color: var(--erp-color-info-strong);
+}
+
+.erp-db-sev.is-ok {
+  background: var(--erp-color-success-badge);
+  color: var(--erp-color-success-strong);
+}
+
+.erp-db-sev.is-neutral {
+  background: var(--erp-color-surface-muted);
+  color: var(--erp-color-text-muted);
+}
+
+/* ===========================================================================
+   A meter
+   ===========================================================================
+
+   Usage against a cap -- the one chart shape both dashboards need and the
+   only one that is honest with a single pair of numbers. */
+
+.erp-db-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.erp-db-meter-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--erp-db-gap);
+}
+
+.erp-db-meter-label {
+  color: var(--erp-color-text-secondary);
+  font-size: var(--erp-font-size-micro);
+  font-weight: var(--erp-font-weight-medium);
+}
+
+.erp-db-meter-value {
+  color: var(--erp-color-text);
+  font-size: var(--erp-font-size-micro);
+  font-weight: var(--erp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.erp-db-meter-track {
+  height: 6px;
+  border-radius: var(--erp-radius-pill);
+  background: var(--erp-color-surface-muted);
+  overflow: hidden;
+}
+
+.erp-db-meter-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--erp-db-accent);
+  transition: width var(--erp-transition-fast);
+}
+
+.erp-db-meter.is-warning .erp-db-meter-fill { background: var(--erp-color-warning); }
+.erp-db-meter.is-critical .erp-db-meter-fill { background: var(--erp-color-danger); }
+
+/* No cap, or nothing measured. A track with no fill and no claim. */
+.erp-db-meter.is-unmeasured .erp-db-meter-track {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--erp-color-surface-muted) 0 6px,
+    transparent 6px 12px
+  );
+}
+
+/* ===========================================================================
+   Nothing to show
+   ===========================================================================
+
+   An empty panel is a result, and it should look like one rather than like
+   a panel that failed. */
+
+.erp-db-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 26px var(--erp-db-pad);
+  text-align: center;
+}
+
+.erp-db-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--erp-radius-pill);
+  background: var(--erp-color-surface-muted);
+  color: var(--erp-color-text-subtle);
+}
+
+.erp-db-empty-title {
+  color: var(--erp-color-text-secondary);
+  font-size: var(--erp-font-size-2xs);
+  font-weight: var(--erp-font-weight-semibold);
+}
+
+.erp-db-empty-note {
+  max-width: 34ch;
+  color: var(--erp-color-text-muted);
+  font-size: var(--erp-font-size-micro);
+  line-height: 1.45;
+}
+
+/* ===========================================================================
+   Responsive
+   ===========================================================================
+
+   The figure row reflows rather than scrolls. A row of six that becomes a
+   row of three and then two keeps the hairlines meaningful, which is why
+   the inline border is reset per visual row at each step. */
+
+@media (max-width: 1240px) {
+  .erp-db-grid.is-thirds {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1080px) {
+  .erp-db-grid.is-primary,
+  .erp-db-grid.is-even,
+  .erp-db-grid.is-thirds {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* A literal 3, not `min(var(--erp-db-cols), 3)`.
+
+     `repeat()` takes an `<integer>`; a math function there is invalid and
+     the whole declaration is dropped, which is worse than not writing it
+     -- the row would silently keep six columns on a tablet. The cost of
+     the literal is that `StatRow` is a component for four to six figures:
+     a row declaring fewer would be stretched to three here. Both
+     dashboards use five. */
+  .erp-db-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  /* Rows of three: every fourth tile starts a row and loses its hairline,
+     and the ones that now sit under something gain a top one. */
+  .erp-db-stats > .erp-db-stat:nth-child(3n + 1) { border-inline-start: 0; }
+  .erp-db-stats > .erp-db-stat:nth-child(n + 4) { border-top: 1px solid var(--erp-db-edge); }
+}
+
+@media (max-width: 760px) {
+  .erp-db-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .erp-db-stats > .erp-db-stat:nth-child(n) { border-inline-start: 1px solid var(--erp-db-edge); border-top: 0; }
+  .erp-db-stats > .erp-db-stat:nth-child(2n + 1) { border-inline-start: 0; }
+  .erp-db-stats > .erp-db-stat:nth-child(n + 3) { border-top: 1px solid var(--erp-db-edge); }
+
+  .erp-db-stat-value { font-size: 19px; }
+  .erp-db-stat.is-lead .erp-db-stat-value { font-size: 23px; }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --erp-db-section-gap: 16px;
+    --erp-db-pad: 13px;
+  }
+
+  /* One column. A two-up row of 150px tiles is two figures nobody can
+     read, and on a phone the top figures are the whole point. */
+  .erp-db-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .erp-db-stats > .erp-db-stat:nth-child(n) {
+    border-inline-start: 0;
+    border-top: 1px solid var(--erp-db-edge);
+  }
+
+  .erp-db-stats > .erp-db-stat:first-child {
+    border-top: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-db-meter-fill,
+  a.erp-db-stat,
+  a.erp-db-row {
+    transition: none;
+  }
+}

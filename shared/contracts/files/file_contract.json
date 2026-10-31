@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "UniversalFileContract",
+  "type": "object",
+  "properties": {
+    "file_id": { "type": "string", "format": "uuid" },
+    "owner_type": { "type": "string" },
+    "owner_id": { "type": "string" },
+    "file_name": { "type": "string" },
+    "file_size": { "type": "integer" },
+    "mime_type": { "type": "string" },
+    "download_url": { "type": "string", "format": "uri" },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["file_id", "owner_type", "owner_id", "file_name", "download_url"]
+}
