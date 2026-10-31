@@ -358,3 +358,4 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
     </div>
   );
 }
+

@@ -6,3 +6,4 @@ class FileStorageConfig(AppConfig):
     path = str(Path(__file__).resolve().parent)
     verbose_name = "Shared Universal File Storage"
     default_auto_field = "django.db.models.BigAutoField"
+

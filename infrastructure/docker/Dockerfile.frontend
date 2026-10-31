@@ -14,3 +14,4 @@ COPY . .
 EXPOSE 5173
 
 CMD ["npm", "--prefix", "modules/inventory/frontend", "run", "dev", "--", "--host", "0.0.0.0"]
+

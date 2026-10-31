@@ -327,3 +327,4 @@ export function StockTransactionModal({ isOpen, initialType = "RECEIPT", onClose
     </div>
   );
 }
+

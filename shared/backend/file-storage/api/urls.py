@@ -9,3 +9,4 @@ urlpatterns = [
     path("", include(router.urls)),
     path("download/<uuid:file_id>/", FileDownloadView.as_view(), name="file-download"),
 ]
+

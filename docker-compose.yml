@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5434}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/scripts/init-schemas.sql:/docker-entrypoint-initdb.d/init-schemas.sql
@@ -21,7 +21,7 @@ services:
     image: redis:7-alpine
     container_name: ecosystem_redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6380}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -38,8 +38,8 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${MINIO_PORT:-9002}:9000"
+      - "${MINIO_CONSOLE_PORT:-9003}:9001"
     volumes:
       - minio_data:/data
 
@@ -53,7 +53,7 @@ services:
       - .:/app
       - ./uploads:/app/uploads
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8008}:8000"
     environment:
       - ENVIRONMENT=development
       - DB_HOST=postgres
@@ -91,14 +91,26 @@ services:
       dockerfile: infrastructure/docker/Dockerfile.frontend
     container_name: ecosystem_inventory_frontend
     ports:
-      - "5173:5173"
+      - "${FRONTEND_PORT:-5174}:5173"
     volumes:
       - .:/app
       - /app/modules/inventory/frontend/node_modules
     environment:
-      - VITE_API_BASE_URL=http://localhost:8000/api/v1
+      - VITE_API_BASE_URL=http://localhost:8008/api/v1
     depends_on:
       - inventory_backend
+
+  nginx:
+    image: nginx:alpine
+    container_name: ecosystem_nginx_gateway
+    ports:
+      - "${GATEWAY_PORT:-8088}:80"
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./uploads:/app/uploads:ro
+    depends_on:
+      - inventory_backend
+      - frontend
 
 volumes:
   postgres_data:

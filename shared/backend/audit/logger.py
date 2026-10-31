@@ -40,3 +40,4 @@ class AuditLogger:
 
 def audit_log(action: str, actor: str, entity_type: str, entity_id: str, **kwargs):
     return AuditLogger.log_action(action, actor, entity_type, entity_id, **kwargs)
+

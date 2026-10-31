@@ -86,3 +86,4 @@ class FileDownloadView(views.APIView):
             url = provider.get_url(record.storage_key)
             from django.shortcuts import redirect
             return redirect(url)
+

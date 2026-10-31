@@ -30,3 +30,4 @@ class StoredFileSerializer(serializers.ModelSerializer):
             return FileStorageService.get_download_url(obj)
         except Exception:
             return ""
+

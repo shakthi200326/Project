@@ -3,7 +3,7 @@ from pathlib import Path
 import config._bootstrap
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-PROJECT_ROOT = BASE_DIR.parent.parent
+PROJECT_ROOT = BASE_DIR.parent.parent.parent
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-universal-inventory-module-3.1")
 DEBUG = os.environ.get("DEBUG", "True") == "True"
