@@ -21,11 +21,15 @@ import {
   ShieldAlert,
   ArrowRightLeft,
   Flame,
-  Gauge,
+  Gauge as GaugeIcon,
   PackageCheck,
   FileSpreadsheet,
   Warehouse,
   ExternalLink,
+  Zap,
+  Target,
+  ShieldCheck,
+  TrendingDown,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -41,9 +45,13 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
+  ReferenceLine,
 } from "recharts";
 import { fetchInventoryKPIs, fetchStockMovements, DEMO_KPIS } from "../services/api";
 
+// ---------------------------------------------------------------------------
+// Chart Datasets with Multi-Dimension Metrics (MUI X Pattern)
+// ---------------------------------------------------------------------------
 const MOVEMENT_DATA = [
   { date: "Oct 20", inbound: 420, outbound: 280, net: 140 },
   { date: "Oct 21", inbound: 310, outbound: 450, net: -140 },
@@ -84,6 +92,11 @@ const STOCK_HEALTH_DATA = [
   { name: "Slow Moving (61-90d)", value: 10, color: "#F59E0B", capital: "$42.9k" },
   { name: "Stagnant (>90d)", value: 4, color: "#EF4444", capital: "$17.1k" },
 ];
+
+// Sparkline series for KPI cards (MUI X SparkLineChart style)
+const SPARKLINE_SKUS = [{ v: 1390 }, { v: 1402 }, { v: 1410 }, { v: 1415 }, { v: 1420 }];
+const SPARKLINE_VALUATION = [{ v: 395 }, { v: 402 }, { v: 410 }, { v: 422 }, { v: 428.5 }];
+const SPARKLINE_AVAILABLE = [{ v: 46200 }, { v: 47100 }, { v: 47800 }, { v: 48050 }, { v: 48210 }];
 
 const TOP_CAPITAL_SKUS = [
   {
@@ -175,6 +188,76 @@ const FEFO_EXPIRY_RISKS = [
     risk: "MONITORED",
   },
 ];
+
+// ---------------------------------------------------------------------------
+// MUI X-Inspired Custom Arc Gauge Component
+// ---------------------------------------------------------------------------
+function MuiGaugeMeter({ value, max = 100, label, sublabel, color = "#10B981", size = 110 }) {
+  const radius = 42;
+  const strokeWidth = 9;
+  const circumference = Math.PI * radius; // 180 degrees semi-circle arc
+  const percent = Math.min(Math.max(value / max, 0), 1);
+  const strokeDashoffset = circumference * (1 - percent);
+
+  return (
+    <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50/60 dark:bg-zinc-800/30 border border-slate-100 dark:border-zinc-800/80">
+      <div className="relative flex items-center justify-center" style={{ width: size, height: size * 0.65 }}>
+        <svg width={size} height={size * 0.65} viewBox="0 0 110 70" className="overflow-visible">
+          {/* Background Track Arc */}
+          <path
+            d="M 13,60 A 42,42 0 0,1 97,60"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            className="text-slate-200/80 dark:text-zinc-700/60"
+          />
+          {/* Active Value Arc with rounded caps */}
+          <path
+            d="M 13,60 A 42,42 0 0,1 97,60"
+            fill="none"
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+            className="transition-all duration-1000 ease-out"
+          />
+        </svg>
+        <div className="absolute bottom-0 text-center">
+          <span className="text-lg font-bold font-mono text-slate-900 dark:text-white tabular-nums tracking-tight">
+            {value}%
+          </span>
+        </div>
+      </div>
+      <div className="mt-1 text-center">
+        <span className="text-[11px] font-bold text-slate-900 dark:text-white block">{label}</span>
+        <span className="text-[10px] text-slate-400 font-medium block">{sublabel}</span>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// MUI X-Inspired Inline Sparkline Component
+// ---------------------------------------------------------------------------
+function MuiSparkline({ data, color = "#3B82F6", height = 24 }) {
+  return (
+    <div style={{ height }} className="w-full mt-1.5 opacity-80 hover:opacity-100 transition-opacity">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+          <defs>
+            <linearGradient id={`spark-${color}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.4} />
+              <stop offset="100%" stopColor={color} stopOpacity={0.0} />
+            </linearGradient>
+          </defs>
+          <Area type="monotone" dataKey="v" stroke={color} strokeWidth={2} fill={`url(#spark-${color})`} dot={false} />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
 
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -293,117 +376,201 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* 7 Core Executive KPI Cards */}
+      {/* 7 Core Executive KPI Cards with MUI X Sparklines */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-        {/* Total Products */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-blue-300 dark:hover:border-blue-900/50 transition-all group">
+        {/* Total Products with Sparkline */}
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-blue-300 dark:hover:border-blue-900/50 transition-all group flex flex-col justify-between">
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-blue-500" />
-          <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Total SKUs</span>
-            <Boxes className="h-4 w-4 text-blue-500 group-hover:scale-110 transition-transform" />
+          <div>
+            <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Total SKUs</span>
+              <Boxes className="h-4 w-4 text-blue-500 group-hover:scale-110 transition-transform" />
+            </div>
+            <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
+              {kpis.total_products.toLocaleString()}
+            </div>
           </div>
-          <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
-            {kpis.total_products.toLocaleString()}
-          </div>
-          <div className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 font-medium">
-            <TrendingUp className="h-3 w-3" /> +12 this month
+          <div>
+            <MuiSparkline data={SPARKLINE_SKUS} color="#3B82F6" height={26} />
+            <div className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 font-medium">
+              <TrendingUp className="h-3 w-3" /> +12 this month
+            </div>
           </div>
         </div>
 
         {/* Total Warehouses */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-slate-300 dark:hover:border-zinc-700 transition-all group">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-slate-300 dark:hover:border-zinc-700 transition-all group flex flex-col justify-between">
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-indigo-500" />
-          <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Warehouses</span>
-            <Building2 className="h-4 w-4 text-indigo-500 group-hover:scale-110 transition-transform" />
+          <div>
+            <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Warehouses</span>
+              <Building2 className="h-4 w-4 text-indigo-500 group-hover:scale-110 transition-transform" />
+            </div>
+            <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
+              {kpis.total_warehouses}
+            </div>
           </div>
-          <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
-            {kpis.total_warehouses}
-          </div>
-          <div className="mt-1 text-[11px] text-slate-400 dark:text-zinc-500">
-            Across 3 regions
-          </div>
-        </div>
-
-        {/* Total Stock Value */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-emerald-300 dark:hover:border-emerald-900/50 transition-all group">
-          <div className="absolute top-0 left-0 right-0 h-0.5 bg-emerald-500" />
-          <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Valuation</span>
-            <DollarSign className="h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" />
-          </div>
-          <div className="mt-2 text-xl font-bold tracking-tight font-mono tabular-nums text-emerald-700 dark:text-emerald-400">
-            ${kpis.total_stock_value.toLocaleString("en-US", { minimumFractionDigits: 0 })}
-          </div>
-          <div className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-            Weighted Average (WAV)
+          <div className="pt-4">
+            <div className="text-[11px] text-slate-400 dark:text-zinc-500 font-medium">
+              Across 3 regions
+            </div>
+            <div className="text-[10px] text-indigo-500 font-semibold mt-0.5">100% Online</div>
           </div>
         </div>
 
-        {/* Available Stock */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-emerald-300 dark:hover:border-emerald-900/50 transition-all group">
+        {/* Total Stock Value with Sparkline */}
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-emerald-300 dark:hover:border-emerald-900/50 transition-all group flex flex-col justify-between">
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-emerald-500" />
-          <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Available</span>
-            <CheckCircle className="h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" />
+          <div>
+            <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Valuation</span>
+              <DollarSign className="h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" />
+            </div>
+            <div className="mt-2 text-xl font-bold tracking-tight font-mono tabular-nums text-emerald-700 dark:text-emerald-400">
+              ${kpis.total_stock_value.toLocaleString("en-US", { minimumFractionDigits: 0 })}
+            </div>
           </div>
-          <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
-            {kpis.total_available.toLocaleString()}
+          <div>
+            <MuiSparkline data={SPARKLINE_VALUATION} color="#10B981" height={26} />
+            <div className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+              Weighted Average (WAV)
+            </div>
           </div>
-          <div className="mt-1 text-[11px] text-slate-400 dark:text-zinc-500">
-            Free for dispatch
+        </div>
+
+        {/* Available Stock with Sparkline */}
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-emerald-300 dark:hover:border-emerald-900/50 transition-all group flex flex-col justify-between">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-emerald-500" />
+          <div>
+            <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Available</span>
+              <CheckCircle className="h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" />
+            </div>
+            <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
+              {kpis.total_available.toLocaleString()}
+            </div>
+          </div>
+          <div>
+            <MuiSparkline data={SPARKLINE_AVAILABLE} color="#10B981" height={26} />
+            <div className="mt-1 text-[11px] text-slate-400 dark:text-zinc-500 font-medium">
+              Free for dispatch
+            </div>
           </div>
         </div>
 
         {/* Reserved Stock */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-purple-300 dark:hover:border-purple-900/50 transition-all group">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-purple-300 dark:hover:border-purple-900/50 transition-all group flex flex-col justify-between">
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-purple-500" />
-          <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Reserved</span>
-            <Clock className="h-4 w-4 text-purple-500 group-hover:scale-110 transition-transform" />
+          <div>
+            <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Reserved</span>
+              <Clock className="h-4 w-4 text-purple-500 group-hover:scale-110 transition-transform" />
+            </div>
+            <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-purple-700 dark:text-purple-400">
+              {kpis.total_reserved.toLocaleString()}
+            </div>
           </div>
-          <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-purple-700 dark:text-purple-400">
-            {kpis.total_reserved.toLocaleString()}
-          </div>
-          <div className="mt-1 text-[11px] text-purple-600 dark:text-purple-400 font-medium">
-            Allocated to orders
+          <div className="pt-4">
+            <div className="text-[11px] text-purple-600 dark:text-purple-400 font-medium">
+              Allocated to orders
+            </div>
+            <div className="text-[10px] text-slate-400 mt-0.5">SO commitment</div>
           </div>
         </div>
 
         {/* Low Stock Items */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-amber-300 dark:hover:border-amber-900/50 transition-all group">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-amber-300 dark:hover:border-amber-900/50 transition-all group flex flex-col justify-between">
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-amber-500" />
-          <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Low Stock</span>
-            <AlertTriangle className="h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" />
+          <div>
+            <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Low Stock</span>
+              <AlertTriangle className="h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" />
+            </div>
+            <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-amber-600 dark:text-amber-400">
+              {kpis.low_stock_items}
+            </div>
           </div>
-          <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-amber-600 dark:text-amber-400">
-            {kpis.low_stock_items}
-          </div>
-          <div className="mt-1 text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-            Requires reorder
+          <div className="pt-4">
+            <div className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+              Requires reorder
+            </div>
+            <div className="text-[10px] text-slate-400 mt-0.5">Threshold crossed</div>
           </div>
         </div>
 
         {/* Out of Stock */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-rose-300 dark:hover:border-rose-900/50 transition-all group">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-rose-300 dark:hover:border-rose-900/50 transition-all group flex flex-col justify-between">
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-rose-500" />
-          <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Out of Stock</span>
-            <XCircle className="h-4 w-4 text-rose-500 group-hover:scale-110 transition-transform" />
+          <div>
+            <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Out of Stock</span>
+              <XCircle className="h-4 w-4 text-rose-500 group-hover:scale-110 transition-transform" />
+            </div>
+            <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-rose-600 dark:text-rose-400">
+              {kpis.out_of_stock_items}
+            </div>
           </div>
-          <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-rose-600 dark:text-rose-400">
-            {kpis.out_of_stock_items}
-          </div>
-          <div className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium">
-            Critical stock-out
+          <div className="pt-4">
+            <div className="text-[11px] text-rose-600 dark:text-rose-400 font-medium">
+              Critical stock-out
+            </div>
+            <div className="text-[10px] text-rose-500 font-semibold mt-0.5">Action urgent</div>
           </div>
         </div>
       </div>
 
-      {/* Row 1: Charts Section (Stock Movement Dynamics + Inventory Category Donut) */}
+      {/* Row: MUI X-Style Operational Health Gauge Intelligence Strip */}
+      <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+              <GaugeIcon className="h-4 w-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                Operational Telemetry & Performance Gauges
+              </h2>
+              <p className="text-xs text-slate-400 dark:text-zinc-500">
+                MUI X Gauge composition tracking SLA fulfillment, storage saturation, and FEFO compliance.
+              </p>
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300">
+            Real-Time Metric Arcs
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <MuiGaugeMeter
+            value={96.8}
+            label="Order Fulfillment SLA"
+            sublabel="Avg Lead Time: 4.2h"
+            color="#10B981"
+          />
+          <MuiGaugeMeter
+            value={71.5}
+            label="Global Storage Saturation"
+            sublabel="18,920 / 27,000 slots"
+            color="#6366F1"
+          />
+          <MuiGaugeMeter
+            value={98.4}
+            label="FEFO Batch Integrity"
+            sublabel="0 expired lots active"
+            color="#06B6D4"
+          />
+          <MuiGaugeMeter
+            value={99.1}
+            label="Cycle Count Accuracy"
+            sublabel="Variance delta < 0.2%"
+            color="#8B5CF6"
+          />
+        </div>
+      </div>
+
+      {/* Row: Charts Section (Stock Movement Dynamics + Inventory Category Donut) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Stock Movement Trend (Inbound vs Outbound) */}
+        {/* Stock Movement Trend with MUI X-Style Target Reference Line */}
         <div className="lg:col-span-2 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
@@ -423,6 +590,9 @@ export function DashboardPage() {
               </span>
               <span className="flex items-center gap-1.5 text-slate-700 dark:text-zinc-300">
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20" /> Outbound
+              </span>
+              <span className="flex items-center gap-1.5 text-slate-400">
+                <span className="h-2 w-4 border-t-2 border-dashed border-slate-400" /> Target
               </span>
             </div>
           </div>
@@ -453,6 +623,13 @@ export function DashboardPage() {
                     boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
                     backdropFilter: "blur(8px)",
                   }}
+                />
+                {/* MUI X-Style Reference Line for SLA Daily Target */}
+                <ReferenceLine
+                  y={500}
+                  stroke="#94A3B8"
+                  strokeDasharray="4 4"
+                  label={{ value: "Daily Baseline: 500 EA", fill: "#94A3B8", fontSize: 10, position: "insideTopRight" }}
                 />
                 <Area type="monotone" dataKey="inbound" stroke="#3B82F6" strokeWidth={2.5} fillOpacity={1} fill="url(#inboundGrad)" />
                 <Area type="monotone" dataKey="outbound" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#outboundGrad)" />
@@ -514,9 +691,9 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Row 2: NEW CHARTS SECTION (Facility Capacity BarChart + Valuation Trend + Stock Aging Health) */}
+      {/* Row: Facility Capacity BarChart + Valuation Trend + Stock Aging Health */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Chart 3: Multi-Facility Space & Pallet Utilization (BarChart) */}
+        {/* Multi-Facility Space & Pallet Utilization with MUI X-Style Capacity Benchmark */}
         <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
@@ -553,6 +730,12 @@ export function DashboardPage() {
                     name === "used" ? "Occupied Capacity" : "Available Capacity",
                   ]}
                 />
+                <ReferenceLine
+                  y={8000}
+                  stroke="#F59E0B"
+                  strokeDasharray="4 4"
+                  label={{ value: "Max 8k Ceiling", fill: "#F59E0B", fontSize: 9, position: "insideTopLeft" }}
+                />
                 <Bar dataKey="used" fill="#6366F1" radius={[4, 4, 0, 0]} stackId="a" />
                 <Bar dataKey="available" fill="#E2E8F0" radius={[4, 4, 0, 0]} stackId="a" />
               </BarChart>
@@ -581,7 +764,7 @@ export function DashboardPage() {
           </div>
         </div>
 
-        {/* Chart 4: Valuation & Capital Progression (Monthly Area Trend) */}
+        {/* Valuation & Capital Progression with MUI X Reference Line */}
         <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
@@ -620,6 +803,12 @@ export function DashboardPage() {
                   }}
                   formatter={(val, name) => [`$${val}k USD`, name === "valuation" ? "Actual Valuation" : "Target Limit"]}
                 />
+                <ReferenceLine
+                  y={400}
+                  stroke="#3B82F6"
+                  strokeDasharray="4 4"
+                  label={{ value: "Budget Cap: $400k", fill: "#3B82F6", fontSize: 10, position: "insideBottomRight" }}
+                />
                 <Area type="monotone" dataKey="valuation" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#valGrad)" />
               </AreaChart>
             </ResponsiveContainer>
@@ -637,7 +826,7 @@ export function DashboardPage() {
           </div>
         </div>
 
-        {/* Chart 5: Stock Health & Ageing Distribution */}
+        {/* Stock Health & Ageing Distribution */}
         <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
@@ -697,7 +886,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Row 3: Comprehensive Facility Stock Details Matrix */}
+      {/* Row: Comprehensive Facility Stock Details Matrix */}
       <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
@@ -787,7 +976,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Row 4: Top Capital Concentration SKUs & FEFO Expiry Risk Strip */}
+      {/* Row: Top Capital Concentration SKUs & FEFO Expiry Risk Strip */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Top 5 Capital Concentration SKUs */}
         <div className="lg:col-span-2 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
@@ -906,7 +1095,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Row 5: Operational Sections: Recent Movements & Low Stock Alerts */}
+      {/* Row: Operational Sections: Recent Movements & Low Stock Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Stock Movements Table */}
         <div className="lg:col-span-2 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
