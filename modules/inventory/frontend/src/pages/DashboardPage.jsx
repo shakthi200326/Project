@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import {
   Boxes,
   Building2,
@@ -13,6 +14,8 @@ import {
   Calendar,
   ChevronRight,
   TrendingUp,
+  Download,
+  CheckCircle2,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -28,40 +31,91 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
-import { DEMO_KPIS, fetchInventoryKPIs, fetchStockMovements } from "../services/api";
+import { fetchInventoryKPIs, fetchStockMovements, DEMO_KPIS } from "../services/api";
 
 const MOVEMENT_DATA = [
-  { date: "Oct 24", inbound: 450, outbound: 320 },
-  { date: "Oct 25", inbound: 520, outbound: 410 },
-  { date: "Oct 26", inbound: 680, outbound: 490 },
-  { date: "Oct 27", inbound: 390, outbound: 550 },
-  { date: "Oct 28", inbound: 720, outbound: 380 },
-  { date: "Oct 29", inbound: 850, outbound: 620 },
-  { date: "Oct 30", inbound: 610, outbound: 440 },
+  { date: "Oct 20", inbound: 420, outbound: 280 },
+  { date: "Oct 21", inbound: 310, outbound: 450 },
+  { date: "Oct 22", inbound: 580, outbound: 390 },
+  { date: "Oct 23", inbound: 240, outbound: 620 },
+  { date: "Oct 24", inbound: 750, outbound: 480 },
+  { date: "Oct 25", inbound: 890, outbound: 530 },
+  { date: "Oct 26", inbound: 640, outbound: 710 },
 ];
 
 const CATEGORY_DATA = [
-  { name: "Mechanical", value: 38, color: "#3B82F6" },
-  { name: "Hydraulics", value: 24, color: "#10B981" },
-  { name: "Sensors", value: 18, color: "#F59E0B" },
-  { name: "Power Trans", value: 12, color: "#8B5CF6" },
-  { name: "Chemicals", value: 8, color: "#EC4899" },
+  { name: "Mechanical Components", value: 38, color: "#3B82F6" },
+  { name: "Hydraulics & Valves", value: 24, color: "#8B5CF6" },
+  { name: "Power Transmission", value: 18, color: "#10B981" },
+  { name: "Sensors & Encoders", value: 12, color: "#F59E0B" },
+  { name: "Fluids & Greases", value: 8, color: "#EC4899" },
 ];
 
 export function DashboardPage() {
+  const navigate = useNavigate();
   const [kpis, setKpis] = useState(DEMO_KPIS);
   const [recentMovements, setRecentMovements] = useState([]);
   const [period, setPeriod] = useState("30d");
+  const [toastMessage, setToastMessage] = useState(null);
 
   useEffect(() => {
     fetchInventoryKPIs().then(setKpis);
     fetchStockMovements().then((data) => setRecentMovements(data.results || []));
   }, []);
 
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const handleExportSummary = () => {
+    const headers = ["Metric", "Value", "Unit / Scope"];
+    const rows = [
+      ["Total Products (SKUs)", kpis.total_products, "Items"],
+      ["Active Warehouses", kpis.total_warehouses, "Distribution Hubs"],
+      ["Total Inventory Valuation", `$${kpis.total_stock_value}`, "USD (WAV)"],
+      ["Total On-Hand Quantity", kpis.total_on_hand, "Units"],
+      ["Total Available Quantity", kpis.total_available, "Units Free for Dispatch"],
+      ["Total Reserved Quantity", kpis.total_reserved, "Units Allocated"],
+      ["Low Stock Warning Items", kpis.low_stock_items, "Requires Reorder"],
+      ["Out of Stock Items", kpis.out_of_stock_items, "Critical Stock-out"],
+    ];
+
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute(
+      "download",
+      `Inventory_Executive_Summary_${new Date().toISOString().split("T")[0]}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("Executive summary exported as CSV.");
+  };
+
+  const handleDraftOrder = (itemName) => {
+    showToast(`Opening draft procurement requisition for ${itemName}...`);
+    setTimeout(() => {
+      navigate("/replenishment");
+    }, 600);
+  };
+
   if (!kpis) return null;
 
   return (
     <div className="space-y-6">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-900 dark:bg-zinc-800 text-white text-xs font-medium shadow-xl border border-slate-700 animate-in slide-in-from-top-2">
+          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -89,7 +143,11 @@ export function DashboardPage() {
             </select>
           </div>
 
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium shadow-sm transition-colors">
+          <button
+            onClick={handleExportSummary}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium shadow-sm transition-colors cursor-pointer"
+          >
+            <Download className="h-3.5 w-3.5" />
             <span>Export Summary</span>
           </button>
         </div>
@@ -297,9 +355,12 @@ export function DashboardPage() {
             <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
               Recent Stock Movements
             </h2>
-            <a href="/inventory/control/ledger" className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+            <Link
+              to="/ledger"
+              className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 cursor-pointer"
+            >
               View Immutable Ledger <ChevronRight className="h-3 w-3" />
-            </a>
+            </Link>
           </div>
 
           <div className="overflow-x-auto">
@@ -372,7 +433,13 @@ export function DashboardPage() {
               </div>
               <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400">
                 <span>Reorder Qty: 40 EA</span>
-                <button className="text-blue-600 font-medium hover:underline">Draft Order</button>
+                <button
+                  type="button"
+                  onClick={() => handleDraftOrder("Hydraulic Solenoid Valve 24V")}
+                  className="text-blue-600 dark:text-blue-400 font-semibold hover:underline cursor-pointer"
+                >
+                  Draft Order
+                </button>
               </div>
             </div>
 
@@ -386,7 +453,13 @@ export function DashboardPage() {
               </div>
               <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400">
                 <span className="text-rose-600 font-semibold">OUT OF STOCK</span>
-                <button className="text-blue-600 font-medium hover:underline">Draft Order</button>
+                <button
+                  type="button"
+                  onClick={() => handleDraftOrder("Optical Rotary Encoder 1024 PPR")}
+                  className="text-blue-600 dark:text-blue-400 font-semibold hover:underline cursor-pointer"
+                >
+                  Draft Order
+                </button>
               </div>
             </div>
           </div>

@@ -51,6 +51,33 @@ export function AppShell({ children }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState([
+    {
+      id: "notif-1",
+      title: "Low Stock Alert",
+      description: "Hydraulic Pump HP-400 dropped below reorder threshold (8 units on-hand vs 25 min).",
+      time: "10m ago",
+      unread: true,
+      type: "warning",
+    },
+    {
+      id: "notif-2",
+      title: "Stock Reconciliation Completed",
+      description: "Cycle count REC-2026-001 reconciled with zero variance across Zone A.",
+      time: "1h ago",
+      unread: true,
+      type: "success",
+    },
+    {
+      id: "notif-3",
+      title: "Goods Receipt Posted",
+      description: "GRN-2026-089: 150 EA Precision Bearings received and quarantined.",
+      time: "3h ago",
+      unread: false,
+      type: "info",
+    },
+  ]);
   const [isApiLive, setIsApiLive] = useState(getApiStatus());
   const [openGroups, setOpenGroups] = useState({
     catalog: true,
@@ -236,10 +263,7 @@ export function AppShell({ children }) {
         <div className="p-3 border-t border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 space-y-2">
           {!collapsed && (
             <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-zinc-500">
-              <span className="flex items-center gap-1">
-                <Database className="h-3 w-3 text-blue-500" /> PostgreSQL 16
-              </span>
-              <span className="font-mono">v3.1.0</span>
+    
             </div>
           )}
 
@@ -425,11 +449,123 @@ export function AppShell({ children }) {
               </div>
             </div>
 
-            {/* Notification Bell */}
-            <button className="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 relative cursor-pointer">
-              <Bell className="h-4 w-4" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-blue-600 ring-2 ring-white dark:ring-zinc-900" />
-            </button>
+            {/* Notification Bell with Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setIsNotificationsOpen((prev) => !prev)}
+                className="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 relative cursor-pointer"
+                title="Notifications"
+                aria-label="Toggle notifications menu"
+              >
+                <Bell className="h-4 w-4" />
+                {notifications.some((n) => n.unread) && (
+                  <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-blue-600 ring-2 ring-white dark:ring-zinc-900" />
+                )}
+              </button>
+
+              {isNotificationsOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsNotificationsOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl z-50 overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
+                    <div className="p-3 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-800/40">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-slate-900 dark:text-white">System Notifications</span>
+                        {notifications.filter((n) => n.unread).length > 0 && (
+                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
+                            {notifications.filter((n) => n.unread).length} new
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {notifications.length > 0 && (
+                          <button
+                            onClick={() =>
+                              setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })))
+                            }
+                            className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setIsNotificationsOpen(false)}
+                          className="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 cursor-pointer"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-zinc-800">
+                      {notifications.length === 0 ? (
+                        <div className="p-6 text-center text-slate-400">
+                          <CheckCircle2 className="h-6 w-6 mx-auto mb-2 text-emerald-500 opacity-60" />
+                          <span>All caught up! No notifications.</span>
+                        </div>
+                      ) : (
+                        notifications.map((n) => (
+                          <div
+                            key={n.id}
+                            className={`p-3 flex items-start gap-3 hover:bg-slate-50/80 dark:hover:bg-zinc-800/50 transition-colors ${
+                              n.unread ? "bg-blue-50/30 dark:bg-blue-950/20" : ""
+                            }`}
+                          >
+                            <div className="mt-0.5 shrink-0">
+                              {n.type === "warning" && (
+                                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                              )}
+                              {n.type === "success" && (
+                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                              )}
+                              {n.type === "info" && (
+                                <Package className="h-4 w-4 text-blue-500" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="font-semibold text-slate-900 dark:text-white truncate">
+                                  {n.title}
+                                </span>
+                                <span className="text-[10px] text-slate-400 shrink-0">{n.time}</span>
+                              </div>
+                              <p className="text-[11px] text-slate-600 dark:text-zinc-300 mt-0.5">
+                                {n.description}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() =>
+                                setNotifications((prev) => prev.filter((item) => item.id !== n.id))
+                              }
+                              className="p-1 rounded text-slate-300 hover:text-rose-500 dark:text-zinc-600 dark:hover:text-rose-400 shrink-0 cursor-pointer"
+                              title="Dismiss"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {notifications.length > 0 && (
+                      <div className="p-2 px-3 border-t border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40 flex items-center justify-between">
+                        <span className="text-[10px] text-slate-400">
+                          {notifications.length} active alert{notifications.length > 1 ? "s" : ""}
+                        </span>
+                        <button
+                          onClick={() => setNotifications([])}
+                          className="text-[10px] text-slate-500 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 font-medium cursor-pointer"
+                        >
+                          Clear all
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Dark/Light Mode Toggle */}
             <button
