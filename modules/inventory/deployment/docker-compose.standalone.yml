@@ -22,3 +22,4 @@ services:
       - DB_PASSWORD=postgres
     depends_on:
       - inventory_standalone_db
+

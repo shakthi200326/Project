@@ -12,3 +12,4 @@ The Inventory Management Module is an enterprise-grade, pluggable business engin
 6. **Piece-Level Serialization**: Individual asset tracking, warranty timelines, and chain-of-custody history.
 7. **Physical Stock Reconciliation**: Snapshot freeze, cycle count discrepancy identification, and dual-entry ledger adjustment posting.
 8. **Automated Replenishment**: Min/Max thresholds, reorder triggers, and draft procurement suggestions.
+

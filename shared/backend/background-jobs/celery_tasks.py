@@ -17,3 +17,4 @@ def sync_inventory_valuation_task(warehouse_id: str = None) -> Dict[str, Any]:
     Recalculates Weighted Average Cost and total valuation aggregates across warehouses.
     """
     return {"status": "SUCCESS", "warehouse_id": warehouse_id or "ALL"}
+

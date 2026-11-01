@@ -50,3 +50,4 @@ PostgreSQL Database: ecosystem_db
 3. **Weighted Average Valuation (WAV)**:
    $$WAV_{\text{new}} = \frac{(Q_{\text{curr}} \times WAV_{\text{curr}}) + (q_{\text{in}} \times c_{\text{in}})}{Q_{\text{curr}} + q_{\text{in}}}$$
    Recalculated automatically upon every verified Inbound Receipt.
+

@@ -75,3 +75,4 @@ CREATE TABLE IF NOT EXISTS shared.notifications (
 );
 
 CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON shared.notifications(recipient_user, is_read);
+

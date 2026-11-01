@@ -16,3 +16,4 @@ class PlatformAdminService:
             "storage_provider": "polymorphic (local/minio/s3)",
             "database_engine": "PostgreSQL 16",
         }
+

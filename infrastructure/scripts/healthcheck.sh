@@ -20,3 +20,4 @@ echo -n "3. Enterprise Frontend UI Shell: "
 curl -s -f -o /dev/null -w "%{http_code}\n" "${FRONTEND_URL}" || echo "OFFLINE"
 
 echo "Healthcheck complete."
+

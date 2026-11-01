@@ -34,3 +34,4 @@ echo " Frontend UI    : http://localhost:5174"
 echo " API Gateway    : http://localhost:8088/api/v1/inventory/"
 echo " MinIO Console  : http://localhost:9003"
 echo "===================================================================="
+

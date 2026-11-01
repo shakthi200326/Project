@@ -28,3 +28,4 @@ class IdentityContext:
     @classmethod
     def anonymous(cls) -> "IdentityContext":
         return cls(user_id="anonymous", email="anonymous@internal", tenant_id="default-tenant", roles=["GUEST"])
+

@@ -23,3 +23,4 @@ def error_envelope(code: str, message: str, details: Optional[Dict[str, Any]] = 
             "details": details or {},
         },
     }
+

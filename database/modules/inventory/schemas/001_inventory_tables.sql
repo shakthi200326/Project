@@ -195,3 +195,4 @@ CREATE TABLE IF NOT EXISTS inventory.inv_valuations (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_inv_item_wh_valuation UNIQUE (item_id, warehouse_id)
 );
+

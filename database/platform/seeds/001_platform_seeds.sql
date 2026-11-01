@@ -51,3 +51,4 @@ VALUES (
     TRUE,
     '{"storage_backend": "polymorphic", "ledger_immutable": true, "valuation_method": "WAV"}'::jsonb
 ) ON CONFLICT (code) DO NOTHING;
+

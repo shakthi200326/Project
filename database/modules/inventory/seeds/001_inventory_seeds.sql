@@ -46,3 +46,4 @@ VALUES
 ('10eebc99-9c0b-4ef8-bb6d-6bb9bd380002', 'WH-EAST', 'East Coast Logistics Terminal', 'Pier 12 Harbor Boulevard, Newark, NJ'),
 ('10eebc99-9c0b-4ef8-bb6d-6bb9bd380003', 'WH-COLD', 'Cold Storage & Perishables Facility', 'Sector B Coldway, Dallas, TX')
 ON CONFLICT (tenant_id, code) DO NOTHING;
+

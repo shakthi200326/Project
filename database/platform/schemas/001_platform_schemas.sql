@@ -86,3 +86,4 @@ CREATE TABLE IF NOT EXISTS platform.modules (
     config JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+

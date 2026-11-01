@@ -29,3 +29,4 @@ PGPASSWORD="${DB_PASSWORD:-postgres}" pg_dump \
 
 echo "[$(date -u)] Backup created successfully: ${BACKUP_FILE}"
 ls -lh "${BACKUP_FILE}"
+

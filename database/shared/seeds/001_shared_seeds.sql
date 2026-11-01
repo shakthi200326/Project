@@ -14,3 +14,4 @@ VALUES (
     'SUCCESS',
     FALSE
 );
+

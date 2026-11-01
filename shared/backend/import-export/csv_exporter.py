@@ -16,3 +16,4 @@ class CSVStreamExporter:
         for row in rows:
             writer.writerow(row)
         return output.getvalue()
+

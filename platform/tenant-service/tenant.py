@@ -23,3 +23,4 @@ class TenantProfile:
             name="Apex Industrial Global Holdings",
             subscription_tier="ENTERPRISE_UNLIMITED",
         )
+

@@ -68,3 +68,4 @@ LEFT JOIN inventory.inv_locations l ON l.warehouse_id = w.id
 LEFT JOIN inventory.inv_balances bal ON bal.warehouse_id = w.id
 LEFT JOIN inventory.inv_valuations v ON v.warehouse_id = w.id AND v.item_id = bal.item_id
 GROUP BY w.id, w.tenant_id, w.code, w.name;
+

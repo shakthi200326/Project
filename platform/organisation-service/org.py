@@ -22,3 +22,4 @@ class OrganisationContext:
             name="Default Corporate Organisation",
             base_currency="USD",
         )
+

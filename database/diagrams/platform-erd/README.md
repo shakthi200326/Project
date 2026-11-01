@@ -62,3 +62,4 @@ erDiagram
         jsonb config
     }
 ```
+

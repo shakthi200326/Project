@@ -20,3 +20,4 @@ class SecuritySanitizer:
         Validates SKU contains only safe alphanumeric, dash, and underscore characters.
         """
         return bool(re.match(r"^[A-Za-z0-9_\-\.]{1,64}$", sku))
+

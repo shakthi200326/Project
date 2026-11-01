@@ -16,3 +16,4 @@ echo "[MinIO Init] Setting access policies..."
 /usr/bin/mc anonymous set download local/inventory-attachments
 
 echo "[MinIO Init] Storage buckets initialized."
+

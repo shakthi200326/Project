@@ -40,3 +40,4 @@ class AccessControlEngine:
             if "*" in permissions or required_permission in permissions:
                 return True
         return False
+

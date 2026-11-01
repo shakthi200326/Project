@@ -81,3 +81,4 @@ erDiagram
         date warranty_until
     }
 ```
+

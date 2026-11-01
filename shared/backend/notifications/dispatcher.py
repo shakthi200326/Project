@@ -21,3 +21,4 @@ class NotificationDispatcher:
             "delivered": True,
         }
         return payload
+
