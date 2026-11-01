@@ -1,0 +1,32 @@
+{
+  "module": "inventory",
+  "version": "3.1.0",
+  "capabilities": [
+    "stock_ledger",
+    "valuation_wav",
+    "batch_tracking",
+    "serial_numbers",
+    "reconciliation",
+    "replenishment",
+    "barcode_generation"
+  ],
+  "inbound_integrations": [
+    {
+      "source_module": "purchase",
+      "action": "RECEIPT",
+      "endpoint": "/api/v1/inventory/movements/"
+    }
+  ],
+  "outbound_integrations": [
+    {
+      "target_module": "sales",
+      "action": "RESERVATION",
+      "endpoint": "/api/v1/inventory/reservations/"
+    },
+    {
+      "target_module": "sales",
+      "action": "ISSUE",
+      "endpoint": "/api/v1/inventory/movements/"
+    }
+  ]
+}

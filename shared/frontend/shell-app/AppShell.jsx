@@ -264,6 +264,105 @@ export function AppShell({ children }) {
         </div>
       </aside>
 
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-950/40"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Close navigation"
+          />
+          <aside
+            className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-slate-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
+            aria-label="Inventory navigation"
+          >
+            <div className="flex h-15 items-center justify-between border-b border-slate-200 px-4 dark:border-zinc-800">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 font-bold text-white shadow-sm">
+                  <Boxes className="h-5 w-5" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
+                    ONE ERP
+                  </span>
+                  <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                    Inventory Ecosystem v3.1
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileOpen(false)}
+                className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                aria-label="Close navigation"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <nav className="flex-1 space-y-4 overflow-y-auto px-2 py-3">
+              {navGroups.map((group) => {
+                const hasKey = !!group.key;
+                const isOpen = hasKey ? openGroups[group.key] : true;
+
+                return (
+                  <div key={group.title} className="space-y-1">
+                    {hasKey ? (
+                      <button
+                        type="button"
+                        onClick={() => toggleGroup(group.key)}
+                        className="flex w-full items-center justify-between px-2.5 py-1 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 hover:text-slate-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+                        aria-expanded={isOpen}
+                      >
+                        <span>{group.title}</span>
+                        {isOpen ? (
+                          <ChevronDown className="h-3 w-3" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3" />
+                        )}
+                      </button>
+                    ) : (
+                      <div className="px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                        {group.title}
+                      </div>
+                    )}
+                    {isOpen && (
+                      <div className="space-y-0.5">
+                        {group.items.map((item) => {
+                          const Icon = item.icon;
+                          const isActive = location.pathname === item.path;
+
+                          return (
+                            <Link
+                              key={item.path}
+                              to={item.path}
+                              onClick={() => setMobileOpen(false)}
+                              className={`flex items-center gap-3 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${
+                                isActive
+                                  ? "bg-blue-50 font-semibold text-blue-700 dark:bg-blue-950/60 dark:text-blue-400"
+                                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-200"
+                              }`}
+                            >
+                              <Icon
+                                className={`h-4 w-4 shrink-0 ${
+                                  isActive
+                                    ? "text-blue-600 dark:text-blue-400"
+                                    : "text-slate-500 dark:text-zinc-400"
+                                }`}
+                              />
+                              <span>{item.label}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </nav>
+          </aside>
+        </div>
+      )}
+
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Navigation */}

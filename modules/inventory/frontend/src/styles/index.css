@@ -3,6 +3,8 @@
 @import "../../../../../shared/frontend/ui-kit/theme.css";
 @import "../../../../../shared/frontend/ui-kit/design-system.css";
 
+@source "../../../../../shared/frontend";
+
 /* Tabular figures for numbers, currency, quantities, and serials */
 .tabular-nums {
   font-variant-numeric: tabular-nums;

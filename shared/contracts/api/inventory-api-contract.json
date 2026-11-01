@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InventoryModuleAPIContract",
+  "version": "3.1.0",
+  "description": "REST API Contract specification for the Universal Reusable Inventory Module",
+  "endpoints": {
+    "dashboard_kpis": {
+      "path": "/api/v1/inventory/dashboard/kpis/",
+      "method": "GET",
+      "auth": true,
+      "response": {
+        "total_products": "integer",
+        "total_warehouses": "integer",
+        "total_stock_value": "number",
+        "total_on_hand": "number",
+        "total_available": "number",
+        "total_reserved": "number",
+        "low_stock_items": "integer",
+        "out_of_stock_items": "integer"
+      }
+    },
+    "items_list": {
+      "path": "/api/v1/inventory/items/",
+      "method": "GET",
+      "query_params": ["search", "category", "brand", "page"],
+      "response": "array<Item>"
+    },
+    "movements_post": {
+      "path": "/api/v1/inventory/movements/{id}/post/",
+      "method": "POST",
+      "headers": ["Idempotency-Key"],
+      "response": "Transaction"
+    },
+    "reconciliation_reconcile": {
+      "path": "/api/v1/inventory/reconciliation/{id}/reconcile/",
+      "method": "POST",
+      "response": "StockCount"
+    }
+  }
+}

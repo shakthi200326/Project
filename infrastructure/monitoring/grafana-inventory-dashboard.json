@@ -1,0 +1,43 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "Real-Time Stock Transaction Throughput (RPM)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+    },
+    {
+      "title": "Inventory Posting Service Latency (P95)",
+      "type": "gauge",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+    },
+    {
+      "title": "Database Connection Pool Usage",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 8 }
+    },
+    {
+      "title": "Active Celery Async Outbox Tasks",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 8 }
+    },
+    {
+      "title": "Total Valuation in Facilities ($)",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 8 }
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["inventory", "operations", "telemetry"],
+  "time": { "from": "now-6h", "to": "now" },
+  "title": "Enterprise Inventory Operations & Telemetry",
+  "uid": "inv-telemetry-01"
+}
