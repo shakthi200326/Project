@@ -28,6 +28,8 @@ INSTALLED_APPS = [
     "apps.movements",
     "apps.reservations",
     "apps.reconciliation",
+    "apps.batches",
+    "apps.serial_numbers",
     "apps.valuation",
 ]
 

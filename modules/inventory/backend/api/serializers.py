@@ -5,6 +5,10 @@ from apps.warehouses.models import Warehouse, StorageLocation
 from apps.stock.models import StockBalance, StockLedgerEntry
 from apps.movements.models import StockTransaction, StockTransactionLine
 from apps.valuation.models import InventoryValuation
+from apps.reservations.models import StockReservation
+from apps.reconciliation.models import StockCount, StockCountLine
+from apps.batches.models import Batch
+from apps.serial_numbers.models import SerialNumber
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -75,4 +79,52 @@ class ValuationSerializer(serializers.ModelSerializer):
     class Meta:
         model = InventoryValuation
         fields = "__all__"
+
+class StockReservationSerializer(serializers.ModelSerializer):
+    item_code = serializers.CharField(source="item.code", read_only=True)
+    item_name = serializers.CharField(source="item.name", read_only=True)
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+
+    class Meta:
+        model = StockReservation
+        fields = "__all__"
+
+class StockCountLineSerializer(serializers.ModelSerializer):
+    item_code = serializers.CharField(source="item.code", read_only=True)
+    item_name = serializers.CharField(source="item.name", read_only=True)
+    location_code = serializers.CharField(source="location.code", read_only=True)
+    variance_qty = serializers.DecimalField(max_digits=20, decimal_places=4, read_only=True)
+
+    class Meta:
+        model = StockCountLine
+        fields = "__all__"
+
+class StockCountSerializer(serializers.ModelSerializer):
+    lines = StockCountLineSerializer(many=True, read_only=True)
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+
+    class Meta:
+        model = StockCount
+        fields = "__all__"
+
+class BatchSerializer(serializers.ModelSerializer):
+    item_code = serializers.CharField(source="item.code", read_only=True)
+    item_name = serializers.CharField(source="item.name", read_only=True)
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    days_remaining = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Batch
+        fields = "__all__"
+
+class SerialNumberSerializer(serializers.ModelSerializer):
+    item_code = serializers.CharField(source="item.code", read_only=True)
+    item_name = serializers.CharField(source="item.name", read_only=True)
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    location_code = serializers.CharField(source="location.code", read_only=True)
+
+    class Meta:
+        model = SerialNumber
+        fields = "__all__"
+
 

@@ -9,8 +9,12 @@ from apps.categories.models import InventoryCategory
 from apps.products.models import InventoryItem
 from apps.warehouses.models import Warehouse, StorageLocation
 from apps.stock.models import StockBalance, StockLedgerEntry
-from apps.movements.models import StockTransaction
+from apps.movements.models import StockTransaction, StockTransactionLine
 from apps.valuation.models import InventoryValuation
+from apps.reservations.models import StockReservation
+from apps.reconciliation.models import StockCount, StockCountLine
+from apps.batches.models import Batch
+from apps.serial_numbers.models import SerialNumber
 from services.posting_service import InventoryPostingService
 
 from .serializers import (
@@ -22,6 +26,10 @@ from .serializers import (
     StockLedgerEntrySerializer,
     StockTransactionSerializer,
     ValuationSerializer,
+    StockReservationSerializer,
+    StockCountSerializer,
+    BatchSerializer,
+    SerialNumberSerializer,
 )
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -75,6 +83,85 @@ class StockTransactionViewSet(viewsets.ModelViewSet):
 class ValuationViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = InventoryValuation.objects.select_related("item", "warehouse").all()
     serializer_class = ValuationSerializer
+
+class StockReservationViewSet(viewsets.ModelViewSet):
+    queryset = StockReservation.objects.select_related("item", "warehouse", "location").all()
+    serializer_class = StockReservationSerializer
+
+    @action(detail=True, methods=["post"])
+    def fulfill(self, request, pk=None):
+        res = self.get_object()
+        res.status = StockReservation.Status.FULFILLED
+        res.save()
+        # Decrement reserved_qty on stock balance
+        bal = StockBalance.objects.filter(item=res.item, warehouse=res.warehouse).first()
+        if bal and bal.reserved_qty >= res.quantity:
+            bal.reserved_qty = max(Decimal("0"), bal.reserved_qty - res.quantity)
+            bal.save()
+        return Response(StockReservationSerializer(res).data)
+
+    @action(detail=True, methods=["post"])
+    def release(self, request, pk=None):
+        res = self.get_object()
+        res.status = StockReservation.Status.RELEASED
+        res.save()
+        bal = StockBalance.objects.filter(item=res.item, warehouse=res.warehouse).first()
+        if bal and bal.reserved_qty >= res.quantity:
+            bal.reserved_qty = max(Decimal("0"), bal.reserved_qty - res.quantity)
+            bal.save()
+        return Response(StockReservationSerializer(res).data)
+
+class StockCountViewSet(viewsets.ModelViewSet):
+    queryset = StockCount.objects.select_related("warehouse").prefetch_related("lines__item").all()
+    serializer_class = StockCountSerializer
+
+    @action(detail=True, methods=["post"])
+    def reconcile(self, request, pk=None):
+        count = self.get_object()
+        actor = request.context.username if hasattr(request, "context") else "system"
+        # Auto-generate adjustment transaction for lines with variance
+        has_variance = False
+        lines_to_adjust = []
+        for line in count.lines.all():
+            if line.counted_qty is not None and line.variance_qty != Decimal("0"):
+                lines_to_adjust.append(line)
+
+        if lines_to_adjust:
+            import uuid
+            adj_tx = StockTransaction.objects.create(
+                document_number=f"ADJ-RECON-{count.count_number}-{uuid.uuid4().hex[:6].upper()}",
+                transaction_type=StockTransaction.TransactionType.ADJUSTMENT,
+                status=StockTransaction.Status.DRAFT,
+                warehouse=count.warehouse,
+                notes=f"Automatic reconciliation variance adjustment for {count.count_number}",
+            )
+            for line in lines_to_adjust:
+                StockTransactionLine.objects.create(
+                    transaction=adj_tx,
+                    item=line.item,
+                    variant=line.variant,
+                    location=line.location,
+                    quantity=line.variance_qty,
+                    unit_cost=Decimal("0.0000"),
+                )
+            InventoryPostingService.post_transaction(adj_tx, actor=actor)
+
+        count.status = StockCount.Status.RECONCILED
+        import django.utils.timezone as tz
+        count.reconciled_at = tz.now()
+        count.reconciled_by = actor
+        count.save()
+        return Response(StockCountSerializer(count).data)
+
+class BatchViewSet(viewsets.ModelViewSet):
+    queryset = Batch.objects.select_related("item", "warehouse").all()
+    serializer_class = BatchSerializer
+    filterset_fields = ["status", "warehouse", "item"]
+
+class SerialNumberViewSet(viewsets.ModelViewSet):
+    queryset = SerialNumber.objects.select_related("item", "warehouse", "location", "batch").all()
+    serializer_class = SerialNumberSerializer
+    filterset_fields = ["status", "warehouse", "item"]
 
 class DashboardKPIView(APIView):
     def get(self, request):

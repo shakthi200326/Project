@@ -9,6 +9,10 @@ from .views import (
     StockLedgerViewSet,
     StockTransactionViewSet,
     ValuationViewSet,
+    StockReservationViewSet,
+    StockCountViewSet,
+    BatchViewSet,
+    SerialNumberViewSet,
     DashboardKPIView,
 )
 
@@ -20,6 +24,10 @@ router.register(r"locations", StorageLocationViewSet)
 router.register(r"balances", StockBalanceViewSet)
 router.register(r"ledger", StockLedgerViewSet)
 router.register(r"movements", StockTransactionViewSet)
+router.register(r"reservations", StockReservationViewSet)
+router.register(r"reconciliation", StockCountViewSet)
+router.register(r"batches", BatchViewSet)
+router.register(r"serials", SerialNumberViewSet)
 router.register(r"valuation", ValuationViewSet)
 
 urlpatterns = [
