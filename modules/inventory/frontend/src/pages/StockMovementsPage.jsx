@@ -17,11 +17,15 @@ import {
 import { fetchStockMovements } from "../services/api";
 import { StockTransactionModal } from "../components/StockTransactionModal.jsx";
 
-export function StockMovementsPage() {
+export function StockMovementsPage({ initialType = "ALL" }) {
   const [movements, setMovements] = useState([]);
-  const [activeTab, setActiveTab] = useState("ALL");
+  const [activeTab, setActiveTab] = useState(initialType);
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    setActiveTab(initialType);
+  }, [initialType]);
 
   useEffect(() => {
     fetchStockMovements().then((data) => setMovements(data.results || []));
@@ -54,7 +58,10 @@ export function StockMovementsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 shadow-xs">
+          <button
+            onClick={() => alert("Exporting stock operations log to CSV...")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 shadow-xs cursor-pointer"
+          >
             <Download className="h-3.5 w-3.5" />
             <span>Export Register</span>
           </button>
@@ -80,7 +87,7 @@ export function StockMovementsPage() {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-3.5 py-2 font-medium border-b-2 transition-colors ${
+            className={`px-3.5 py-2 font-medium border-b-2 transition-colors cursor-pointer ${
               activeTab === tab.key
                 ? "border-blue-600 text-blue-600 dark:text-blue-400 font-semibold"
                 : "border-transparent text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-200"
@@ -99,10 +106,13 @@ export function StockMovementsPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by transaction doc, item or warehouse..."
+            placeholder="Search by document number, product name or facility..."
             className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
+        <span className="text-xs text-slate-400 dark:text-zinc-500 tabular-nums">
+          {filteredMovements.length} transactions recorded
+        </span>
       </div>
 
       {/* Movements Table */}
@@ -110,21 +120,21 @@ export function StockMovementsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50/75 dark:bg-zinc-800/40 text-slate-500 dark:text-zinc-400">
+              <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50/75 dark:bg-zinc-800/50 text-slate-500 dark:text-zinc-400">
                 <th className="py-3 px-4 font-semibold">Document No.</th>
                 <th className="py-3 px-4 font-semibold">Type</th>
-                <th className="py-3 px-4 font-semibold">Item & Details</th>
-                <th className="py-3 px-4 font-semibold">Warehouse & Location</th>
-                <th className="py-3 px-4 font-semibold text-right">Quantity</th>
+                <th className="py-3 px-4 font-semibold">Timestamp</th>
+                <th className="py-3 px-4 font-semibold">Product Item</th>
+                <th className="py-3 px-4 font-semibold">Warehouse / Bin</th>
+                <th className="py-3 px-4 font-semibold text-right">Quantity Delta</th>
                 <th className="py-3 px-4 font-semibold text-right">Unit Cost</th>
                 <th className="py-3 px-4 font-semibold text-center">Status</th>
-                <th className="py-3 px-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
               {filteredMovements.map((m) => (
-                <tr key={m.id} className="hover:bg-slate-50/60 dark:hover:bg-zinc-800/40 transition-colors">
-                  <td className="py-3 px-4 font-mono font-medium text-slate-900 dark:text-zinc-100">
+                <tr key={m.id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/40">
+                  <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-white">
                     {m.document_number}
                   </td>
                   <td className="py-3 px-4">
@@ -134,20 +144,25 @@ export function StockMovementsPage() {
                           ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
                           : m.type === "ISSUE"
                           ? "bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400"
-                          : "bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400"
+                          : m.type === "TRANSFER"
+                          ? "bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400"
+                          : "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400"
                       }`}
                     >
                       {m.type}
                     </span>
                   </td>
-                  <td className="py-3 px-4 font-medium text-slate-800 dark:text-zinc-200">
+                  <td className="py-3 px-4 text-slate-500 font-mono text-[11px]">
+                    {new Date(m.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  </td>
+                  <td className="py-3 px-4 font-medium text-slate-900 dark:text-white">
                     {m.item}
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="font-medium text-slate-800 dark:text-zinc-200">{m.warehouse}</div>
-                    <div className="text-[10px] text-slate-400 dark:text-zinc-500">{m.location}</div>
+                  <td className="py-3 px-4 text-slate-600 dark:text-zinc-300">
+                    <div>{m.warehouse}</div>
+                    <div className="text-[10px] text-slate-400">{m.location}</div>
                   </td>
-                  <td className={`py-3 px-4 text-right font-medium tabular-nums ${m.quantity > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-900 dark:text-zinc-200"}`}>
+                  <td className={`py-3 px-4 text-right font-mono tabular-nums font-bold ${m.quantity > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-900 dark:text-zinc-200"}`}>
                     {m.quantity > 0 ? `+${m.quantity}` : m.quantity} {m.unit}
                   </td>
                   <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-700 dark:text-zinc-300">
@@ -157,11 +172,6 @@ export function StockMovementsPage() {
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
                       {m.status}
                     </span>
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    <button className="text-xs text-blue-600 hover:text-blue-700 font-medium">
-                      View Details
-                    </button>
                   </td>
                 </tr>
               ))}

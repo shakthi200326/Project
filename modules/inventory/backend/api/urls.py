@@ -2,6 +2,8 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     CategoryViewSet,
+    BrandViewSet,
+    UnitOfMeasureViewSet,
     ItemViewSet,
     WarehouseViewSet,
     StorageLocationViewSet,
@@ -18,6 +20,8 @@ from .views import (
 
 router = DefaultRouter()
 router.register(r"categories", CategoryViewSet)
+router.register(r"brands", BrandViewSet)
+router.register(r"units", UnitOfMeasureViewSet)
 router.register(r"items", ItemViewSet)
 router.register(r"warehouses", WarehouseViewSet)
 router.register(r"locations", StorageLocationViewSet)
@@ -34,4 +38,3 @@ urlpatterns = [
     path("dashboard/kpis/", DashboardKPIView.as_view(), name="inventory-dashboard-kpis"),
     path("", include(router.urls)),
 ]
-

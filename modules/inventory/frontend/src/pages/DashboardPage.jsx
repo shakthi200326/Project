@@ -28,7 +28,7 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
-import { fetchInventoryKPIs, fetchStockMovements } from "../services/api";
+import { DEMO_KPIS, fetchInventoryKPIs, fetchStockMovements } from "../services/api";
 
 const MOVEMENT_DATA = [
   { date: "Oct 24", inbound: 450, outbound: 320 },
@@ -49,7 +49,7 @@ const CATEGORY_DATA = [
 ];
 
 export function DashboardPage() {
-  const [kpis, setKpis] = useState(null);
+  const [kpis, setKpis] = useState(DEMO_KPIS);
   const [recentMovements, setRecentMovements] = useState([]);
   const [period, setPeriod] = useState("30d");
 
@@ -395,4 +395,3 @@ export function DashboardPage() {
     </div>
   );
 }
-

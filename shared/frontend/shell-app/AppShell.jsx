@@ -36,10 +36,13 @@ import {
   X,
   Building2,
   ShieldCheck,
+  Database,
+  Radio,
 } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 import { useWorkspace } from "./ContextSelector";
 import { CommandPaletteModal } from "../../../modules/inventory/frontend/src/components/CommandPaletteModal.jsx";
+import { getApiStatus, subscribeApiStatus } from "../../../modules/inventory/frontend/src/services/api.js";
 
 export function AppShell({ children }) {
   const location = useLocation();
@@ -48,6 +51,7 @@ export function AppShell({ children }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
+  const [isApiLive, setIsApiLive] = useState(getApiStatus());
   const [openGroups, setOpenGroups] = useState({
     catalog: true,
     warehouses: true,
@@ -56,6 +60,11 @@ export function AppShell({ children }) {
     planning: false,
     analytics: false,
   });
+
+  useEffect(() => {
+    const unsub = subscribeApiStatus(setIsApiLive);
+    return unsub;
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -84,17 +93,15 @@ export function AppShell({ children }) {
         { label: "Products", path: "/inventory/products", icon: Package },
         { label: "Categories", path: "/inventory/categories", icon: Layers },
         { label: "Brands", path: "/inventory/brands", icon: Tag },
-        { label: "Product Variants", path: "/inventory/variants", icon: Boxes },
         { label: "Units of Measure", path: "/inventory/units", icon: Ruler },
-        { label: "Barcodes", path: "/inventory/barcodes", icon: Barcode },
+        { label: "Barcodes & Tags", path: "/inventory/barcodes", icon: Barcode },
       ],
     },
     {
       key: "warehouses",
       title: "Warehouses",
       items: [
-        { label: "Facility Overview", path: "/inventory/warehouses/overview", icon: Warehouse },
-        { label: "Warehouses", path: "/inventory/warehouses", icon: Building2 },
+        { label: "Facility Overview", path: "/inventory/warehouses", icon: Warehouse },
         { label: "Storage Locations", path: "/inventory/locations", icon: MapPin },
       ],
     },
@@ -114,28 +121,25 @@ export function AppShell({ children }) {
       key: "control",
       title: "Stock Control",
       items: [
-        { label: "Stock Ledger", path: "/inventory/control/ledger", icon: FileSpreadsheet },
         { label: "Stock Balances", path: "/inventory/control/balances", icon: Boxes },
+        { label: "Stock Ledger", path: "/inventory/control/ledger", icon: FileSpreadsheet },
         { label: "Batch Tracking", path: "/inventory/control/batches", icon: Hash },
         { label: "Serial Tracking", path: "/inventory/control/serials", icon: Cpu },
-        { label: "Expiry Management", path: "/inventory/control/expiry", icon: Clock },
       ],
     },
     {
       key: "planning",
       title: "Planning",
       items: [
-        { label: "Replenishment", path: "/inventory/planning/replenishment", icon: TrendingUp },
-        { label: "Low Stock Alerts", path: "/inventory/planning/low-stock", icon: AlertTriangle },
+        { label: "Replenishment & Alerts", path: "/inventory/planning/replenishment", icon: TrendingUp },
       ],
     },
     {
       key: "analytics",
       title: "Analytics",
       items: [
-        { label: "Inventory Reports", path: "/inventory/analytics/reports", icon: PieChart },
-        { label: "Stock Valuation", path: "/inventory/analytics/valuation", icon: DollarSign },
-        { label: "Movement Analytics", path: "/inventory/analytics/movement", icon: Activity },
+        { label: "Valuation Reports", path: "/inventory/analytics/valuation", icon: DollarSign },
+        { label: "Inventory Analytics", path: "/inventory/analytics/reports", icon: PieChart },
       ],
     },
     {
@@ -164,7 +168,7 @@ export function AppShell({ children }) {
                   ONE ERP
                 </span>
                 <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                  Inventory Module
+                  Inventory Ecosystem v3.1
                 </span>
               </div>
             )}
@@ -231,19 +235,28 @@ export function AppShell({ children }) {
           })}
         </div>
 
-        {/* Footer / User Scope */}
-        <div className="p-3 border-t border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50">
+        {/* Footer / User Scope & Environment status */}
+        <div className="p-3 border-t border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 space-y-2">
+          {!collapsed && (
+            <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-zinc-500">
+              <span className="flex items-center gap-1">
+                <Database className="h-3 w-3 text-blue-500" /> PostgreSQL 16
+              </span>
+              <span className="font-mono">v3.1.0</span>
+            </div>
+          )}
+
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-zinc-800 text-xs font-semibold text-slate-700 dark:text-zinc-300">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-950/80 text-xs font-bold text-blue-700 dark:text-blue-300">
               AD
             </div>
             {!collapsed && (
               <div className="flex flex-col min-w-0">
-                <span className="truncate text-xs font-medium text-slate-800 dark:text-zinc-200">
-                  Admin User
+                <span className="truncate text-xs font-semibold text-slate-800 dark:text-zinc-200">
+                  Operations Admin
                 </span>
                 <span className="truncate text-[10px] text-slate-400 dark:text-zinc-500">
-                  Universal Modules
+                  Universal Modules Host
                 </span>
               </div>
             )}
@@ -262,7 +275,7 @@ export function AppShell({ children }) {
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
 
-          {/* Context Selector: Facility / Warehouse */}
+          {/* Context Selector: Facility / Warehouse & Live API Status */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-xs">
               <Warehouse className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
@@ -282,6 +295,22 @@ export function AppShell({ children }) {
                 ))}
               </select>
             </div>
+
+            {/* Connectivity status indicator */}
+            <div
+              className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold border ${
+                isApiLive
+                  ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/40"
+                  : "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900/40"
+              }`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  isApiLive ? "bg-emerald-500 animate-pulse" : "bg-blue-500"
+                }`}
+              />
+              <span>{isApiLive ? "Live Engine Sync" : "Pre-Seeded Demo Mode"}</span>
+            </div>
           </div>
 
           {/* Actions & Utilities */}
@@ -292,7 +321,7 @@ export function AppShell({ children }) {
               className="relative hidden sm:flex items-center cursor-pointer select-none"
             >
               <Search className="absolute left-3 h-3.5 w-3.5 text-slate-400 dark:text-zinc-500" />
-              <div className="w-64 pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-400 dark:text-zinc-500 flex items-center justify-between">
+              <div className="w-60 pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-400 dark:text-zinc-500 flex items-center justify-between">
                 <span>Quick search (Ctrl+K)...</span>
                 <kbd className="px-1.5 py-0.2 text-[9px] font-mono bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded">
                   ⌘K
@@ -301,7 +330,7 @@ export function AppShell({ children }) {
             </div>
 
             {/* Notification Bell */}
-            <button className="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 relative">
+            <button className="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 relative cursor-pointer">
               <Bell className="h-4 w-4" />
               <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-blue-600 ring-2 ring-white dark:ring-zinc-900" />
             </button>
@@ -309,7 +338,7 @@ export function AppShell({ children }) {
             {/* Dark/Light Mode Toggle */}
             <button
               onClick={toggleMode}
-              className="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800"
+              className="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer"
               title={`Switch to ${mode === "dark" ? "light" : "dark"} mode`}
             >
               {mode === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}

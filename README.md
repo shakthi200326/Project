@@ -65,5 +65,4 @@ npm run dev
 ```bash
 docker compose up -d
 ```
-Access the application at `http://localhost:5173`.
-
+Docker Compose exposes the frontend at `http://localhost:5174` and the gateway at `http://localhost:8088`. Running `npm run dev` directly serves the frontend at `http://localhost:5173`.

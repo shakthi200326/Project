@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models.file_record import StoredFile
+from shared_file_storage.models.file_record import StoredFile
 
 class StoredFileSerializer(serializers.ModelSerializer):
     download_url = serializers.SerializerMethodField()
@@ -25,9 +25,8 @@ class StoredFileSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "storage_key", "created_at", "updated_at", "download_url"]
 
     def get_download_url(self, obj):
-        from ..services.storage_service import FileStorageService
+        from shared_file_storage.services.storage_service import FileStorageService
         try:
             return FileStorageService.get_download_url(obj)
         except Exception:
             return ""
-

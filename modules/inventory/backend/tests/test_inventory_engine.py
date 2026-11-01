@@ -3,6 +3,8 @@ from django.test import TestCase
 from django.core.exceptions import ValidationError
 
 from apps.categories.models import InventoryCategory
+from apps.brands.models import Brand
+from apps.units.models import UnitOfMeasure
 from apps.products.models import InventoryItem
 from apps.warehouses.models import Warehouse, StorageLocation
 from apps.stock.models import StockBalance, StockLedgerEntry
@@ -98,3 +100,16 @@ class InventoryPostingServiceTest(TestCase):
         with self.assertRaises(ValidationError):
             InventoryPostingService.post_transaction(tx, actor="tester")
 
+class CatalogAndMasterDataTests(TestCase):
+    def test_brand_creation_and_attributes(self):
+        brand = Brand.objects.create(code="TIMK", name="Timken Industrial", country="USA")
+        self.assertEqual(str(brand), "Timken Industrial (TIMK)")
+        self.assertTrue(brand.is_active)
+
+    def test_unit_of_measure_conversions(self):
+        base_ea = UnitOfMeasure.objects.create(code="EA", name="Each", is_base=True, decimal_places=0)
+        box = UnitOfMeasure.objects.create(
+            code="BOX", name="Box of 12", is_base=False, base_unit=base_ea, conversion_factor=Decimal("12.0000")
+        )
+        self.assertEqual(box.conversion_factor, Decimal("12.0000"))
+        self.assertEqual(box.base_unit.code, "EA")

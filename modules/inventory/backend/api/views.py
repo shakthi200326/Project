@@ -6,6 +6,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 from apps.categories.models import InventoryCategory
+from apps.brands.models import Brand
+from apps.units.models import UnitOfMeasure
 from apps.products.models import InventoryItem
 from apps.warehouses.models import Warehouse, StorageLocation
 from apps.stock.models import StockBalance, StockLedgerEntry
@@ -19,6 +21,8 @@ from services.posting_service import InventoryPostingService
 
 from .serializers import (
     CategorySerializer,
+    BrandSerializer,
+    UnitOfMeasureSerializer,
     InventoryItemSerializer,
     WarehouseSerializer,
     StorageLocationSerializer,
@@ -35,6 +39,21 @@ from .serializers import (
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = InventoryCategory.objects.all()
     serializer_class = CategorySerializer
+
+class BrandViewSet(viewsets.ModelViewSet):
+    queryset = Brand.objects.all()
+    serializer_class = BrandSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        search = self.request.query_params.get("search")
+        if search:
+            qs = qs.filter(name__icontains=search) | qs.filter(code__icontains=search)
+        return qs
+
+class UnitOfMeasureViewSet(viewsets.ModelViewSet):
+    queryset = UnitOfMeasure.objects.all()
+    serializer_class = UnitOfMeasureSerializer
 
 class ItemViewSet(viewsets.ModelViewSet):
     queryset = InventoryItem.objects.select_related("category").prefetch_related("variants").all()
@@ -93,7 +112,6 @@ class StockReservationViewSet(viewsets.ModelViewSet):
         res = self.get_object()
         res.status = StockReservation.Status.FULFILLED
         res.save()
-        # Decrement reserved_qty on stock balance
         bal = StockBalance.objects.filter(item=res.item, warehouse=res.warehouse).first()
         if bal and bal.reserved_qty >= res.quantity:
             bal.reserved_qty = max(Decimal("0"), bal.reserved_qty - res.quantity)
@@ -119,8 +137,6 @@ class StockCountViewSet(viewsets.ModelViewSet):
     def reconcile(self, request, pk=None):
         count = self.get_object()
         actor = request.context.username if hasattr(request, "context") else "system"
-        # Auto-generate adjustment transaction for lines with variance
-        has_variance = False
         lines_to_adjust = []
         for line in count.lines.all():
             if line.counted_qty is not None and line.variance_qty != Decimal("0"):
@@ -181,7 +197,6 @@ class DashboardKPIView(APIView):
 
         total_value = InventoryValuation.objects.aggregate(val=Sum("total_value"))["val"] or Decimal("0.0000")
 
-        # Low stock & out of stock calculation
         low_stock_count = 0
         out_of_stock_count = 0
         items = InventoryItem.objects.filter(is_active=True)
@@ -202,4 +217,3 @@ class DashboardKPIView(APIView):
             "low_stock_items": low_stock_count or 18,
             "out_of_stock_items": out_of_stock_count or 4,
         })
-

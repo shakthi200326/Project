@@ -22,6 +22,8 @@ INSTALLED_APPS = [
     "shared_file_storage.apps.FileStorageConfig",
     # Inventory Sub-apps
     "apps.categories",
+    "apps.brands",
+    "apps.units",
     "apps.products",
     "apps.warehouses",
     "apps.stock",
@@ -117,4 +119,3 @@ REST_FRAMEWORK = {
 # Storage
 LOCAL_STORAGE_ROOT = str(PROJECT_ROOT / "uploads")
 STORAGE_PROVIDER = os.environ.get("STORAGE_PROVIDER", "local")
-

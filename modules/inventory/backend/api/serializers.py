@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from apps.categories.models import InventoryCategory
+from apps.brands.models import Brand
+from apps.units.models import UnitOfMeasure
 from apps.products.models import InventoryItem, InventoryItemVariant
 from apps.warehouses.models import Warehouse, StorageLocation
 from apps.stock.models import StockBalance, StockLedgerEntry
@@ -13,6 +15,18 @@ from apps.serial_numbers.models import SerialNumber
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = InventoryCategory
+        fields = "__all__"
+
+class BrandSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Brand
+        fields = "__all__"
+
+class UnitOfMeasureSerializer(serializers.ModelSerializer):
+    base_unit_code = serializers.CharField(source="base_unit.code", read_only=True)
+
+    class Meta:
+        model = UnitOfMeasure
         fields = "__all__"
 
 class ItemVariantSerializer(serializers.ModelSerializer):
@@ -126,5 +140,3 @@ class SerialNumberSerializer(serializers.ModelSerializer):
     class Meta:
         model = SerialNumber
         fields = "__all__"
-
-

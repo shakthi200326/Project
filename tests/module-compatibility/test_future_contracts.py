@@ -9,7 +9,7 @@ class FutureIntegrationContractsTests(TestCase):
     """
 
     def setUp(self):
-        self.contracts_dir = Path("G:/Project/shared/contracts")
+        self.contracts_dir = Path(__file__).resolve().parent.parent.parent / "shared" / "contracts"
 
     def test_event_schemas_validity(self):
         events_schema_file = self.contracts_dir / "events" / "schemas.json"

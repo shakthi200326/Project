@@ -6,9 +6,9 @@ from rest_framework import status, views, viewsets
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 
-from ..models.file_record import StoredFile
-from ..services.storage_service import FileStorageService
-from .serializers import StoredFileSerializer
+from shared_file_storage.models.file_record import StoredFile
+from shared_file_storage.services.storage_service import FileStorageService
+from shared_file_storage.api.serializers import StoredFileSerializer
 
 class StoredFileViewSet(viewsets.ModelViewSet):
     """
@@ -86,4 +86,3 @@ class FileDownloadView(views.APIView):
             url = provider.get_url(record.storage_key)
             from django.shortcuts import redirect
             return redirect(url)
-

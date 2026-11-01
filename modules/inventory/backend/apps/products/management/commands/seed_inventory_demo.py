@@ -1,6 +1,8 @@
 from decimal import Decimal
 from django.core.management.base import BaseCommand
 from apps.categories.models import InventoryCategory
+from apps.brands.models import Brand
+from apps.units.models import UnitOfMeasure
 from apps.products.models import InventoryItem, InventoryItemVariant
 from apps.warehouses.models import Warehouse, StorageLocation
 from apps.stock.models import StockBalance, StockLedgerEntry
@@ -19,14 +21,29 @@ class Command(BaseCommand):
         cat_sens, _ = InventoryCategory.objects.get_or_create(code="CAT-SENS", name="Sensors & Automation")
         cat_chem, _ = InventoryCategory.objects.get_or_create(code="CAT-CHEM", name="Chemicals & Fluids")
 
-        # 2. Warehouses
+        # 2. Units of Measure
+        uom_ea, _ = UnitOfMeasure.objects.get_or_create(code="EA", defaults={"name": "Each / Unit", "symbol": "ea", "is_base": True, "decimal_places": 0})
+        uom_kg, _ = UnitOfMeasure.objects.get_or_create(code="KG", defaults={"name": "Kilogram", "symbol": "kg", "is_base": True, "decimal_places": 3})
+        uom_ltr, _ = UnitOfMeasure.objects.get_or_create(code="LTR", defaults={"name": "Liter", "symbol": "L", "is_base": True, "decimal_places": 2})
+        uom_mtr, _ = UnitOfMeasure.objects.get_or_create(code="MTR", defaults={"name": "Meter", "symbol": "m", "is_base": True, "decimal_places": 2})
+        uom_box, _ = UnitOfMeasure.objects.get_or_create(code="BOX", defaults={"name": "Box (10 units)", "symbol": "bx", "is_base": False, "base_unit": uom_ea, "conversion_factor": Decimal("10.0000"), "decimal_places": 0})
+        uom_pal, _ = UnitOfMeasure.objects.get_or_create(code="PAL", defaults={"name": "Pallet (100 units)", "symbol": "pal", "is_base": False, "base_unit": uom_ea, "conversion_factor": Decimal("100.0000"), "decimal_places": 0})
+
+        # 3. Brands
+        brand_skf, _ = Brand.objects.get_or_create(code="SKF", defaults={"name": "SKF Precision", "country": "Sweden"})
+        brand_rex, _ = Brand.objects.get_or_create(code="REX", defaults={"name": "Bosch Rexroth", "country": "Germany"})
+        brand_gat, _ = Brand.objects.get_or_create(code="GAT", defaults={"name": "Gates PowerGrip", "country": "USA"})
+        brand_omr, _ = Brand.objects.get_or_create(code="OMR", defaults={"name": "Omron Industrial", "country": "Japan"})
+        brand_mob, _ = Brand.objects.get_or_create(code="MOB", defaults={"name": "Mobil Rarus", "country": "USA"})
+
+        # 4. Warehouses
         wh_main, _ = Warehouse.objects.get_or_create(code="WH-MAIN", name="Main Central Fulfillment Hub", address="Chicago, IL")
         wh_east, _ = Warehouse.objects.get_or_create(code="WH-EAST", name="East Coast Logistics Terminal", address="Newark, NJ")
 
         loc_a3, _ = StorageLocation.objects.get_or_create(warehouse=wh_main, code="A3-RB", name="Aisle 3 - Rack B", zone="Zone A")
         loc_a1, _ = StorageLocation.objects.get_or_create(warehouse=wh_main, code="A1-B4", name="Aisle 1 - Bin 4", zone="Zone A")
 
-        # 3. Items
+        # 5. Items
         items_data = [
             ("BRG-6205-2RS", "Industrial Ball Bearing 6205-2RS", cat_mech, "SKF Precision", "EA", 100, 450, 14.85),
             ("HYD-SV-24V", "Hydraulic Solenoid Valve 24V DC", cat_hyd, "Bosch Rexroth", "EA", 25, 18, 128.50),
@@ -86,4 +103,3 @@ class Command(BaseCommand):
                 )
 
         self.stdout.write(self.style.SUCCESS("Successfully seeded enterprise inventory catalog & balances!"))
-

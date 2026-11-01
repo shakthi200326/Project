@@ -6,6 +6,8 @@ from rest_framework.test import APIClient
 from rest_framework import status
 
 from apps.categories.models import InventoryCategory
+from apps.brands.models import Brand
+from apps.units.models import UnitOfMeasure
 from apps.products.models import InventoryItem
 from apps.warehouses.models import Warehouse, StorageLocation
 from apps.stock.models import StockBalance, StockLedgerEntry
@@ -30,6 +32,25 @@ class EndToEndRestApiWorkflowTests(TestCase):
         }, format="json")
         self.assertEqual(cat_resp.status_code, status.HTTP_201_CREATED)
         category_id = cat_resp.data["id"]
+
+        # 1b. Create Brand via API
+        brand_resp = self.client.post("/api/v1/inventory/brands/", {
+            "name": "HarmonicDrive SE",
+            "code": "HDSE",
+            "country": "Germany",
+        }, format="json")
+        self.assertEqual(brand_resp.status_code, status.HTTP_201_CREATED)
+        brand_id = brand_resp.data["id"]
+
+        # 1c. Create UOM via API
+        uom_resp = self.client.post("/api/v1/inventory/units/", {
+            "name": "Each / Unit",
+            "code": "EA",
+            "symbol": "ea",
+            "is_base": True,
+            "decimal_places": 0,
+        }, format="json")
+        self.assertEqual(uom_resp.status_code, status.HTTP_201_CREATED)
 
         # 2. Create Warehouse via API
         wh_resp = self.client.post("/api/v1/inventory/warehouses/", {
