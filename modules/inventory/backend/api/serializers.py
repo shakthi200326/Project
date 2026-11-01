@@ -49,6 +49,7 @@ class WarehouseSerializer(serializers.ModelSerializer):
 
 class StorageLocationSerializer(serializers.ModelSerializer):
     warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
 
     class Meta:
         model = StorageLocation

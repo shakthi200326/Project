@@ -164,11 +164,8 @@ export function AppShell({ children }) {
             </div>
             {!collapsed && (
               <div className="flex flex-col">
-                <span className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white leading-tight">
-                  ONE ERP
-                </span>
                 <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                  Inventory Ecosystem v3.1
+                  Inventory Management
                 </span>
               </div>
             )}
