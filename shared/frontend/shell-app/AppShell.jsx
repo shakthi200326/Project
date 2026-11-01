@@ -179,19 +179,25 @@ export function AppShell({ children }) {
     <div className="flex h-screen w-full overflow-hidden bg-slate-50 text-slate-900 dark:bg-zinc-950 dark:text-zinc-100 font-sans antialiased">
       {/* Sidebar Desktop */}
       <aside
-        className={`hidden md:flex flex-col border-r border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 transition-all duration-200 z-30 select-none ${
+        className={`hidden md:flex flex-col border-r border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 transition-all duration-200 z-30 select-none shadow-xs ${
           collapsed ? "w-18" : "w-64"
         }`}
       >
         {/* Brand / Logo */}
-        <div className="flex h-15 items-center justify-between px-4 border-b border-slate-200 dark:border-zinc-800">
+        <div className="flex h-16 items-center justify-between px-4 border-b border-slate-200/80 dark:border-zinc-800/80 bg-white/50 dark:bg-zinc-900/50">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white font-bold shadow-sm">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 text-white font-bold shadow-md shadow-blue-500/20 ring-1 ring-white/20">
               <Boxes className="h-5 w-5" />
             </div>
             {!collapsed && (
-              <div className="flex flex-col">
-                <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
+                  ONE ERP
+                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-950/80 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-900">
+                    v3.1
+                  </span>
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-zinc-400 font-medium truncate">
                   Inventory Management
                 </span>
               </div>
@@ -199,7 +205,7 @@ export function AppShell({ children }) {
           </div>
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="hidden lg:flex p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800"
+            className="hidden lg:flex p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <Menu className="h-4 w-4" />
@@ -207,7 +213,7 @@ export function AppShell({ children }) {
         </div>
 
         {/* Navigation Group Items */}
-        <div className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
+        <div className="flex-1 overflow-y-auto px-2.5 py-3 space-y-4">
           {navGroups.map((group, gIdx) => {
             const hasKey = !!group.key;
             const isOpen = hasKey ? openGroups[group.key] : true;
@@ -217,8 +223,8 @@ export function AppShell({ children }) {
                 {!collapsed && (
                   <div
                     onClick={() => hasKey && toggleGroup(group.key)}
-                    className={`flex items-center justify-between px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500 ${
-                      hasKey ? "cursor-pointer hover:text-slate-600 dark:hover:text-zinc-300" : ""
+                    className={`flex items-center justify-between px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500 ${
+                      hasKey ? "cursor-pointer hover:text-slate-600 dark:hover:text-zinc-300 transition-colors" : ""
                     }`}
                   >
                     <span>{group.title}</span>
@@ -241,14 +247,23 @@ export function AppShell({ children }) {
                           key={item.path}
                           to={item.path}
                           title={collapsed ? item.label : undefined}
-                          className={`flex items-center gap-3 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors ${
+                          className={`group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                             isActive
-                              ? "bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 font-semibold"
-                              : "text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800/60 hover:text-slate-900 dark:hover:text-zinc-200"
+                              ? "bg-blue-500/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400 font-semibold shadow-2xs"
+                              : "text-slate-600 dark:text-zinc-400 hover:bg-slate-100/80 dark:hover:bg-zinc-800/60 hover:text-slate-900 dark:hover:text-zinc-200"
                           } ${collapsed ? "justify-center px-0" : ""}`}
                         >
-                          <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-500 dark:text-zinc-400"}`} />
-                          {!collapsed && <span>{item.label}</span>}
+                          {isActive && !collapsed && (
+                            <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-blue-600 dark:bg-blue-400" />
+                          )}
+                          <Icon
+                            className={`h-4 w-4 shrink-0 transition-transform group-hover:scale-105 ${
+                              isActive
+                                ? "text-blue-600 dark:text-blue-400"
+                                : "text-slate-400 dark:text-zinc-500 group-hover:text-slate-600 dark:group-hover:text-zinc-300"
+                            }`}
+                          />
+                          {!collapsed && <span className="truncate">{item.label}</span>}
                         </Link>
                       );
                     })}
@@ -260,23 +275,29 @@ export function AppShell({ children }) {
         </div>
 
         {/* Footer / User Scope & Environment status */}
-        <div className="p-3 border-t border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 space-y-2">
+        <div className="p-3 border-t border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/70 dark:bg-zinc-900/70 space-y-2.5">
           {!collapsed && (
-            <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-zinc-500">
-    
+            <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-zinc-400 font-medium px-1">
+              <span className="flex items-center gap-1.5">
+                <span className={`h-1.5 w-1.5 rounded-full ${isApiLive ? "bg-emerald-500 animate-pulse" : "bg-blue-500"}`} />
+                {isApiLive ? "LIVE ENGINE SYNC" : "PRE-SEEDED DEMO"}
+              </span>
+              <span className="font-mono text-[9px] bg-slate-200/60 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-slate-600 dark:text-zinc-400 font-bold">
+                PROD-READY
+              </span>
             </div>
           )}
 
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-950/80 text-xs font-bold text-blue-700 dark:text-blue-300">
+          <div className="flex items-center gap-3 p-1 rounded-xl hover:bg-slate-100/60 dark:hover:bg-zinc-800/40 transition-colors">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-xs font-bold text-white shadow-xs">
               AD
             </div>
             {!collapsed && (
               <div className="flex flex-col min-w-0">
-                <span className="truncate text-xs font-semibold text-slate-800 dark:text-zinc-200">
+                <span className="truncate text-xs font-semibold text-slate-900 dark:text-zinc-100">
                   Operations Admin
                 </span>
-                <span className="truncate text-[10px] text-slate-400 dark:text-zinc-500">
+                <span className="truncate text-[10px] text-slate-500 dark:text-zinc-400">
                   Universal Modules Host
                 </span>
               </div>

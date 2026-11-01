@@ -243,39 +243,42 @@ export function WarehousesPage() {
         {filteredWarehouses.map((wh) => (
           <div
             key={wh.id}
-            className="p-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs space-y-4 hover:border-blue-500 transition-colors flex flex-col justify-between"
+            className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4 hover:shadow-md hover:border-blue-400/60 dark:hover:border-blue-700/60 transition-all flex flex-col justify-between group"
           >
-            <div className="space-y-3">
+            <div className="space-y-3.5">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 shrink-0">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-xs shrink-0 group-hover:scale-105 transition-transform">
                     <Building2 className="h-5 w-5" />
                   </div>
                   <div className="min-w-0">
                     <h2 className="text-sm font-bold text-slate-900 dark:text-white truncate">
                       {wh.name}
                     </h2>
-                    <span className="font-mono text-[11px] font-semibold text-blue-600 dark:text-blue-400">
+                    <span className="font-mono text-[11px] font-bold text-blue-600 dark:text-blue-400">
                       {wh.code}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <button
                     onClick={(e) => handleOpenEditModal(wh)}
-                    className="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                     title="Edit Facility"
                   >
                     <Edit2 className="h-3.5 w-3.5" />
                   </button>
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                       wh.is_active !== false && wh.status !== "INACTIVE"
-                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
-                        : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400"
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50"
+                        : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400 border-slate-200 dark:border-zinc-700"
                     }`}
                   >
+                    <span className={`h-1.5 w-1.5 rounded-full ${
+                      wh.is_active !== false && wh.status !== "INACTIVE" ? "bg-emerald-500 animate-pulse" : "bg-slate-400"
+                    }`} />
                     {wh.is_active !== false && wh.status !== "INACTIVE"
                       ? "ACTIVE"
                       : "INACTIVE"}
@@ -289,17 +292,19 @@ export function WarehousesPage() {
               </div>
 
               {/* Capacity Bar */}
-              <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-zinc-800">
+              <div className="space-y-1.5 pt-3 border-t border-slate-100 dark:border-zinc-800/80">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500 dark:text-zinc-400">Capacity Occupancy</span>
-                  <span className="font-bold tabular-nums text-slate-900 dark:text-white">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium">Capacity Occupancy</span>
+                  <span className="font-bold font-mono tabular-nums text-slate-900 dark:text-white">
                     {wh.capacity_used}%
                   </span>
                 </div>
                 <div className="w-full bg-slate-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all duration-300 ${
-                      wh.capacity_used > 80 ? "bg-amber-500" : "bg-blue-600"
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      wh.capacity_used > 80
+                        ? "bg-gradient-to-r from-amber-500 to-rose-500"
+                        : "bg-gradient-to-r from-blue-600 to-cyan-500"
                     }`}
                     style={{ width: `${wh.capacity_used}%` }}
                   />
@@ -307,34 +312,34 @@ export function WarehousesPage() {
               </div>
 
               {/* Quick Metrics */}
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800 text-center text-xs">
-                <div className="p-2 rounded bg-slate-50 dark:bg-zinc-800/40">
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800/80 text-center text-xs">
+                <div className="p-2 rounded-xl bg-slate-50/80 dark:bg-zinc-800/40 border border-slate-100 dark:border-zinc-800">
                   <div className="font-bold text-slate-900 dark:text-white tabular-nums">
                     {wh.zones_count || 3}
                   </div>
-                  <div className="text-[10px] text-slate-400">Zones</div>
+                  <div className="text-[10px] text-slate-400 font-medium">Zones</div>
                 </div>
-                <div className="p-2 rounded bg-slate-50 dark:bg-zinc-800/40">
+                <div className="p-2 rounded-xl bg-slate-50/80 dark:bg-zinc-800/40 border border-slate-100 dark:border-zinc-800">
                   <div className="font-bold text-slate-900 dark:text-white tabular-nums">
                     {wh.locations_count || 48}
                   </div>
-                  <div className="text-[10px] text-slate-400">Bins/Racks</div>
+                  <div className="text-[10px] text-slate-400 font-medium">Bins/Racks</div>
                 </div>
-                <div className="p-2 rounded bg-slate-50 dark:bg-zinc-800/40">
+                <div className="p-2 rounded-xl bg-slate-50/80 dark:bg-zinc-800/40 border border-slate-100 dark:border-zinc-800">
                   <div className="font-bold text-slate-900 dark:text-white tabular-nums">
                     {wh.total_skus || 240}
                   </div>
-                  <div className="text-[10px] text-slate-400">SKUs</div>
+                  <div className="text-[10px] text-slate-400 font-medium">SKUs</div>
                 </div>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="pt-2 flex items-center gap-2">
+            <div className="pt-3 flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => handleInspectLocations(wh.code)}
-                className="flex-1 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-zinc-800 flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                className="flex-1 py-2 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50/80 dark:hover:bg-zinc-800 flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
               >
                 <span>Inspect Bin Hierarchy</span>
                 <ChevronRight className="h-3.5 w-3.5" />
@@ -344,7 +349,7 @@ export function WarehousesPage() {
                 type="button"
                 onClick={(e) => handleToggleStatus(wh, e)}
                 title={wh.is_active !== false ? "Deactivate Facility" : "Activate Facility"}
-                className="p-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 text-slate-500 hover:text-slate-800 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+                className="p-2 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 text-slate-500 hover:text-slate-800 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shadow-2xs"
               >
                 <Power className="h-3.5 w-3.5" />
               </button>

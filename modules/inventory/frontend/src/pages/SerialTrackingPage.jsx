@@ -309,52 +309,63 @@ export function SerialTrackingPage() {
       </div>
 
       {/* Serial Numbers Table */}
-      <div className="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
+      <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-500">
-                <th className="py-3 px-4 font-semibold">Serial Number</th>
-                <th className="py-3 px-4 font-semibold">Item & SKU Code</th>
-                <th className="py-3 px-4 font-semibold">Facility & Bin Location</th>
-                <th className="py-3 px-4 font-semibold">Warranty Expiration</th>
-                <th className="py-3 px-4 font-semibold text-center">Status</th>
-                <th className="py-3 px-4 text-center">Traceability Action</th>
+              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                <th className="py-3.5 px-4 font-semibold">Serial Number</th>
+                <th className="py-3.5 px-4 font-semibold">Item & SKU Code</th>
+                <th className="py-3.5 px-4 font-semibold">Facility & Bin Location</th>
+                <th className="py-3.5 px-4 font-semibold">Warranty Expiration</th>
+                <th className="py-3.5 px-4 font-semibold text-center">Status</th>
+                <th className="py-3.5 px-4 text-center">Traceability Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
               {filteredSerials.map((sn) => (
-                <tr key={sn.id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/40">
-                  <td className="py-3 px-4 font-mono font-bold text-blue-600 dark:text-blue-400">
-                    {sn.serial_number}
+                <tr key={sn.id} className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors">
+                  <td className="py-3.5 px-4">
+                    <span className="font-mono text-[11px] font-bold text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md bg-blue-50/80 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/40">
+                      {sn.serial_number}
+                    </span>
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3.5 px-4">
                     <div className="font-semibold text-slate-900 dark:text-zinc-100">{sn.item_name}</div>
                     <div className="font-mono text-[10px] text-slate-400">{sn.item_code}</div>
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="font-medium text-slate-800 dark:text-zinc-200">
+                  <td className="py-3.5 px-4">
+                    <div className="font-semibold text-slate-800 dark:text-zinc-200">
                       {sn.warehouse_name || sn.warehouse}
                     </div>
                     <div className="font-mono text-[10px] text-slate-400">
                       {sn.location_code || sn.location || "Central Storage"}
                     </div>
                   </td>
-                  <td className="py-3 px-4 font-mono text-slate-500">
+                  <td className="py-3.5 px-4 font-mono text-slate-500">
                     {sn.warranty_until || "2028-12-31"}
                   </td>
-                  <td className="py-3 px-4 text-center">
+                  <td className="py-3.5 px-4 text-center">
                     <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                         sn.status === "IN_STOCK"
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
+                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50"
                           : sn.status === "DISPATCHED" || sn.status === "ISSUED"
-                          ? "bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400"
+                          ? "bg-blue-50 text-blue-700 dark:bg-blue-950/70 dark:text-blue-400 border border-blue-200 dark:border-blue-900/50"
                           : sn.status === "IN_MAINTENANCE"
-                          ? "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400"
-                          : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400"
+                          ? "bg-amber-50 text-amber-700 dark:bg-amber-950/70 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50"
+                          : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400 border-slate-200 dark:border-zinc-700"
                       }`}
                     >
+                      <span className={`h-1.5 w-1.5 rounded-full ${
+                        sn.status === "IN_STOCK"
+                          ? "bg-emerald-500"
+                          : sn.status === "DISPATCHED" || sn.status === "ISSUED"
+                          ? "bg-blue-500"
+                          : sn.status === "IN_MAINTENANCE"
+                          ? "bg-amber-500"
+                          : "bg-slate-400"
+                      }`} />
                       {sn.status.replace("_", " ")}
                     </span>
                   </td>

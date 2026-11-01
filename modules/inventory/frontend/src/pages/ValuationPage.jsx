@@ -91,9 +91,9 @@ export function ValuationPage() {
 
       {/* Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
+        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
-            <span>Total Book Value</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">Total Book Value</span>
             <DollarSign className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight font-mono text-slate-900 dark:text-white tabular-nums">
@@ -104,48 +104,48 @@ export function ValuationPage() {
           </div>
         </div>
 
-        <div className="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
+        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
-            <span>Active Catalog SKUs</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">Active Catalog SKUs</span>
             <PieChart className="h-4 w-4 text-blue-500" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums">
             {totalSkus.toLocaleString()}
           </div>
-          <div className="mt-1 text-[11px] text-slate-400">
+          <div className="text-[11px] text-slate-400">
             Across 5 primary classifications
           </div>
         </div>
 
-        <div className="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
+        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
-            <span>Physical Units On-Hand</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">Units On-Hand</span>
             <TrendingUp className="h-4 w-4 text-purple-500" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums">
             {totalQty.toLocaleString()}
           </div>
-          <div className="mt-1 text-[11px] text-slate-400">
+          <div className="text-[11px] text-slate-400">
             Total units across all warehouses
           </div>
         </div>
 
-        <div className="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
+        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
-            <span>Avg Blended Cost</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">Avg Blended Cost</span>
             <DollarSign className="h-4 w-4 text-amber-500" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight font-mono text-slate-900 dark:text-white tabular-nums">
             ${(grandTotal / totalQty).toFixed(2)}
           </div>
-          <div className="mt-1 text-[11px] text-slate-400">
+          <div className="text-[11px] text-slate-400">
             Per physical unit in stock
           </div>
         </div>
       </div>
 
       {/* Valuation Info Banner */}
-      <div className="p-3 px-4 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/60 dark:bg-blue-950/30 flex items-center gap-3 text-xs text-blue-900 dark:text-blue-300">
+      <div className="p-4 rounded-2xl border border-blue-200/80 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/25 flex items-center gap-3 text-xs text-blue-900 dark:text-blue-300 shadow-2xs">
         <Info className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
         <span>
           Valuation is recalculated dynamically upon every Goods Receipt using the Moving Weighted Average formula:{" "}
@@ -154,9 +154,9 @@ export function ValuationPage() {
       </div>
 
       {/* Table Container */}
-      <div className="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
+      <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
         {/* Search Bar */}
-        <div className="p-3 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between gap-3">
+        <div className="p-3.5 border-b border-slate-200/80 dark:border-zinc-800/80 flex items-center justify-between gap-3">
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
             <input
@@ -164,10 +164,10 @@ export function ValuationPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Filter by category..."
-              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
             />
           </div>
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-slate-400 font-medium">
             Showing {filteredRows.length} of {valuationRows.length} categories
           </span>
         </div>
@@ -175,16 +175,16 @@ export function ValuationPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50/75 dark:bg-zinc-800/40 text-slate-500 dark:text-zinc-400">
-                <th className="py-3 px-4 font-semibold">Category Classification</th>
-                <th className="py-3 px-4 font-semibold text-center">Active SKUs</th>
-                <th className="py-3 px-4 font-semibold text-right">Total On-Hand Qty</th>
-                <th className="py-3 px-4 font-semibold text-right">Avg Unit Cost</th>
-                <th className="py-3 px-4 font-semibold text-right">Total Valuation (USD)</th>
-                <th className="py-3 px-4 font-semibold text-right">% of Inventory</th>
+              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/40 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                <th className="py-3.5 px-4 font-semibold">Category Classification</th>
+                <th className="py-3.5 px-4 font-semibold text-center">Active SKUs</th>
+                <th className="py-3.5 px-4 font-semibold text-right">Total On-Hand Qty</th>
+                <th className="py-3.5 px-4 font-semibold text-right">Avg Unit Cost</th>
+                <th className="py-3.5 px-4 font-semibold text-right">Total Valuation (USD)</th>
+                <th className="py-3.5 px-4 font-semibold text-right">% of Inventory</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
               {filteredRows.map((row) => (
                 <tr key={row.category} className="hover:bg-slate-50/60 dark:hover:bg-zinc-800/40 transition-colors">
                   <td className="py-3 px-4 font-semibold text-slate-900 dark:text-zinc-100">

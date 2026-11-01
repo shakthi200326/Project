@@ -226,25 +226,69 @@ export function ProductsPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsImportOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors shadow-xs cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors shadow-2xs cursor-pointer"
           >
             <Upload className="h-3.5 w-3.5" />
             <span>Import</span>
           </button>
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors shadow-xs cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors shadow-2xs cursor-pointer"
           >
             <Download className="h-3.5 w-3.5" />
             <span>Export CSV</span>
           </button>
           <button
             onClick={() => setIsCreateOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-colors shadow-xs cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-all shadow-xs shadow-blue-500/25 active:scale-[0.98] cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             <span>Create Product</span>
           </button>
+        </div>
+      </div>
+
+      {/* Catalog Metric Strip */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+            Catalog SKUs
+          </div>
+          <div className="text-xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums mt-1">
+            {products.length} Items
+          </div>
+          <div className="text-[11px] text-slate-400 mt-0.5">Across master categories</div>
+        </div>
+        <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+            Physical On-Hand
+          </div>
+          <div className="text-xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums mt-1">
+            {products.reduce((acc, p) => acc + (p.on_hand || 0), 0).toLocaleString()} Units
+          </div>
+          <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-0.5">
+            Circulating in facilities
+          </div>
+        </div>
+        <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+            Catalog Valuation
+          </div>
+          <div className="text-xl font-bold tracking-tight font-mono text-emerald-600 dark:text-emerald-400 tabular-nums mt-1">
+            ${products.reduce((acc, p) => acc + (p.on_hand || 0) * (p.unit_cost || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+          <div className="text-[11px] text-slate-400 mt-0.5">Moving Weighted Average</div>
+        </div>
+        <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+            Attention Needed
+          </div>
+          <div className="text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400 tabular-nums mt-1">
+            {products.filter((p) => p.stock_status === "LOW_STOCK" || p.stock_status === "OUT_OF_STOCK").length} Products
+          </div>
+          <div className="text-[11px] text-amber-600 dark:text-amber-400 font-medium mt-0.5">
+            At or below reorder point
+          </div>
         </div>
       </div>
 
@@ -333,12 +377,12 @@ export function ProductsPage() {
       )}
 
       {/* High-Density Data Table */}
-      <div className="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
+      <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50/75 dark:bg-zinc-800/40 text-slate-500 dark:text-zinc-400 select-none">
-                <th className="py-3 px-4 w-10">
+              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/40 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400 select-none">
+                <th className="py-3.5 px-4 w-10">
                   <input
                     type="checkbox"
                     checked={
@@ -349,25 +393,25 @@ export function ProductsPage() {
                     className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
                   />
                 </th>
-                <th className="py-3 px-4 font-semibold">SKU & Item Name</th>
-                <th className="py-3 px-4 font-semibold">Category & Brand</th>
-                <th className="py-3 px-4 font-semibold text-center">Variants</th>
-                <th className="py-3 px-4 font-semibold text-right">On-Hand</th>
-                <th className="py-3 px-4 font-semibold text-right">Reserved</th>
-                <th className="py-3 px-4 font-semibold text-right">Available</th>
-                <th className="py-3 px-4 font-semibold text-center">Status</th>
-                <th className="py-3 px-4 font-semibold text-right">Unit WAV</th>
-                <th className="py-3 px-4 text-center w-12">Actions</th>
+                <th className="py-3.5 px-4 font-semibold">SKU & Item Name</th>
+                <th className="py-3.5 px-4 font-semibold">Category & Brand</th>
+                <th className="py-3.5 px-4 font-semibold text-center">Variants</th>
+                <th className="py-3.5 px-4 font-semibold text-right">On-Hand</th>
+                <th className="py-3.5 px-4 font-semibold text-right">Reserved</th>
+                <th className="py-3.5 px-4 font-semibold text-right">Available</th>
+                <th className="py-3.5 px-4 font-semibold text-center">Status</th>
+                <th className="py-3.5 px-4 font-semibold text-right">Unit WAV</th>
+                <th className="py-3.5 px-4 text-center w-12">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
               {paginatedProducts.map((p) => (
                 <tr
                   key={p.id}
                   onClick={() => handleOpenDetail(p)}
-                  className="hover:bg-slate-50/60 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors"
+                  className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors"
                 >
-                  <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                  <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={selectedIds.includes(p.id)}
@@ -375,15 +419,17 @@ export function ProductsPage() {
                       className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
                     />
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="font-mono text-[11px] font-semibold text-blue-600 dark:text-blue-400">
-                      {p.sku}
+                  <td className="py-3.5 px-4">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[11px] font-bold text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md bg-blue-50/80 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/40">
+                        {p.sku}
+                      </span>
                     </div>
-                    <div className="font-medium text-slate-900 dark:text-zinc-100">
+                    <div className="font-semibold text-slate-900 dark:text-zinc-100 mt-1">
                       {p.name}
                     </div>
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3.5 px-4">
                     <div className="text-slate-800 dark:text-zinc-200 font-medium">
                       {p.category}
                     </div>
@@ -391,44 +437,44 @@ export function ProductsPage() {
                       {p.brand}
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-center">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
+                  <td className="py-3.5 px-4 text-center">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
                       <Boxes className="h-3 w-3 text-slate-400" /> {p.variants_count || 1}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-right font-medium tabular-nums text-slate-900 dark:text-zinc-100">
+                  <td className="py-3.5 px-4 text-right font-semibold tabular-nums text-slate-900 dark:text-zinc-100">
                     {(p.on_hand || 0).toLocaleString()} {p.unit}
                   </td>
-                  <td className="py-3 px-4 text-right font-medium tabular-nums text-purple-600 dark:text-purple-400">
+                  <td className="py-3.5 px-4 text-right font-medium tabular-nums text-purple-600 dark:text-purple-400">
                     {p.reserved > 0 ? `${p.reserved.toLocaleString()} ${p.unit}` : "-"}
                   </td>
-                  <td className="py-3 px-4 text-right font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                  <td className="py-3.5 px-4 text-right font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
                     {(p.available || 0).toLocaleString()} {p.unit}
                   </td>
-                  <td className="py-3 px-4 text-center">
+                  <td className="py-3.5 px-4 text-center">
                     <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                         p.stock_status === "IN_STOCK"
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
+                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50"
                           : p.stock_status === "LOW_STOCK"
-                          ? "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400"
-                          : "bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400"
+                          ? "bg-amber-50 text-amber-700 dark:bg-amber-950/70 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50"
+                          : "bg-rose-50 text-rose-700 dark:bg-rose-950/70 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50"
                       }`}
                     >
-                      {p.stock_status === "IN_STOCK" && <CheckCircle className="h-3 w-3" />}
-                      {p.stock_status === "LOW_STOCK" && <AlertCircle className="h-3 w-3" />}
-                      {p.stock_status === "OUT_OF_STOCK" && <XCircle className="h-3 w-3" />}
+                      <span className={`h-1.5 w-1.5 rounded-full ${
+                        p.stock_status === "IN_STOCK" ? "bg-emerald-500" : p.stock_status === "LOW_STOCK" ? "bg-amber-500" : "bg-rose-500"
+                      }`} />
                       {(p.stock_status || "IN_STOCK").replace("_", " ")}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-700 dark:text-zinc-300">
+                  <td className="py-3.5 px-4 text-right font-mono tabular-nums text-slate-700 dark:text-zinc-300 font-medium">
                     ${(p.unit_cost || 0).toFixed(2)}
                   </td>
-                  <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                  <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => handleOpenDetail(p)}
-                      className="p-1 rounded text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
-                      title="Inspect Product"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                      title="Inspect Product Specifications"
                     >
                       <Eye className="h-4 w-4" />
                     </button>

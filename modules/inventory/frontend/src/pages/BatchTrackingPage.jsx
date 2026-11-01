@@ -285,68 +285,70 @@ export function BatchTrackingPage() {
       </div>
 
       {/* Batch Table */}
-      <div className="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
+      <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-500">
-                <th className="py-3 px-4 font-semibold">Batch / Lot No.</th>
-                <th className="py-3 px-4 font-semibold">Product SKU & Title</th>
-                <th className="py-3 px-4 font-semibold">Facility</th>
-                <th className="py-3 px-4 font-semibold">Mfg Date</th>
-                <th className="py-3 px-4 font-semibold">Expiry Date</th>
-                <th className="py-3 px-4 font-semibold text-right">Remaining Stock</th>
-                <th className="py-3 px-4 font-semibold text-center">Status</th>
-                <th className="py-3 px-4 text-center">Actions</th>
+              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                <th className="py-3.5 px-4 font-semibold">Batch / Lot No.</th>
+                <th className="py-3.5 px-4 font-semibold">Product SKU & Title</th>
+                <th className="py-3.5 px-4 font-semibold">Facility</th>
+                <th className="py-3.5 px-4 font-semibold">Mfg Date</th>
+                <th className="py-3.5 px-4 font-semibold">Expiry Date</th>
+                <th className="py-3.5 px-4 font-semibold text-right">Remaining Stock</th>
+                <th className="py-3.5 px-4 font-semibold text-center">Status</th>
+                <th className="py-3.5 px-4 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
               {filteredBatches.map((b) => {
                 const isQuarantined = b.status === "QUARANTINED";
                 return (
                   <tr
                     key={b.id}
                     onClick={() => setSelectedBatch(b)}
-                    className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors"
+                    className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors"
                   >
-                    <td className="py-3 px-4 font-mono font-bold text-blue-600 dark:text-blue-400">
-                      {b.batch_number}
+                    <td className="py-3.5 px-4">
+                      <span className="font-mono text-[11px] font-bold text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md bg-blue-50/80 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/40">
+                        {b.batch_number}
+                      </span>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3.5 px-4">
                       <div className="font-semibold text-slate-900 dark:text-zinc-100">{b.item_name}</div>
                       <div className="font-mono text-[10px] text-slate-400">{b.item_code}</div>
                     </td>
-                    <td className="py-3 px-4 text-slate-600 dark:text-zinc-300 font-medium">
+                    <td className="py-3.5 px-4 text-slate-600 dark:text-zinc-300 font-medium">
                       {b.warehouse_name || b.warehouse}
                     </td>
-                    <td className="py-3 px-4 font-mono text-slate-500">{b.manufacture_date}</td>
-                    <td className="py-3 px-4 font-mono text-slate-800 dark:text-zinc-200 font-medium">
+                    <td className="py-3.5 px-4 font-mono text-slate-500">{b.manufacture_date}</td>
+                    <td className="py-3.5 px-4 font-mono text-slate-800 dark:text-zinc-200 font-medium">
                       {b.expiry_date}
                     </td>
-                    <td className="py-3 px-4 text-right font-bold tabular-nums text-slate-900 dark:text-white">
+                    <td className="py-3.5 px-4 text-right font-bold tabular-nums text-slate-900 dark:text-white">
                       {parseFloat(b.quantity || 0).toLocaleString()} EA
                     </td>
-                    <td className="py-3 px-4 text-center">
+                    <td className="py-3.5 px-4 text-center">
                       <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                           b.status === "RELEASED" || b.status === "HEALTHY"
-                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
+                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50"
                             : b.status === "EXPIRING_SOON"
-                            ? "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400"
+                            ? "bg-amber-50 text-amber-700 dark:bg-amber-950/70 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50"
                             : b.status === "QUARANTINED"
-                            ? "bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-400"
-                            : "bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400"
+                            ? "bg-purple-50 text-purple-700 dark:bg-purple-950/70 dark:text-purple-400 border border-purple-200 dark:border-purple-900/50"
+                            : "bg-rose-50 text-rose-700 dark:bg-rose-950/70 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50"
                         }`}
                       >
-                        {b.status === "RELEASED" || b.status === "HEALTHY" ? (
-                          <CheckCircle className="h-3 w-3" />
-                        ) : b.status === "EXPIRING_SOON" ? (
-                          <Clock className="h-3 w-3" />
-                        ) : b.status === "QUARANTINED" ? (
-                          <Lock className="h-3 w-3" />
-                        ) : (
-                          <ShieldAlert className="h-3 w-3" />
-                        )}
+                        <span className={`h-1.5 w-1.5 rounded-full ${
+                          b.status === "RELEASED" || b.status === "HEALTHY"
+                            ? "bg-emerald-500"
+                            : b.status === "EXPIRING_SOON"
+                            ? "bg-amber-500"
+                            : b.status === "QUARANTINED"
+                            ? "bg-purple-500"
+                            : "bg-rose-500"
+                        }`} />
                         {b.status.replace("_", " ")}
                       </span>
                     </td>

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, Package, Layers, Tag, Ruler, Barcode, Shield, Save, AlertCircle } from "lucide-react";
+import { X, Package, Layers, Tag, Ruler, Barcode, Shield, Save, AlertCircle, Sparkles } from "lucide-react";
 
 export function CreateProductModal({ isOpen, onClose, onCreated }) {
   const [tab, setTab] = useState("basic");
@@ -62,33 +62,39 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="p-5 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/50">
+        <div className="p-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/50">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white font-bold shadow-xs">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-bold shadow-md shadow-blue-500/20">
               <Package className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Create New Catalog Product
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-zinc-400">
-                Define item identity, tracking parameters, UOM & reorder policies.
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                  Create Catalog Product
+                </h2>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/50">
+                  <Sparkles className="h-2.5 w-2.5" />
+                  Item Master
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                Define item identity, tracking policies, UOM conversions & reorder boundaries.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Tab Buttons */}
-        <div className="flex items-center gap-2 px-5 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs">
+        <div className="flex items-center gap-2 px-6 border-b border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs">
           {[
             { key: "basic", label: "1. Basic Details" },
             { key: "tracking", label: "2. Unit & Tracking" },
@@ -98,9 +104,9 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
               key={t.key}
               onClick={() => setTab(t.key)}
               type="button"
-              className={`py-3 font-medium border-b-2 transition-colors ${
+              className={`py-3 font-semibold border-b-2 transition-colors cursor-pointer ${
                 tab === t.key
-                  ? "border-blue-600 text-blue-600 dark:text-blue-400 font-semibold"
+                  ? "border-blue-600 text-blue-600 dark:text-blue-400"
                   : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-zinc-200"
               }`}
             >
@@ -111,9 +117,9 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
 
         {/* Error message */}
         {error && (
-          <div className="m-5 mb-0 p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 flex items-center gap-2 text-xs text-rose-700 dark:text-rose-400">
+          <div className="m-6 mb-0 p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 flex items-center gap-2.5 text-xs text-rose-700 dark:text-rose-400">
             <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{error}</span>
+            <span className="font-medium">{error}</span>
           </div>
         )}
 
@@ -124,7 +130,7 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
                       Product SKU / Item Code <span className="text-rose-500">*</span>
                     </label>
                     <input
@@ -133,13 +139,13 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                       value={formData.code}
                       onChange={handleChange}
                       placeholder="e.g. BRG-6205-2RS"
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:ring-1 focus:ring-blue-500 font-mono"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono transition-all"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
                       Barcode (EAN/UPC)
                     </label>
                     <input
@@ -148,13 +154,13 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                       value={formData.barcode}
                       onChange={handleChange}
                       placeholder="e.g. 890123984210"
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:ring-1 focus:ring-blue-500 font-mono"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono transition-all"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
                     Product Title / Name <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -163,21 +169,21 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                     value={formData.name}
                     onChange={handleChange}
                     placeholder="e.g. Industrial Deep Groove Ball Bearing"
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:ring-1 focus:ring-blue-500"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
                     required
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
                       Category
                     </label>
                     <select
                       name="category"
                       value={formData.category}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:ring-1 focus:ring-blue-500"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
                     >
                       <option value="Mechanical Components">Mechanical Components</option>
                       <option value="Hydraulics & Pneumatics">Hydraulics & Pneumatics</option>
@@ -188,7 +194,7 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                   </div>
 
                   <div>
-                    <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
                       Brand / Manufacturer
                     </label>
                     <input
@@ -197,13 +203,13 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                       value={formData.brand}
                       onChange={handleChange}
                       placeholder="e.g. SKF Precision"
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:ring-1 focus:ring-blue-500"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
                     Operational Description
                   </label>
                   <textarea
@@ -212,7 +218,7 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                     value={formData.description}
                     onChange={handleChange}
                     placeholder="Enter engineering notes, storage conditions or product specifications..."
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:ring-1 focus:ring-blue-500"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
                   />
                 </div>
               </div>
@@ -222,14 +228,14 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
                       Item Type
                     </label>
                     <select
                       name="item_type"
                       value={formData.item_type}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:ring-1 focus:ring-blue-500"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
                     >
                       <option value="STOCK">Stockable Product</option>
                       <option value="RAW_MATERIAL">Raw Material</option>
@@ -239,14 +245,14 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                   </div>
 
                   <div>
-                    <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
                       Base Unit of Measure (UOM)
                     </label>
                     <select
                       name="base_unit"
                       value={formData.base_unit}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:ring-1 focus:ring-blue-500 font-mono"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono transition-all font-medium"
                     >
                       <option value="EA">EA - Each / Piece</option>
                       <option value="LTR">LTR - Liters</option>
@@ -258,25 +264,25 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                 </div>
 
                 <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
-                  <label className="block font-medium text-slate-700 dark:text-zinc-300">
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300">
                     Inventory Tracking Control
                   </label>
                   <div className="grid grid-cols-3 gap-3">
                     {[
-                      { key: "NONE", label: "Standard (No Batch)", desc: "Quantities tracked in aggregate" },
-                      { key: "BATCH", label: "Batch / Lot Tracked", desc: "Track manufacturing & expiry dates" },
-                      { key: "SERIAL", label: "Serial Numbered", desc: "Track unique individual units" },
+                      { key: "NONE", label: "Standard (Aggregate)", desc: "Quantities tracked without lot separation" },
+                      { key: "BATCH", label: "Batch / Lot Tracked", desc: "Track manufacturing date, expiry & FEFO" },
+                      { key: "SERIAL", label: "Serial Numbered", desc: "Track unique individual units & warranty" },
                     ].map((opt) => (
                       <div
                         key={opt.key}
                         onClick={() => setFormData((p) => ({ ...p, tracking: opt.key }))}
-                        className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                        className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
                           formData.tracking === opt.key
-                            ? "border-blue-600 bg-blue-50/60 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200"
-                            : "border-slate-200 dark:border-zinc-800 hover:border-slate-300"
+                            ? "border-blue-600 bg-blue-50/60 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 shadow-xs"
+                            : "border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700"
                         }`}
                       >
-                        <div className="font-semibold">{opt.label}</div>
+                        <div className="font-semibold text-xs">{opt.label}</div>
                         <div className="text-[10px] text-slate-500 dark:text-zinc-400 mt-1">{opt.desc}</div>
                       </div>
                     ))}
@@ -289,7 +295,7 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
                       Reorder Threshold (Min)
                     </label>
                     <input
@@ -297,13 +303,13 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                       name="reorder_point"
                       value={formData.reorder_point}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:ring-1 focus:ring-blue-500 font-mono"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono transition-all"
                     />
-                    <span className="text-[10px] text-slate-400">Triggers low stock alert</span>
+                    <span className="text-[10px] text-slate-400 mt-1 block">Triggers low stock alert</span>
                   </div>
 
                   <div>
-                    <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
                       Suggested Reorder Qty
                     </label>
                     <input
@@ -311,13 +317,13 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                       name="reorder_quantity"
                       value={formData.reorder_quantity}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:ring-1 focus:ring-blue-500 font-mono"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono transition-all"
                     />
-                    <span className="text-[10px] text-slate-400">Default order batch size</span>
+                    <span className="text-[10px] text-slate-400 mt-1 block">Default order batch size</span>
                   </div>
 
                   <div>
-                    <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
                       Initial Unit Cost ($)
                     </label>
                     <input
@@ -326,9 +332,9 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                       name="initial_cost"
                       value={formData.initial_cost}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:ring-1 focus:ring-blue-500 font-mono"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono transition-all"
                     />
-                    <span className="text-[10px] text-slate-400">Baseline WAV valuation</span>
+                    <span className="text-[10px] text-slate-400 mt-1 block">Baseline WAV valuation</span>
                   </div>
                 </div>
               </div>
@@ -336,18 +342,18 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
           </div>
 
           {/* Footer */}
-          <div className="p-4 px-6 border-t border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 flex items-center justify-between text-xs">
+          <div className="p-4 px-6 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 flex items-center justify-between text-xs">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 font-medium"
+              className="px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 font-semibold transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-xs disabled:opacity-50"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold shadow-xs hover:shadow-blue-500/25 disabled:opacity-50 transition-all cursor-pointer"
             >
               <Save className="h-4 w-4" />
               <span>{submitting ? "Saving Product..." : "Save & Register Item"}</span>
@@ -358,4 +364,3 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
     </div>
   );
 }
-

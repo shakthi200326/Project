@@ -10,10 +10,10 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Custom scrollbars */
+/* Custom ultra-refined scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -21,10 +21,52 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.4);
+  background: rgba(148, 163, 184, 0.35);
   border-radius: 9999px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: rgba(82, 82, 91, 0.5);
+  background: rgba(82, 82, 91, 0.45);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(82, 82, 91, 0.7);
+}
+
+/* World-class SaaS Design System Utility Classes */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.dark .glass-panel {
+  background: rgba(24, 24, 27, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.stat-card-gradient {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.8) 100%);
+}
+
+.dark .stat-card-gradient {
+  background: linear-gradient(135deg, rgba(24, 24, 27, 0.95) 0%, rgba(18, 18, 20, 0.8) 100%);
+}
+
+.interactive-row {
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.interactive-card {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+}
+
+.interactive-card:hover {
+  transform: translateY(-1.5px);
 }

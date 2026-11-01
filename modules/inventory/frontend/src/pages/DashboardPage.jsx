@@ -4,18 +4,19 @@ import {
   Boxes,
   Building2,
   DollarSign,
-  CheckCircle,
-  Clock,
   AlertTriangle,
+  Clock,
+  CheckCircle,
   XCircle,
   ArrowUpRight,
   ArrowDownLeft,
-  Filter,
   Calendar,
   ChevronRight,
   TrendingUp,
   Download,
   CheckCircle2,
+  Sparkles,
+  Layers,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -110,70 +111,87 @@ export function DashboardPage() {
     <div className="space-y-6">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-900 dark:bg-zinc-800 text-white text-xs font-medium shadow-xl border border-slate-700 animate-in slide-in-from-top-2">
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-slate-900/95 dark:bg-zinc-800/95 backdrop-blur-md text-white text-xs font-medium shadow-2xl border border-slate-700/60 animate-in slide-in-from-top-2">
           <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Inventory Dashboard
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-zinc-400">
-            Real-time multi-warehouse availability, moving weighted valuation & stock health.
-          </p>
-        </div>
+      {/* Page Header with Ambient SaaS Banner */}
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-5 sm:p-6 shadow-xs">
+        <div className="absolute top-0 right-0 -mt-8 -mr-8 h-48 w-48 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 -mb-8 h-32 w-32 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
 
-        {/* Global Dashboard Filters */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs text-slate-700 dark:text-zinc-300">
-            <Calendar className="h-3.5 w-3.5 text-slate-400" />
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-              className="bg-transparent focus:outline-none cursor-pointer"
-            >
-              <option value="7d">Last 7 Days</option>
-              <option value="30d">Last 30 Days</option>
-              <option value="90d">This Quarter</option>
-              <option value="ytd">Year to Date</option>
-            </select>
+        <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 dark:bg-blue-950/70 dark:text-blue-400 border border-blue-200 dark:border-blue-900">
+                <Sparkles className="h-3 w-3 text-blue-500" />
+                Live Telemetry
+              </span>
+              <span className="text-slate-300 dark:text-zinc-700">•</span>
+              <span className="text-[11px] text-slate-500 dark:text-zinc-400 font-medium">
+                Multi-Facility Balance Sheet Active
+              </span>
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+              Inventory Command Center
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+              Real-time multi-warehouse availability, moving weighted valuation & stock health.
+            </p>
           </div>
 
-          <button
-            onClick={handleExportSummary}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium shadow-sm transition-colors cursor-pointer"
-          >
-            <Download className="h-3.5 w-3.5" />
-            <span>Export Summary</span>
-          </button>
+          {/* Global Dashboard Filters */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-800/60 shadow-2xs text-xs text-slate-700 dark:text-zinc-300">
+              <Calendar className="h-3.5 w-3.5 text-slate-400" />
+              <select
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+                className="bg-transparent font-medium focus:outline-hidden cursor-pointer"
+              >
+                <option value="7d">Last 7 Days</option>
+                <option value="30d">Last 30 Days</option>
+                <option value="90d">This Quarter</option>
+                <option value="ytd">Year to Date</option>
+              </select>
+            </div>
+
+            <button
+              onClick={handleExportSummary}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs shadow-blue-500/25 transition-all active:scale-[0.98] cursor-pointer"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span>Export Summary</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* 7 Core KPI Cards */}
+      {/* 7 Core KPI Cards with Stripe-Standard Precision */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {/* Total Products */}
-        <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-blue-300 dark:hover:border-blue-900/50 transition-all group">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-blue-500" />
           <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-            <span>Total SKUs</span>
-            <Boxes className="h-4 w-4 text-blue-500" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Total SKUs</span>
+            <Boxes className="h-4 w-4 text-blue-500 group-hover:scale-110 transition-transform" />
           </div>
           <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
             {kpis.total_products.toLocaleString()}
           </div>
-          <div className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+          <div className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 font-medium">
             <TrendingUp className="h-3 w-3" /> +12 this month
           </div>
         </div>
 
         {/* Total Warehouses */}
-        <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-slate-300 dark:hover:border-zinc-700 transition-all group">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-indigo-500" />
           <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-            <span>Warehouses</span>
-            <Building2 className="h-4 w-4 text-slate-500" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Warehouses</span>
+            <Building2 className="h-4 w-4 text-indigo-500 group-hover:scale-110 transition-transform" />
           </div>
           <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
             {kpis.total_warehouses}
@@ -184,26 +202,28 @@ export function DashboardPage() {
         </div>
 
         {/* Total Stock Value */}
-        <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-emerald-300 dark:hover:border-emerald-900/50 transition-all group">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-emerald-500" />
           <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-            <span>Valuation (WAV)</span>
-            <DollarSign className="h-4 w-4 text-emerald-500" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Valuation</span>
+            <DollarSign className="h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" />
           </div>
-          <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
+          <div className="mt-2 text-xl font-bold tracking-tight font-mono tabular-nums text-emerald-700 dark:text-emerald-400">
             ${kpis.total_stock_value.toLocaleString("en-US", { minimumFractionDigits: 0 })}
           </div>
-          <div className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400">
-            Weighted Average
+          <div className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+            Weighted Average (WAV)
           </div>
         </div>
 
         {/* Available Stock */}
-        <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-emerald-300 dark:hover:border-emerald-900/50 transition-all group">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-emerald-500" />
           <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-            <span>Available</span>
-            <CheckCircle className="h-4 w-4 text-emerald-500" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Available</span>
+            <CheckCircle className="h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" />
           </div>
-          <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-emerald-700 dark:text-emerald-400">
+          <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
             {kpis.total_available.toLocaleString()}
           </div>
           <div className="mt-1 text-[11px] text-slate-400 dark:text-zinc-500">
@@ -212,24 +232,26 @@ export function DashboardPage() {
         </div>
 
         {/* Reserved Stock */}
-        <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-purple-300 dark:hover:border-purple-900/50 transition-all group">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-purple-500" />
           <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-            <span>Reserved</span>
-            <Clock className="h-4 w-4 text-purple-500" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Reserved</span>
+            <Clock className="h-4 w-4 text-purple-500 group-hover:scale-110 transition-transform" />
           </div>
           <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-purple-700 dark:text-purple-400">
             {kpis.total_reserved.toLocaleString()}
           </div>
-          <div className="mt-1 text-[11px] text-purple-600 dark:text-purple-400">
+          <div className="mt-1 text-[11px] text-purple-600 dark:text-purple-400 font-medium">
             Allocated to orders
           </div>
         </div>
 
         {/* Low Stock Items */}
-        <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-amber-300 dark:hover:border-amber-900/50 transition-all group">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-amber-500" />
           <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-            <span>Low Stock</span>
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Low Stock</span>
+            <AlertTriangle className="h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" />
           </div>
           <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-amber-600 dark:text-amber-400">
             {kpis.low_stock_items}
@@ -240,10 +262,11 @@ export function DashboardPage() {
         </div>
 
         {/* Out of Stock */}
-        <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-rose-300 dark:hover:border-rose-900/50 transition-all group">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-rose-500" />
           <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-            <span>Out of Stock</span>
-            <XCircle className="h-4 w-4 text-rose-500" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Out of Stock</span>
+            <XCircle className="h-4 w-4 text-rose-500 group-hover:scale-110 transition-transform" />
           </div>
           <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-rose-600 dark:text-rose-400">
             {kpis.out_of_stock_items}
@@ -257,90 +280,107 @@ export function DashboardPage() {
       {/* Analytics Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Stock Movement Trend (Inbound vs Outbound) */}
-        <div className="lg:col-span-2 p-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
+        <div className="lg:col-span-2 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
-                Stock Movement Dynamics
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span>Stock Movement Dynamics</span>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300">
+                  Daily Receipts vs Issues
+                </span>
               </h2>
-              <p className="text-xs text-slate-400 dark:text-zinc-500">
-                Daily volume of Goods Receipts (Inbound) vs Stock Issues (Outbound)
+              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                Physical transaction throughput monitored across multi-warehouse ledger.
               </p>
             </div>
-            <div className="flex items-center gap-4 text-xs">
-              <span className="flex items-center gap-1.5 text-slate-600 dark:text-zinc-400">
-                <span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> Inbound
+            <div className="flex items-center gap-4 text-xs font-medium">
+              <span className="flex items-center gap-1.5 text-slate-700 dark:text-zinc-300">
+                <span className="h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-blue-500/20" /> Inbound
               </span>
-              <span className="flex items-center gap-1.5 text-slate-600 dark:text-zinc-400">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Outbound
+              <span className="flex items-center gap-1.5 text-slate-700 dark:text-zinc-300">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20" /> Outbound
               </span>
             </div>
           </div>
 
-          <div className="h-64 w-full">
+          <div className="h-68 w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={MOVEMENT_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="inboundGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.0} />
                   </linearGradient>
                   <linearGradient id="outboundGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.6} />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#18181b",
-                    borderColor: "#27272a",
-                    borderRadius: "8px",
+                    backgroundColor: "rgba(24, 24, 27, 0.95)",
+                    borderColor: "rgba(63, 63, 70, 0.4)",
+                    borderRadius: "12px",
                     color: "#fff",
                     fontSize: "12px",
+                    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
+                    backdropFilter: "blur(8px)",
                   }}
                 />
-                <Area type="monotone" dataKey="inbound" stroke="#3B82F6" strokeWidth={2} fillOpacity={1} fill="url(#inboundGrad)" />
-                <Area type="monotone" dataKey="outbound" stroke="#10B981" strokeWidth={2} fillOpacity={1} fill="url(#outboundGrad)" />
+                <Area type="monotone" dataKey="inbound" stroke="#3B82F6" strokeWidth={2.5} fillOpacity={1} fill="url(#inboundGrad)" />
+                <Area type="monotone" dataKey="outbound" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#outboundGrad)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Product Category Distribution */}
-        <div className="p-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
+        <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
           <div>
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">
               Inventory by Category
             </h2>
-            <p className="text-xs text-slate-400 dark:text-zinc-500">
+            <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
               Proportion of stock valuation by classification
             </p>
           </div>
 
-          <div className="h-48 w-full flex items-center justify-center">
+          <div className="h-48 w-full flex items-center justify-center relative">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={CATEGORY_DATA} innerRadius={50} outerRadius={75} paddingAngle={4} dataKey="value">
+                <Pie data={CATEGORY_DATA} innerRadius={54} outerRadius={78} paddingAngle={4} dataKey="value">
                   {CATEGORY_DATA.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "rgba(24, 24, 27, 0.95)",
+                    borderColor: "rgba(63, 63, 70, 0.4)",
+                    borderRadius: "12px",
+                    color: "#fff",
+                    fontSize: "12px",
+                  }}
+                />
               </PieChart>
             </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-xl font-bold font-mono text-slate-900 dark:text-white">100%</span>
+              <span className="text-[10px] uppercase font-bold text-slate-400">Portfolio</span>
+            </div>
           </div>
 
-          <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-zinc-800 text-xs">
+          <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-zinc-800 text-xs">
             {CATEGORY_DATA.map((item) => (
               <div key={item.name} className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
                 <span className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
-                  {item.name}
+                  <span className="font-medium text-slate-700 dark:text-zinc-300">{item.name}</span>
                 </span>
-                <span className="font-medium text-slate-900 dark:text-white">{item.value}%</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white tabular-nums">{item.value}%</span>
               </div>
             ))}
           </div>
@@ -350,57 +390,64 @@ export function DashboardPage() {
       {/* Operational Sections: Recent Movements & Low Stock Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Stock Movements Table */}
-        <div className="lg:col-span-2 p-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
+        <div className="lg:col-span-2 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
-              Recent Stock Movements
-            </h2>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                Recent Stock Movements
+              </h2>
+              <p className="text-xs text-slate-400 dark:text-zinc-500">
+                Audited transaction log recorded on append-only ledger.
+              </p>
+            </div>
             <Link
               to="/ledger"
-              className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 cursor-pointer"
+              className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
             >
-              View Immutable Ledger <ChevronRight className="h-3 w-3" />
+              View Full Ledger <ChevronRight className="h-3.5 w-3.5" />
             </Link>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-400 dark:text-zinc-500">
-                  <th className="pb-2 font-medium">Doc Number</th>
-                  <th className="pb-2 font-medium">Type</th>
-                  <th className="pb-2 font-medium">Item & Location</th>
-                  <th className="pb-2 font-medium text-right">Quantity</th>
-                  <th className="pb-2 font-medium text-right">Unit Cost</th>
+                <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 text-[11px] uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                  <th className="pb-3 font-semibold">Doc Number</th>
+                  <th className="pb-3 font-semibold">Type</th>
+                  <th className="pb-3 font-semibold">Item & Storage Location</th>
+                  <th className="pb-3 font-semibold text-right">Quantity</th>
+                  <th className="pb-3 font-semibold text-right">Unit Cost</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
                 {recentMovements.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/40">
-                    <td className="py-2.5 font-mono text-[11px] font-medium text-slate-900 dark:text-zinc-200">
+                  <tr key={tx.id} className="hover:bg-slate-50/60 dark:hover:bg-zinc-800/40 transition-colors">
+                    <td className="py-3 font-mono text-[11px] font-semibold text-blue-600 dark:text-blue-400">
                       {tx.document_number}
                     </td>
-                    <td className="py-2.5">
+                    <td className="py-3">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                           tx.type === "RECEIPT"
-                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
+                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50"
                             : tx.type === "ISSUE"
-                            ? "bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400"
-                            : "bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400"
+                            ? "bg-rose-50 text-rose-700 dark:bg-rose-950/70 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50"
+                            : "bg-blue-50 text-blue-700 dark:bg-blue-950/70 dark:text-blue-400 border border-blue-200 dark:border-blue-900/50"
                         }`}
                       >
+                        {tx.type === "RECEIPT" && <ArrowDownLeft className="h-3 w-3" />}
+                        {tx.type === "ISSUE" && <ArrowUpRight className="h-3 w-3" />}
                         {tx.type}
                       </span>
                     </td>
-                    <td className="py-2.5">
-                      <div className="font-medium text-slate-800 dark:text-zinc-200">{tx.item}</div>
-                      <div className="text-[10px] text-slate-400 dark:text-zinc-500">{tx.location}</div>
+                    <td className="py-3">
+                      <div className="font-semibold text-slate-800 dark:text-zinc-200">{tx.item}</div>
+                      <div className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">{tx.location}</div>
                     </td>
-                    <td className={`py-2.5 text-right font-medium tabular-nums ${tx.quantity > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-900 dark:text-zinc-200"}`}>
+                    <td className={`py-3 text-right font-semibold tabular-nums ${tx.quantity > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-900 dark:text-zinc-200"}`}>
                       {tx.quantity > 0 ? `+${tx.quantity}` : tx.quantity} {tx.unit}
                     </td>
-                    <td className="py-2.5 text-right font-mono tabular-nums text-slate-600 dark:text-zinc-400">
+                    <td className="py-3 text-right font-mono tabular-nums text-slate-600 dark:text-zinc-400 font-medium">
                       ${tx.unit_cost.toFixed(2)}
                     </td>
                   </tr>
@@ -411,54 +458,54 @@ export function DashboardPage() {
         </div>
 
         {/* Operational Replenishment / Stock Alerts */}
-        <div className="p-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
+        <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-500" />
               Stock Replenishment Alerts
             </h2>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50">
               4 Critical
             </span>
           </div>
 
           <div className="space-y-3">
-            <div className="p-3 rounded-lg border border-amber-200/60 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20 space-y-2">
+            <div className="p-3.5 rounded-xl border border-amber-200/70 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20 space-y-2.5">
               <div className="flex items-center justify-between text-xs font-semibold text-slate-900 dark:text-zinc-200">
                 <span>Hydraulic Solenoid Valve 24V</span>
-                <span className="text-amber-600 dark:text-amber-400">12 / 25 Min</span>
+                <span className="text-amber-600 dark:text-amber-400 font-bold tabular-nums">12 / 25 Min</span>
               </div>
-              <div className="w-full bg-slate-200 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden">
-                <div className="bg-amber-500 h-full rounded-full" style={{ width: "48%" }} />
+              <div className="w-full bg-slate-200/80 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden">
+                <div className="bg-amber-500 h-full rounded-full transition-all" style={{ width: "48%" }} />
               </div>
               <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400">
-                <span>Reorder Qty: 40 EA</span>
+                <span>Reorder Target: 40 EA</span>
                 <button
                   type="button"
                   onClick={() => handleDraftOrder("Hydraulic Solenoid Valve 24V")}
-                  className="text-blue-600 dark:text-blue-400 font-semibold hover:underline cursor-pointer"
+                  className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
                 >
-                  Draft Order
+                  Draft Order →
                 </button>
               </div>
             </div>
 
-            <div className="p-3 rounded-lg border border-rose-200/60 dark:border-rose-900/40 bg-rose-50/40 dark:bg-rose-950/20 space-y-2">
+            <div className="p-3.5 rounded-xl border border-rose-200/70 dark:border-rose-900/40 bg-rose-50/40 dark:bg-rose-950/20 space-y-2.5">
               <div className="flex items-center justify-between text-xs font-semibold text-slate-900 dark:text-zinc-200">
                 <span>Optical Rotary Encoder 1024 PPR</span>
-                <span className="text-rose-600 dark:text-rose-400">0 / 15 Min</span>
+                <span className="text-rose-600 dark:text-rose-400 font-bold tabular-nums">0 / 15 Min</span>
               </div>
-              <div className="w-full bg-slate-200 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden">
-                <div className="bg-rose-500 h-full rounded-full" style={{ width: "0%" }} />
+              <div className="w-full bg-slate-200/80 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden">
+                <div className="bg-rose-500 h-full rounded-full transition-all" style={{ width: "0%" }} />
               </div>
               <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400">
-                <span className="text-rose-600 font-semibold">OUT OF STOCK</span>
+                <span className="text-rose-600 font-bold">OUT OF STOCK</span>
                 <button
                   type="button"
                   onClick={() => handleDraftOrder("Optical Rotary Encoder 1024 PPR")}
-                  className="text-blue-600 dark:text-blue-400 font-semibold hover:underline cursor-pointer"
+                  className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
                 >
-                  Draft Order
+                  Draft Order →
                 </button>
               </div>
             </div>

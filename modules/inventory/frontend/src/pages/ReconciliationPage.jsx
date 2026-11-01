@@ -356,41 +356,43 @@ export function ReconciliationPage() {
       </div>
 
       {/* Lines Table */}
-      <div className="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
+      <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-500">
-                <th className="py-2.5 px-4 font-semibold">SKU Code</th>
-                <th className="py-2.5 px-4 font-semibold">Item Description</th>
-                <th className="py-2.5 px-4 font-semibold">Bin Location</th>
-                <th className="py-2.5 px-4 font-semibold text-right">System Snapshot</th>
-                <th className="py-2.5 px-4 font-semibold text-right">Physical Count</th>
-                <th className="py-2.5 px-4 font-semibold text-right">Variance Qty</th>
-                <th className="py-2.5 px-4 font-semibold text-right">Unit WAV</th>
-                <th className="py-2.5 px-4 font-semibold text-right">Valuation Impact</th>
+              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                <th className="py-3.5 px-4 font-semibold">SKU Code</th>
+                <th className="py-3.5 px-4 font-semibold">Item Description</th>
+                <th className="py-3.5 px-4 font-semibold">Bin Location</th>
+                <th className="py-3.5 px-4 font-semibold text-right">System Snapshot</th>
+                <th className="py-3.5 px-4 font-semibold text-right">Physical Count</th>
+                <th className="py-3.5 px-4 font-semibold text-right">Variance Qty</th>
+                <th className="py-3.5 px-4 font-semibold text-right">Unit WAV</th>
+                <th className="py-3.5 px-4 font-semibold text-right">Valuation Impact</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
               {filteredLines.map((line) => {
                 const variance = line.counted_qty - line.snapshot_qty;
                 const valueImpact = variance * line.unit_cost;
 
                 return (
-                  <tr key={line.id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/40">
-                    <td className="py-3 px-4 font-mono font-semibold text-blue-600 dark:text-blue-400">
-                      {line.sku}
+                  <tr key={line.id} className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors">
+                    <td className="py-3.5 px-4">
+                      <span className="font-mono text-[11px] font-bold text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md bg-blue-50/80 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/40">
+                        {line.sku}
+                      </span>
                     </td>
-                    <td className="py-3 px-4 font-medium text-slate-900 dark:text-zinc-100">
+                    <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-zinc-100">
                       {line.item}
                     </td>
-                    <td className="py-3 px-4 text-slate-500 dark:text-zinc-400 font-mono">
+                    <td className="py-3.5 px-4 text-slate-500 dark:text-zinc-400 font-mono">
                       {line.location}
                     </td>
-                    <td className="py-3 px-4 text-right tabular-nums font-medium text-slate-700 dark:text-zinc-300">
+                    <td className="py-3.5 px-4 text-right tabular-nums font-medium text-slate-700 dark:text-zinc-300">
                       {line.snapshot_qty} {line.unit}
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3.5 px-4 text-right">
                       {reconciledState ? (
                         <span className="font-bold tabular-nums text-slate-900 dark:text-white">
                           {line.counted_qty} {line.unit}
@@ -402,14 +404,14 @@ export function ReconciliationPage() {
                             step="any"
                             value={line.counted_qty}
                             onChange={(e) => handleCountChange(line.id, e.target.value)}
-                            className="w-20 px-2 py-1 text-right text-xs font-bold tabular-nums rounded border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="w-20 px-2 py-1 text-right text-xs font-bold tabular-nums rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                           />
                           <span className="text-[10px] text-slate-400">{line.unit}</span>
                         </div>
                       )}
                     </td>
                     <td
-                      className={`py-3 px-4 text-right tabular-nums font-bold ${
+                      className={`py-3.5 px-4 text-right tabular-nums font-bold ${
                         variance === 0
                           ? "text-slate-400"
                           : variance > 0
@@ -419,11 +421,11 @@ export function ReconciliationPage() {
                     >
                       {variance > 0 ? `+${variance}` : variance} {line.unit}
                     </td>
-                    <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-500">
+                    <td className="py-3.5 px-4 text-right font-mono tabular-nums text-slate-500">
                       ${line.unit_cost.toFixed(2)}
                     </td>
                     <td
-                      className={`py-3 px-4 text-right font-mono tabular-nums font-medium ${
+                      className={`py-3.5 px-4 text-right font-mono tabular-nums font-semibold ${
                         valueImpact === 0
                           ? "text-slate-400"
                           : valueImpact > 0

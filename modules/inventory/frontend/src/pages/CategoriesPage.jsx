@@ -77,32 +77,33 @@ export function CategoriesPage() {
         {filteredCategories.map((cat) => (
           <div
             key={cat.id}
-            className="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs hover:border-blue-500 transition-all flex flex-col justify-between space-y-3"
+            className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs hover:shadow-md hover:border-blue-400/60 dark:hover:border-blue-700/60 transition-all flex flex-col justify-between space-y-3.5 group"
           >
             <div className="flex items-start justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
-                  <Layers className="h-4.5 w-4.5" />
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-xs group-hover:scale-105 transition-transform">
+                  <Layers className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-bold text-slate-900 dark:text-white">{cat.name}</h3>
-                  <span className="font-mono text-[10px] text-blue-600 dark:text-blue-400 font-semibold">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">{cat.name}</h3>
+                  <span className="font-mono text-[10px] text-blue-600 dark:text-blue-400 font-bold px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/40">
                     {cat.code}
                   </span>
                 </div>
               </div>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 tabular-nums">
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 tabular-nums border border-slate-200/60 dark:border-zinc-700">
                 {cat.items_count ?? 12} SKUs
               </span>
             </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-zinc-800/60 text-[11px] text-slate-500 dark:text-zinc-400">
-              <span className="flex items-center gap-1">
-                <FolderTree className="h-3 w-3 text-slate-400" />
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-zinc-800/80 text-[11px] text-slate-500 dark:text-zinc-400">
+              <span className="flex items-center gap-1.5">
+                <FolderTree className="h-3.5 w-3.5 text-slate-400" />
                 {cat.parent ? `Subcategory of ${cat.parent}` : "Root Category"}
               </span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-0.5">
-                <CheckCircle2 className="h-3 w-3" /> Active
+              <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                Active
               </span>
             </div>
           </div>
