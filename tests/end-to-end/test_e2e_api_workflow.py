@@ -12,7 +12,11 @@ from apps.products.models import InventoryItem
 from apps.warehouses.models import Warehouse, StorageLocation
 from apps.stock.models import StockBalance, StockLedgerEntry
 from apps.movements.models import StockTransaction, StockTransactionLine
+from apps.batches.models import Batch
+from apps.serial_numbers.models import SerialNumber
+from apps.reconciliation.models import StockCount, StockCountLine
 from shared_file_storage.models.file_record import StoredFile
+from datetime import date, timedelta
 
 class EndToEndRestApiWorkflowTests(TestCase):
     """
@@ -154,3 +158,81 @@ class EndToEndRestApiWorkflowTests(TestCase):
         self.assertIn("total_warehouses", kpi_resp.data)
         self.assertIn("total_stock_value", kpi_resp.data)
         self.assertIn("total_on_hand", kpi_resp.data)
+
+    def test_batch_and_serial_tracking_api_workflow(self):
+        cat = InventoryCategory.objects.create(name="Mechanical Components", code="CAT-MECH-QA")
+        wh = Warehouse.objects.create(name="Central QA Depot", code="WH-QA-01", is_active=True)
+        loc = StorageLocation.objects.create(warehouse=wh, name="Inspection Bin", code="BIN-QA-1")
+        item = InventoryItem.objects.create(category=cat, name="Precision Servo Valve", code="VALVE-PS-100", tracking="BATCH")
+
+        # 1. Create Batch via API
+        expiry = date.today() + timedelta(days=365)
+        batch_resp = self.client.post("/api/v1/inventory/batches/", {
+            "batch_number": "LOT-2026-VALVE-01",
+            "item": str(item.id),
+            "warehouse": str(wh.id),
+            "expiry_date": expiry.isoformat(),
+            "initial_quantity": "100.0000",
+            "remaining_quantity": "100.0000",
+            "status": "HEALTHY",
+        }, format="json")
+        self.assertEqual(batch_resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(batch_resp.data["batch_number"], "LOT-2026-VALVE-01")
+        self.assertTrue(batch_resp.data["days_remaining"] >= 364)
+
+        # 2. Create Serial via API
+        serial_resp = self.client.post("/api/v1/inventory/serials/", {
+            "serial_number": "SN-VALVE-100-001",
+            "item": str(item.id),
+            "warehouse": str(wh.id),
+            "location": str(loc.id),
+            "status": "IN_STOCK",
+        }, format="json")
+        self.assertEqual(serial_resp.status_code, status.HTTP_201_CREATED)
+        serial_id = serial_resp.data["id"]
+
+        # 3. Transition Serial status via PATCH
+        patch_resp = self.client.patch(f"/api/v1/inventory/serials/{serial_id}/", {
+            "status": "DISPATCHED"
+        }, format="json")
+        self.assertEqual(patch_resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(patch_resp.data["status"], "DISPATCHED")
+
+    def test_reconciliation_variance_adjustment_workflow(self):
+        cat = InventoryCategory.objects.create(name="Bearings", code="CAT-BRG-QA")
+        wh = Warehouse.objects.create(name="Audit Test Hub", code="WH-AUDIT-01", is_active=True)
+        loc = StorageLocation.objects.create(warehouse=wh, name="Audit Bin A", code="BIN-AUD-A")
+        item = InventoryItem.objects.create(category=cat, name="Sealed Roller Bearing", code="BRG-SR-99")
+
+        # Initial baseline stock balance
+        StockBalance.objects.create(
+            item=item,
+            warehouse=wh,
+            location=loc,
+            on_hand_qty=Decimal("100.0000"),
+            reserved_qty=Decimal("0.0000"),
+            blocked_qty=Decimal("0.0000"),
+        )
+
+        # Create cycle count
+        count = StockCount.objects.create(
+            count_number="CC-AUDIT-2026-001",
+            warehouse=wh,
+            status=StockCount.Status.COUNTING,
+        )
+        StockCountLine.objects.create(
+            stock_count=count,
+            item=item,
+            location=loc,
+            snapshot_qty=Decimal("100.0000"),
+            counted_qty=Decimal("98.0000"), # -2 variance
+        )
+
+        # Reconcile via API endpoint
+        rec_resp = self.client.post(f"/api/v1/inventory/reconciliation/{count.id}/reconcile/")
+        self.assertEqual(rec_resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(rec_resp.data["status"], "RECONCILED")
+
+        # Verify balance updated by -2
+        updated_bal = StockBalance.objects.get(item=item, warehouse=wh, location=loc)
+        self.assertEqual(updated_bal.on_hand_qty, Decimal("98.0000"))

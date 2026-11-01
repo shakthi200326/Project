@@ -14,7 +14,7 @@ All 10 project development phases have been executed, verified, tested, and inte
 | **7** | **Dashboard, Reports & Analytics** | **COMPLETED** | Real-time KPI summaries, moving weighted average valuation reports, velocity ABC categorization, and CSV export triggers. |
 | **8** | **File Storage Integration** | **COMPLETED** | Universal polymorphic file storage (`shared_file_storage`), magic byte MIME sniffers, product spec sheet and receipt document attachments. |
 | **9** | **Accessibility & Polish** | **COMPLETED** | `tabular-nums` formatting across all numerics, WCAG 2.2 AA compliant contrast, Vite route-level lazy loading (bundles in ~560ms). |
-| **10** | **Automated Testing & Deployment** | **COMPLETED** | 15/15 Pytest suites passing in 0.82s, Docker Compose orchestration verified, clean Git working tree on `master`. |
+| **10** | **Automated Testing & Deployment** | **COMPLETED** | 17/17 Pytest suites passing in 0.93s, Docker Compose orchestration verified, clean Git working tree on `master`. |
 
 ---
 
@@ -31,6 +31,8 @@ All 10 project development phases have been executed, verified, tested, and inte
     - CatalogAndMasterDataTests::test_unit_of_measure_conversions         PASSED
   tests/end-to-end/test_e2e_api_workflow.py
     - EndToEndRestApiWorkflowTests::test_complete_rest_api_lifecycle      PASSED
+    - EndToEndRestApiWorkflowTests::test_batch_and_serial_tracking_api    PASSED
+    - EndToEndRestApiWorkflowTests::test_reconciliation_variance_adj      PASSED
   tests/integration/test_inventory_flow.py
     - EndToEndInventoryFlowTests::test_complete_enterprise_lifecycle     PASSED
   tests/module-compatibility/test_future_contracts.py
@@ -46,6 +48,6 @@ All 10 project development phases have been executed, verified, tested, and inte
   shared/backend/file-storage/tests/test_file_storage.py
     - UniversalFileStorageTests::test_file_upload_and_lifecycle           PASSED
 
-  Result: 15 passed in 0.82s (100% SUCCESS)
+  Result: 17 passed in 0.93s (100% SUCCESS)
 ====================================================================================
 ```
