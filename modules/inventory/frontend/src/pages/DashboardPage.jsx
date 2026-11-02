@@ -19,24 +19,21 @@ import {
   Layers,
   Activity,
   ShieldAlert,
-  ArrowRightLeft,
   Flame,
-  Gauge as GaugeIcon,
-  PackageCheck,
-  FileSpreadsheet,
+  Gauge,
   Warehouse,
-  ExternalLink,
-  Zap,
-  Target,
-  ShieldCheck,
-  TrendingDown,
+  RotateCcw,
+  Sliders,
 } from "lucide-react";
 import {
   ResponsiveContainer,
+  ComposedChart,
   AreaChart,
   Area,
   BarChart,
   Bar,
+  LineChart,
+  Line,
   PieChart,
   Pie,
   Cell,
@@ -50,54 +47,56 @@ import {
 import { fetchInventoryKPIs, fetchStockMovements, DEMO_KPIS } from "../services/api";
 
 // ---------------------------------------------------------------------------
-// Chart Datasets with Multi-Dimension Metrics (MUI X Pattern)
+// High-Configuration Analytics Datasets
 // ---------------------------------------------------------------------------
+
+// Chart 1: Dual-Axis Transaction Flux (Inbound vs Outbound Bars + Net Flux Spline)
 const MOVEMENT_DATA = [
-  { date: "Oct 20", inbound: 420, outbound: 280, net: 140 },
-  { date: "Oct 21", inbound: 310, outbound: 450, net: -140 },
-  { date: "Oct 22", inbound: 580, outbound: 390, net: 190 },
-  { date: "Oct 23", inbound: 240, outbound: 620, net: -380 },
-  { date: "Oct 24", inbound: 750, outbound: 480, net: 270 },
-  { date: "Oct 25", inbound: 890, outbound: 530, net: 360 },
-  { date: "Oct 26", inbound: 640, outbound: 710, net: -70 },
+  { date: "Oct 20", inbound: 420, outbound: 280, netFlux: 140, totalVolume: 700 },
+  { date: "Oct 21", inbound: 310, outbound: 450, netFlux: -140, totalVolume: 760 },
+  { date: "Oct 22", inbound: 580, outbound: 390, netFlux: 190, totalVolume: 970 },
+  { date: "Oct 23", inbound: 240, outbound: 620, netFlux: -380, totalVolume: 860 },
+  { date: "Oct 24", inbound: 750, outbound: 480, netFlux: 270, totalVolume: 1230 },
+  { date: "Oct 25", inbound: 890, outbound: 530, netFlux: 360, totalVolume: 1420 },
+  { date: "Oct 26", inbound: 640, outbound: 710, netFlux: -70, totalVolume: 1350 },
 ];
 
+// Chart 2: Category Capital Distribution
 const CATEGORY_DATA = [
-  { name: "Mechanical Components", value: 38, capital: "$162,845", color: "#3B82F6" },
-  { name: "Hydraulics & Valves", value: 24, capital: "$102,850", color: "#8B5CF6" },
-  { name: "Power Transmission", value: 18, capital: "$77,137", color: "#10B981" },
-  { name: "Sensors & Encoders", value: 12, capital: "$51,425", color: "#F59E0B" },
-  { name: "Fluids & Greases", value: 8, capital: "$34,283", color: "#EC4899" },
+  { name: "Mechanical Components", value: 38, capital: "$162,845", items: 520, color: "#3B82F6" },
+  { name: "Hydraulics & Valves", value: 24, capital: "$102,850", items: 240, color: "#8B5CF6" },
+  { name: "Power Transmission", value: 18, capital: "$77,137", items: 180, color: "#10B981" },
+  { name: "Sensors & Encoders", value: 12, capital: "$51,425", items: 310, color: "#F59E0B" },
+  { name: "Fluids & Greases", value: 8, capital: "$34,283", items: 170, color: "#EC4899" },
 ];
 
+// Chart 3: Facility Capacity & Buffer Benchmark (BarChart with Reference Line)
 const WAREHOUSE_CAPACITY_DATA = [
-  { name: "Main Central Hub", code: "WH-MAIN", used: 7800, available: 2200, rate: 78, value: 245600, skus: 840 },
-  { name: "East Coast Terminal", code: "WH-EAST", used: 5120, available: 2880, rate: 64, value: 118200, skus: 420 },
-  { name: "Cold Storage Facility", code: "WH-COLD", used: 1680, available: 2320, rate: 42, value: 48940, skus: 160 },
-  { name: "West Coast Terminal", code: "WH-WEST", used: 4320, available: 680, rate: 86, value: 65800, skus: 210 },
+  { name: "Main Central Hub", code: "WH-MAIN", used: 78, capacity: 100, occupiedSlots: 7800, freeSlots: 2200, value: 245600, skus: 840 },
+  { name: "East Coast Terminal", code: "WH-EAST", used: 64, capacity: 100, occupiedSlots: 5120, freeSlots: 2880, value: 118200, skus: 420 },
+  { name: "Cold Storage Hub", code: "WH-COLD", used: 42, capacity: 100, occupiedSlots: 1680, freeSlots: 2320, value: 48940, skus: 160 },
+  { name: "West Coast Terminal", code: "WH-WEST", used: 86, capacity: 100, occupiedSlots: 4320, freeSlots: 680, value: 65800, skus: 210 },
 ];
 
-const VALUATION_TREND_DATA = [
-  { month: "May", valuation: 340, target: 330 },
-  { month: "Jun", valuation: 365, target: 350 },
-  { month: "Jul", valuation: 380, target: 370 },
-  { month: "Aug", valuation: 395, target: 390 },
-  { month: "Sep", valuation: 412, target: 405 },
-  { month: "Oct", valuation: 428.5, target: 420 },
+// Chart 4: Capital Valuation & Turnover Velocity Combo (ComposedChart with Area + Line)
+const VALUATION_VELOCITY_DATA = [
+  { month: "May", valuation: 340, turnover: 4.8, targetVal: 330 },
+  { month: "Jun", valuation: 365, turnover: 5.1, targetVal: 350 },
+  { month: "Jul", valuation: 380, turnover: 5.4, targetVal: 370 },
+  { month: "Aug", valuation: 395, turnover: 5.2, targetVal: 390 },
+  { month: "Sep", valuation: 412, turnover: 5.7, targetVal: 405 },
+  { month: "Oct", valuation: 428.5, turnover: 6.2, targetVal: 420 },
 ];
 
-const STOCK_HEALTH_DATA = [
-  { name: "Active (<30d)", value: 62, color: "#10B981", capital: "$265.7k" },
-  { name: "Circulating (31-60d)", value: 24, color: "#3B82F6", capital: "$102.8k" },
-  { name: "Slow Moving (61-90d)", value: 10, color: "#F59E0B", capital: "$42.9k" },
-  { name: "Stagnant (>90d)", value: 4, color: "#EF4444", capital: "$17.1k" },
+// Chart 5: Stock Ageing & Depletion Tiers
+const STOCK_AGING_TIERS = [
+  { tier: "Fresh Stock (<30d)", percentage: 62, capital: "$265,695", skus: 880, status: "Optimal", color: "from-emerald-500 to-teal-500", text: "text-emerald-600 dark:text-emerald-400" },
+  { tier: "Circulating (31-60d)", percentage: 24, capital: "$102,850", skus: 340, status: "Healthy", color: "from-blue-500 to-indigo-500", text: "text-blue-600 dark:text-blue-400" },
+  { tier: "Slow Moving (61-90d)", percentage: 10, capital: "$42,854", skus: 142, status: "Review", color: "from-amber-500 to-orange-500", text: "text-amber-600 dark:text-amber-400" },
+  { tier: "Stagnant / Dead (>90d)", percentage: 4, capital: "$17,141", skus: 58, status: "Action Needed", color: "from-rose-500 to-red-500", text: "text-rose-600 dark:text-rose-400" },
 ];
 
-// Sparkline series for KPI cards (MUI X SparkLineChart style)
-const SPARKLINE_SKUS = [{ v: 1390 }, { v: 1402 }, { v: 1410 }, { v: 1415 }, { v: 1420 }];
-const SPARKLINE_VALUATION = [{ v: 395 }, { v: 402 }, { v: 410 }, { v: 422 }, { v: 428.5 }];
-const SPARKLINE_AVAILABLE = [{ v: 46200 }, { v: 47100 }, { v: 47800 }, { v: 48050 }, { v: 48210 }];
-
+// Top Capital Concentration Items
 const TOP_CAPITAL_SKUS = [
   {
     sku: "LUB-SYN-VG46",
@@ -156,6 +155,7 @@ const TOP_CAPITAL_SKUS = [
   },
 ];
 
+// FEFO Expiry Risks
 const FEFO_EXPIRY_RISKS = [
   {
     batch: "LOT-2025-NOV-01",
@@ -188,76 +188,6 @@ const FEFO_EXPIRY_RISKS = [
     risk: "MONITORED",
   },
 ];
-
-// ---------------------------------------------------------------------------
-// MUI X-Inspired Custom Arc Gauge Component
-// ---------------------------------------------------------------------------
-function MuiGaugeMeter({ value, max = 100, label, sublabel, color = "#10B981", size = 110 }) {
-  const radius = 42;
-  const strokeWidth = 9;
-  const circumference = Math.PI * radius; // 180 degrees semi-circle arc
-  const percent = Math.min(Math.max(value / max, 0), 1);
-  const strokeDashoffset = circumference * (1 - percent);
-
-  return (
-    <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50/60 dark:bg-zinc-800/30 border border-slate-100 dark:border-zinc-800/80">
-      <div className="relative flex items-center justify-center" style={{ width: size, height: size * 0.65 }}>
-        <svg width={size} height={size * 0.65} viewBox="0 0 110 70" className="overflow-visible">
-          {/* Background Track Arc */}
-          <path
-            d="M 13,60 A 42,42 0 0,1 97,60"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-            className="text-slate-200/80 dark:text-zinc-700/60"
-          />
-          {/* Active Value Arc with rounded caps */}
-          <path
-            d="M 13,60 A 42,42 0 0,1 97,60"
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth}
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
-            className="transition-all duration-1000 ease-out"
-          />
-        </svg>
-        <div className="absolute bottom-0 text-center">
-          <span className="text-lg font-bold font-mono text-slate-900 dark:text-white tabular-nums tracking-tight">
-            {value}%
-          </span>
-        </div>
-      </div>
-      <div className="mt-1 text-center">
-        <span className="text-[11px] font-bold text-slate-900 dark:text-white block">{label}</span>
-        <span className="text-[10px] text-slate-400 font-medium block">{sublabel}</span>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// MUI X-Inspired Inline Sparkline Component
-// ---------------------------------------------------------------------------
-function MuiSparkline({ data, color = "#3B82F6", height = 24 }) {
-  return (
-    <div style={{ height }} className="w-full mt-1.5 opacity-80 hover:opacity-100 transition-opacity">
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-          <defs>
-            <linearGradient id={`spark-${color}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity={0.4} />
-              <stop offset="100%" stopColor={color} stopOpacity={0.0} />
-            </linearGradient>
-          </defs>
-          <Area type="monotone" dataKey="v" stroke={color} strokeWidth={2} fill={`url(#spark-${color})`} dot={false} />
-        </AreaChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
 
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -345,7 +275,7 @@ export function DashboardPage() {
               Executive Inventory Intelligence
             </h1>
             <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-              Comprehensive real-time balance sheets, capacity analytics, asset turnover & stock risk controls.
+              High-configuration analytics, dual-axis movement dynamics, facility buffer controls & capital velocity.
             </p>
           </div>
 
@@ -376,283 +306,208 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* 7 Core Executive KPI Cards with MUI X Sparklines */}
+      {/* 7 Core Executive KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-        {/* Total Products with Sparkline */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-blue-300 dark:hover:border-blue-900/50 transition-all group flex flex-col justify-between">
+        {/* Total Products */}
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-blue-300 dark:hover:border-blue-900/50 transition-all group">
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-blue-500" />
-          <div>
-            <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Total SKUs</span>
-              <Boxes className="h-4 w-4 text-blue-500 group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
-              {kpis.total_products.toLocaleString()}
-            </div>
+          <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Total SKUs</span>
+            <Boxes className="h-4 w-4 text-blue-500 group-hover:scale-110 transition-transform" />
           </div>
-          <div>
-            <MuiSparkline data={SPARKLINE_SKUS} color="#3B82F6" height={26} />
-            <div className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 font-medium">
-              <TrendingUp className="h-3 w-3" /> +12 this month
-            </div>
+          <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
+            {kpis.total_products.toLocaleString()}
+          </div>
+          <div className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 font-medium">
+            <TrendingUp className="h-3 w-3" /> +12 this month
           </div>
         </div>
 
         {/* Total Warehouses */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-slate-300 dark:hover:border-zinc-700 transition-all group flex flex-col justify-between">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-slate-300 dark:hover:border-zinc-700 transition-all group">
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-indigo-500" />
-          <div>
-            <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Warehouses</span>
-              <Building2 className="h-4 w-4 text-indigo-500 group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
-              {kpis.total_warehouses}
-            </div>
+          <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Warehouses</span>
+            <Building2 className="h-4 w-4 text-indigo-500 group-hover:scale-110 transition-transform" />
           </div>
-          <div className="pt-4">
-            <div className="text-[11px] text-slate-400 dark:text-zinc-500 font-medium">
-              Across 3 regions
-            </div>
-            <div className="text-[10px] text-indigo-500 font-semibold mt-0.5">100% Online</div>
+          <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
+            {kpis.total_warehouses}
+          </div>
+          <div className="mt-1 text-[11px] text-slate-400 dark:text-zinc-500">
+            Across 3 regions
           </div>
         </div>
 
-        {/* Total Stock Value with Sparkline */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-emerald-300 dark:hover:border-emerald-900/50 transition-all group flex flex-col justify-between">
+        {/* Total Stock Value */}
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-emerald-300 dark:hover:border-emerald-900/50 transition-all group">
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-emerald-500" />
-          <div>
-            <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Valuation</span>
-              <DollarSign className="h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="mt-2 text-xl font-bold tracking-tight font-mono tabular-nums text-emerald-700 dark:text-emerald-400">
-              ${kpis.total_stock_value.toLocaleString("en-US", { minimumFractionDigits: 0 })}
-            </div>
+          <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Valuation</span>
+            <DollarSign className="h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" />
           </div>
-          <div>
-            <MuiSparkline data={SPARKLINE_VALUATION} color="#10B981" height={26} />
-            <div className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-              Weighted Average (WAV)
-            </div>
+          <div className="mt-2 text-xl font-bold tracking-tight font-mono tabular-nums text-emerald-700 dark:text-emerald-400">
+            ${kpis.total_stock_value.toLocaleString("en-US", { minimumFractionDigits: 0 })}
+          </div>
+          <div className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+            Weighted Average (WAV)
           </div>
         </div>
 
-        {/* Available Stock with Sparkline */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-emerald-300 dark:hover:border-emerald-900/50 transition-all group flex flex-col justify-between">
+        {/* Available Stock */}
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-emerald-300 dark:hover:border-emerald-900/50 transition-all group">
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-emerald-500" />
-          <div>
-            <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Available</span>
-              <CheckCircle className="h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
-              {kpis.total_available.toLocaleString()}
-            </div>
+          <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Available</span>
+            <CheckCircle className="h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" />
           </div>
-          <div>
-            <MuiSparkline data={SPARKLINE_AVAILABLE} color="#10B981" height={26} />
-            <div className="mt-1 text-[11px] text-slate-400 dark:text-zinc-500 font-medium">
-              Free for dispatch
-            </div>
+          <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
+            {kpis.total_available.toLocaleString()}
+          </div>
+          <div className="mt-1 text-[11px] text-slate-400 dark:text-zinc-500">
+            Free for dispatch
           </div>
         </div>
 
         {/* Reserved Stock */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-purple-300 dark:hover:border-purple-900/50 transition-all group flex flex-col justify-between">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-purple-300 dark:hover:border-purple-900/50 transition-all group">
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-purple-500" />
-          <div>
-            <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Reserved</span>
-              <Clock className="h-4 w-4 text-purple-500 group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-purple-700 dark:text-purple-400">
-              {kpis.total_reserved.toLocaleString()}
-            </div>
+          <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Reserved</span>
+            <Clock className="h-4 w-4 text-purple-500 group-hover:scale-110 transition-transform" />
           </div>
-          <div className="pt-4">
-            <div className="text-[11px] text-purple-600 dark:text-purple-400 font-medium">
-              Allocated to orders
-            </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">SO commitment</div>
+          <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-purple-700 dark:text-purple-400">
+            {kpis.total_reserved.toLocaleString()}
+          </div>
+          <div className="mt-1 text-[11px] text-purple-600 dark:text-purple-400 font-medium">
+            Allocated to orders
           </div>
         </div>
 
         {/* Low Stock Items */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-amber-300 dark:hover:border-amber-900/50 transition-all group flex flex-col justify-between">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-amber-300 dark:hover:border-amber-900/50 transition-all group">
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-amber-500" />
-          <div>
-            <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Low Stock</span>
-              <AlertTriangle className="h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-amber-600 dark:text-amber-400">
-              {kpis.low_stock_items}
-            </div>
+          <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Low Stock</span>
+            <AlertTriangle className="h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" />
           </div>
-          <div className="pt-4">
-            <div className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-              Requires reorder
-            </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">Threshold crossed</div>
+          <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-amber-600 dark:text-amber-400">
+            {kpis.low_stock_items}
+          </div>
+          <div className="mt-1 text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+            Requires reorder
           </div>
         </div>
 
         {/* Out of Stock */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-rose-300 dark:hover:border-rose-900/50 transition-all group flex flex-col justify-between">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-sm hover:border-rose-300 dark:hover:border-rose-900/50 transition-all group">
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-rose-500" />
-          <div>
-            <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Out of Stock</span>
-              <XCircle className="h-4 w-4 text-rose-500 group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-rose-600 dark:text-rose-400">
-              {kpis.out_of_stock_items}
-            </div>
+          <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Out of Stock</span>
+            <XCircle className="h-4 w-4 text-rose-500 group-hover:scale-110 transition-transform" />
           </div>
-          <div className="pt-4">
-            <div className="text-[11px] text-rose-600 dark:text-rose-400 font-medium">
-              Critical stock-out
-            </div>
-            <div className="text-[10px] text-rose-500 font-semibold mt-0.5">Action urgent</div>
+          <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-rose-600 dark:text-rose-400">
+            {kpis.out_of_stock_items}
+          </div>
+          <div className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium">
+            Critical stock-out
           </div>
         </div>
       </div>
 
-      {/* Row: MUI X-Style Operational Health Gauge Intelligence Strip */}
-      <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
-              <GaugeIcon className="h-4 w-4" />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                Operational Telemetry & Performance Gauges
-              </h2>
-              <p className="text-xs text-slate-400 dark:text-zinc-500">
-                MUI X Gauge composition tracking SLA fulfillment, storage saturation, and FEFO compliance.
-              </p>
-            </div>
-          </div>
-          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300">
-            Real-Time Metric Arcs
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <MuiGaugeMeter
-            value={96.8}
-            label="Order Fulfillment SLA"
-            sublabel="Avg Lead Time: 4.2h"
-            color="#10B981"
-          />
-          <MuiGaugeMeter
-            value={71.5}
-            label="Global Storage Saturation"
-            sublabel="18,920 / 27,000 slots"
-            color="#6366F1"
-          />
-          <MuiGaugeMeter
-            value={98.4}
-            label="FEFO Batch Integrity"
-            sublabel="0 expired lots active"
-            color="#06B6D4"
-          />
-          <MuiGaugeMeter
-            value={99.1}
-            label="Cycle Count Accuracy"
-            sublabel="Variance delta < 0.2%"
-            color="#8B5CF6"
-          />
-        </div>
-      </div>
-
-      {/* Row: Charts Section (Stock Movement Dynamics + Inventory Category Donut) */}
+      {/* Row 1: High Configuration Composed Charts (Multi-Axis Ledger Flux + Portfolio Radial Donut) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Stock Movement Trend with MUI X-Style Target Reference Line */}
+        {/* CHART 1: High-Configuration Dual-Axis ComposedChart (Inbound/Outbound Bars + Net Flux Spline) */}
         <div className="lg:col-span-2 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <span>Stock Movement Dynamics</span>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300">
-                  Daily Receipts vs Issues
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-blue-500" />
+                  Multi-Dimensional Stock Movement Flux
+                </h2>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200/60">
+                  Dual-Axis Dynamic
                 </span>
-              </h2>
+              </div>
               <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
-                Physical transaction throughput monitored across multi-warehouse ledger.
+                Bars represent throughput volume (left axis); curve traces Net Inventory Delta flux (right axis).
               </p>
             </div>
-            <div className="flex items-center gap-4 text-xs font-semibold">
+            <div className="flex items-center gap-3 text-xs font-semibold">
               <span className="flex items-center gap-1.5 text-slate-700 dark:text-zinc-300">
-                <span className="h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-blue-500/20" /> Inbound
+                <span className="h-2.5 w-2.5 rounded-sm bg-blue-500" /> Inbound
               </span>
               <span className="flex items-center gap-1.5 text-slate-700 dark:text-zinc-300">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20" /> Outbound
+                <span className="h-2.5 w-2.5 rounded-sm bg-indigo-500" /> Outbound
               </span>
-              <span className="flex items-center gap-1.5 text-slate-400">
-                <span className="h-2 w-4 border-t-2 border-dashed border-slate-400" /> Target
+              <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20" /> Net Delta
               </span>
             </div>
           </div>
 
-          <div className="h-68 w-full pt-2">
+          <div className="h-72 w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={MOVEMENT_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <ComposedChart data={MOVEMENT_DATA} margin={{ top: 10, right: 15, left: -15, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="inboundGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.0} />
+                  <linearGradient id="inboundBarGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.9} />
+                    <stop offset="100%" stopColor="#2563EB" stopOpacity={0.7} />
                   </linearGradient>
-                  <linearGradient id="outboundGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0.0} />
+                  <linearGradient id="outboundBarGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#818CF8" stopOpacity={0.9} />
+                    <stop offset="100%" stopColor="#6366F1" stopOpacity={0.7} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
+                <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#e2e8f0" opacity={0.5} />
                 <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="volume" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} domain={[0, 1000]} />
+                <YAxis yAxisId="flux" orientation="right" tick={{ fontSize: 11, fill: "#10B981" }} tickLine={false} axisLine={false} domain={[-500, 500]} />
                 <Tooltip
+                  cursor={{ fill: "rgba(0, 0, 0, 0.03)" }}
                   contentStyle={{
                     backgroundColor: "rgba(24, 24, 27, 0.95)",
-                    borderColor: "rgba(63, 63, 70, 0.4)",
-                    borderRadius: "12px",
+                    borderColor: "rgba(63, 63, 70, 0.5)",
+                    borderRadius: "14px",
                     color: "#fff",
                     fontSize: "12px",
-                    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
-                    backdropFilter: "blur(8px)",
+                    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.4)",
+                    backdropFilter: "blur(12px)",
                   }}
+                  formatter={(value, name) => [
+                    `${value > 0 && name === "netFlux" ? "+" : ""}${value} units`,
+                    name === "inbound" ? "Receipts (Inbound)" : name === "outbound" ? "Dispatches (Outbound)" : "Net Inventory Flux",
+                  ]}
                 />
-                {/* MUI X-Style Reference Line for SLA Daily Target */}
-                <ReferenceLine
-                  y={500}
-                  stroke="#94A3B8"
-                  strokeDasharray="4 4"
-                  label={{ value: "Daily Baseline: 500 EA", fill: "#94A3B8", fontSize: 10, position: "insideTopRight" }}
-                />
-                <Area type="monotone" dataKey="inbound" stroke="#3B82F6" strokeWidth={2.5} fillOpacity={1} fill="url(#inboundGrad)" />
-                <Area type="monotone" dataKey="outbound" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#outboundGrad)" />
-              </AreaChart>
+                <ReferenceLine yAxisId="flux" y={0} stroke="#94a3b8" strokeDasharray="3 3" opacity={0.6} />
+                <Bar yAxisId="volume" dataKey="inbound" fill="url(#inboundBarGrad)" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                <Bar yAxisId="volume" dataKey="outbound" fill="url(#outboundBarGrad)" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                <Line yAxisId="flux" type="monotone" dataKey="netFlux" stroke="#10B981" strokeWidth={3} dot={{ r: 4, fill: "#10B981", strokeWidth: 2, stroke: "#fff" }} activeDot={{ r: 6, fill: "#10B981" }} />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Product Category Distribution */}
+        {/* CHART 2: Portfolio Capital Allocation by Category (Donut with Segment Progress) */}
         <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
-          <div>
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-              Inventory by Category
-            </h2>
-            <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
-              Proportion of stock valuation by classification
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                Portfolio Valuation Share
+              </h2>
+              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                Capital distribution by master category
+              </p>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400">
+              5 Sectors
+            </span>
           </div>
 
-          <div className="h-48 w-full flex items-center justify-center relative">
+          <div className="h-44 w-full flex items-center justify-center relative">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={CATEGORY_DATA} innerRadius={54} outerRadius={78} paddingAngle={4} dataKey="value">
+                <Pie data={CATEGORY_DATA} innerRadius={52} outerRadius={72} paddingAngle={4} dataKey="value">
                   {CATEGORY_DATA.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
@@ -665,12 +520,13 @@ export function DashboardPage() {
                     color: "#fff",
                     fontSize: "12px",
                   }}
+                  formatter={(val, name, entry) => [`${val}% (${entry.payload.capital})`, name]}
                 />
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-xl font-bold font-mono text-slate-900 dark:text-white">100%</span>
-              <span className="text-[10px] uppercase font-bold text-slate-400">Portfolio</span>
+              <span className="text-base font-bold font-mono text-slate-900 dark:text-white">$428.5k</span>
+              <span className="text-[9px] uppercase font-bold text-slate-400">Active Capital</span>
             </div>
           </div>
 
@@ -678,10 +534,10 @@ export function DashboardPage() {
             {CATEGORY_DATA.map((item) => (
               <div key={item.name} className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
                 <span className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="font-medium text-slate-700 dark:text-zinc-300">{item.name}</span>
+                  <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                  <span className="font-medium text-slate-700 dark:text-zinc-300 truncate">{item.name}</span>
                 </span>
-                <div className="flex items-center gap-2 font-mono">
+                <div className="flex items-center gap-2 font-mono shrink-0">
                   <span className="text-slate-400 text-[11px]">{item.capital}</span>
                   <span className="font-bold text-slate-900 dark:text-white tabular-nums">{item.value}%</span>
                 </div>
@@ -691,9 +547,9 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Row: Facility Capacity BarChart + Valuation Trend + Stock Aging Health */}
+      {/* Row 2: Specialized Benchmark & Velocity Charts (Multi-Facility Benchmark + Valuation Growth + Aging Tiers) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Multi-Facility Space & Pallet Utilization with MUI X-Style Capacity Benchmark */}
+        {/* CHART 3: Multi-Facility Space Utilization (BarChart with 80% Buffer Line) */}
         <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
@@ -702,20 +558,20 @@ export function DashboardPage() {
                 Facility Space Utilization
               </h2>
               <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
-                Occupied vs free bin/pallet capacity per facility
+                Current occupancy % vs 80% safety ceiling
               </p>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200/60">
               Pallet Slots
             </span>
           </div>
 
           <div className="h-56 w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={WAREHOUSE_CAPACITY_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.4} />
+              <BarChart data={WAREHOUSE_CAPACITY_DATA} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#e2e8f0" opacity={0.4} />
                 <XAxis dataKey="code" tick={{ fontSize: 10, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} tickLine={false} axisLine={false} domain={[0, 100]} />
                 <Tooltip
                   cursor={{ fill: "rgba(0, 0, 0, 0.04)" }}
                   contentStyle={{
@@ -725,19 +581,24 @@ export function DashboardPage() {
                     color: "#fff",
                     fontSize: "12px",
                   }}
-                  formatter={(value, name) => [
-                    `${value.toLocaleString()} slots`,
-                    name === "used" ? "Occupied Capacity" : "Available Capacity",
+                  formatter={(val, name, entry) => [
+                    `${val}% (${entry.payload.occupiedSlots.toLocaleString()} / ${(entry.payload.occupiedSlots + entry.payload.freeSlots).toLocaleString()} slots)`,
+                    "Occupancy Rate",
                   ]}
                 />
-                <ReferenceLine
-                  y={8000}
-                  stroke="#F59E0B"
-                  strokeDasharray="4 4"
-                  label={{ value: "Max 8k Ceiling", fill: "#F59E0B", fontSize: 9, position: "insideTopLeft" }}
-                />
-                <Bar dataKey="used" fill="#6366F1" radius={[4, 4, 0, 0]} stackId="a" />
-                <Bar dataKey="available" fill="#E2E8F0" radius={[4, 4, 0, 0]} stackId="a" />
+                <ReferenceLine y={80} stroke="#F43F5E" strokeDasharray="3 3" label={{ value: "80% Max Buffer", position: "insideTopRight", fill: "#F43F5E", fontSize: 10, fontWeight: "bold" }} />
+                <Bar
+                  dataKey="used"
+                  radius={[6, 6, 0, 0]}
+                  maxBarSize={36}
+                >
+                  {WAREHOUSE_CAPACITY_DATA.map((entry, index) => (
+                    <Cell
+                      key={`bar-${index}`}
+                      fill={entry.used > 80 ? "#F43F5E" : entry.used > 60 ? "#6366F1" : "#10B981"}
+                    />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -747,16 +608,16 @@ export function DashboardPage() {
               <div key={wh.code} className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800/40 border border-slate-100 dark:border-zinc-800">
                 <div className="flex items-center justify-between font-semibold">
                   <span className="text-slate-700 dark:text-zinc-200 truncate">{wh.code}</span>
-                  <span className={`tabular-nums font-bold ${wh.rate > 80 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                    {wh.rate}%
+                  <span className={`tabular-nums font-bold ${wh.used > 80 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                    {wh.used}%
                   </span>
                 </div>
                 <div className="w-full bg-slate-200 dark:bg-zinc-700 h-1.5 rounded-full mt-1.5 overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all ${
-                      wh.rate > 80 ? "bg-rose-500" : wh.rate > 60 ? "bg-indigo-500" : "bg-emerald-500"
+                      wh.used > 80 ? "bg-rose-500" : wh.used > 60 ? "bg-indigo-500" : "bg-emerald-500"
                     }`}
-                    style={{ width: `${wh.rate}%` }}
+                    style={{ width: `${wh.used}%` }}
                   />
                 </div>
               </div>
@@ -764,35 +625,36 @@ export function DashboardPage() {
           </div>
         </div>
 
-        {/* Valuation & Capital Progression with MUI X Reference Line */}
+        {/* CHART 4: Valuation & Turnover Velocity Combo (Area + Line Dual Y-Axis) */}
         <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <DollarSign className="h-4 w-4 text-emerald-500" />
-                Capital Valuation Growth
+                Capital Valuation & Turnover
               </h2>
               <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
-                6-month asset balance vs target ceiling ($k)
+                Asset volume ($k) vs turnover turns/year
               </p>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60">
-              +26.0% 6M
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200/60">
+              6.2x Turnover
             </span>
           </div>
 
           <div className="h-56 w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={VALUATION_TREND_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <ComposedChart data={VALUATION_VELOCITY_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="valGrad" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="valGrad2" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10B981" stopOpacity={0.25} />
                     <stop offset="95%" stopColor="#10B981" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.4} />
+                <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#e2e8f0" opacity={0.4} />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="left" tick={{ fontSize: 10, fill: "#10B981" }} tickLine={false} axisLine={false} domain={[300, 460]} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: "#6366F1" }} tickLine={false} axisLine={false} domain={[4, 8]} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "rgba(24, 24, 27, 0.95)",
@@ -801,16 +663,14 @@ export function DashboardPage() {
                     color: "#fff",
                     fontSize: "12px",
                   }}
-                  formatter={(val, name) => [`$${val}k USD`, name === "valuation" ? "Actual Valuation" : "Target Limit"]}
+                  formatter={(val, name) => [
+                    name === "valuation" ? `$${val}k USD` : `${val}x / Year`,
+                    name === "valuation" ? "Total Valuation (WAV)" : "Turnover Velocity",
+                  ]}
                 />
-                <ReferenceLine
-                  y={400}
-                  stroke="#3B82F6"
-                  strokeDasharray="4 4"
-                  label={{ value: "Budget Cap: $400k", fill: "#3B82F6", fontSize: 10, position: "insideBottomRight" }}
-                />
-                <Area type="monotone" dataKey="valuation" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#valGrad)" />
-              </AreaChart>
+                <Area yAxisId="left" type="monotone" dataKey="valuation" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#valGrad2)" />
+                <Line yAxisId="right" type="monotone" dataKey="turnover" stroke="#6366F1" strokeWidth={2.5} dot={{ r: 4, fill: "#6366F1", stroke: "#fff" }} />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
 
@@ -826,59 +686,37 @@ export function DashboardPage() {
           </div>
         </div>
 
-        {/* Stock Health & Ageing Distribution */}
+        {/* CHART 5: Inventory Ageing Lifecycle & Capital Exposure Tiers */}
         <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Activity className="h-4 w-4 text-purple-500" />
-                Stock Aging & Turnover Health
+                <Gauge className="h-4 w-4 text-purple-500" />
+                Stock Aging & Depletion Tiers
               </h2>
               <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
-                Circulation lifecycle of active warehouse inventory
+                Capital exposure categorized by shelf-life duration
               </p>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-400 border border-purple-200/60 dark:border-purple-800/60">
-              FEFO Health
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-400 border border-purple-200/60">
+              86% Healthy
             </span>
           </div>
 
-          <div className="h-44 w-full flex items-center justify-center relative">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={STOCK_HEALTH_DATA} innerRadius={48} outerRadius={68} paddingAngle={4} dataKey="value">
-                  {STOCK_HEALTH_DATA.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "rgba(24, 24, 27, 0.95)",
-                    borderColor: "rgba(63, 63, 70, 0.4)",
-                    borderRadius: "12px",
-                    color: "#fff",
-                    fontSize: "12px",
-                  }}
-                  formatter={(val, name, item) => [`${val}% (${item.payload.capital})`, name]}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">86%</span>
-              <span className="text-[9px] uppercase font-bold text-slate-400">Healthy</span>
-            </div>
-          </div>
-
-          <div className="space-y-1.5 pt-1 border-t border-slate-100 dark:border-zinc-800 text-xs">
-            {STOCK_HEALTH_DATA.map((item) => (
-              <div key={item.name} className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
-                <span className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-[11px] font-medium text-slate-700 dark:text-zinc-300">{item.name}</span>
-                </span>
-                <div className="flex items-center gap-2 font-mono">
-                  <span className="text-[11px] text-slate-400">{item.capital}</span>
-                  <span className="text-[11px] font-bold text-slate-900 dark:text-white tabular-nums">{item.value}%</span>
+          {/* Segmented Tier Progress Stack */}
+          <div className="space-y-3 pt-1">
+            {STOCK_AGING_TIERS.map((tier) => (
+              <div key={tier.tier} className="p-2.5 rounded-xl border border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/30 space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-semibold">
+                  <span className="text-slate-800 dark:text-zinc-200">{tier.tier}</span>
+                  <span className={`font-mono font-bold ${tier.text}`}>{tier.percentage}%</span>
+                </div>
+                <div className="w-full bg-slate-200 dark:bg-zinc-700 h-2 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full bg-gradient-to-r ${tier.color}`} style={{ width: `${tier.percentage}%` }} />
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>{tier.skus} SKUs in circulation</span>
+                  <span className="font-mono font-medium text-slate-600 dark:text-zinc-300">{tier.capital}</span>
                 </div>
               </div>
             ))}
@@ -886,7 +724,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Row: Comprehensive Facility Stock Details Matrix */}
+      {/* Row 3: Multi-Facility Real-Time Stock Balance Matrix */}
       <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
@@ -940,23 +778,23 @@ export function DashboardPage() {
                     {wh.skus} items
                   </td>
                   <td className="py-3.5 text-right font-mono tabular-nums text-slate-900 dark:text-white font-bold">
-                    {wh.used.toLocaleString()}
+                    {wh.occupiedSlots.toLocaleString()}
                   </td>
                   <td className="py-3.5 text-right font-mono tabular-nums text-emerald-600 dark:text-emerald-400 font-semibold">
-                    {wh.available.toLocaleString()}
+                    {wh.freeSlots.toLocaleString()}
                   </td>
                   <td className="py-3.5 min-w-[140px]">
                     <div className="flex items-center gap-2">
                       <div className="w-full bg-slate-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
                         <div
                           className={`h-full rounded-full ${
-                            wh.rate > 80 ? "bg-rose-500" : wh.rate > 60 ? "bg-indigo-500" : "bg-emerald-500"
+                            wh.used > 80 ? "bg-rose-500" : wh.used > 60 ? "bg-indigo-500" : "bg-emerald-500"
                           }`}
-                          style={{ width: `${wh.rate}%` }}
+                          style={{ width: `${wh.used}%` }}
                         />
                       </div>
                       <span className="text-[11px] font-bold font-mono text-slate-600 dark:text-zinc-400 shrink-0">
-                        {wh.rate}%
+                        {wh.used}%
                       </span>
                     </div>
                   </td>
@@ -976,7 +814,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Row: Top Capital Concentration SKUs & FEFO Expiry Risk Strip */}
+      {/* Row 4: Top Capital Concentration SKUs & FEFO Expiry Risk Strip */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Top 5 Capital Concentration SKUs */}
         <div className="lg:col-span-2 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
@@ -1095,7 +933,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Row: Operational Sections: Recent Movements & Low Stock Alerts */}
+      {/* Row 5: Operational Recent Movements Table & Low Stock Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Stock Movements Table */}
         <div className="lg:col-span-2 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">

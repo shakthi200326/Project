@@ -192,7 +192,7 @@ export function AppShell({ children }) {
             {!collapsed && (
               <div className="flex flex-col min-w-0">
                 <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
-                  ONE ERP
+                  Business Ecosystem
                   <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-950/80 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-900">
                     v3.1
                   </span>
@@ -324,11 +324,11 @@ export function AppShell({ children }) {
                   <Boxes className="h-5 w-5" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
-                    ONE ERP
+                  <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">
+                    Business Ecosystem
                   </span>
-                  <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
-                    Inventory Ecosystem v3.1
+                  <span className="text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+                    Inventory Management v3.1
                   </span>
                 </div>
               </div>
