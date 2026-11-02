@@ -109,7 +109,8 @@ export function AppShell({ children }) {
       setOpenGroups((p) => ({ ...p, catalog: true }));
     } else if (
       path.startsWith("/inventory/warehouses") ||
-      path.startsWith("/inventory/locations")
+      path.startsWith("/inventory/locations") ||
+      path.startsWith("/inventory/racks-bins")
     ) {
       setOpenGroups((p) => ({ ...p, warehouses: true }));
     } else if (path.startsWith("/inventory/operations")) {
@@ -141,6 +142,7 @@ export function AppShell({ children }) {
       "/inventory/barcodes": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Barcodes & Tags" }],
       "/inventory/warehouses": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Facility Overview" }],
       "/inventory/locations": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Storage Locations" }],
+      "/inventory/racks-bins": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Racks & Bins" }],
       "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock In (Receipt)" }],
       "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Out (Issue)" }],
       "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Transfers" }],
@@ -188,6 +190,7 @@ export function AppShell({ children }) {
       items: [
         { label: "Facility Overview", path: "/inventory/warehouses", icon: Warehouse },
         { label: "Storage Locations", path: "/inventory/locations", icon: MapPin },
+        { label: "Racks & Bins", path: "/inventory/racks-bins", icon: Layers },
       ],
     },
     {
@@ -243,6 +246,7 @@ export function AppShell({ children }) {
       "/inventory/barcodes": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Barcodes & Tags" }],
       "/inventory/warehouses": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Facility Overview" }],
       "/inventory/locations": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Storage Locations" }],
+      "/inventory/racks-bins": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Racks & Bins" }],
       "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock In (Receipt)" }],
       "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Out (Issue)" }],
       "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Transfers" }],
@@ -315,6 +319,7 @@ export function AppShell({ children }) {
       "/inventory/barcodes": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Barcodes & Tags" }],
       "/inventory/warehouses": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Facility Overview" }],
       "/inventory/locations": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Storage Locations" }],
+      "/inventory/racks-bins": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Racks & Bins" }],
       "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock In (Receipt)" }],
       "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Out (Issue)" }],
       "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Transfers" }],
@@ -367,6 +372,7 @@ export function AppShell({ children }) {
       "/inventory/barcodes": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Barcodes & Tags" }],
       "/inventory/warehouses": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Facility Overview" }],
       "/inventory/locations": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Storage Locations" }],
+      "/inventory/racks-bins": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Racks & Bins" }],
       "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock In (Receipt)" }],
       "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Out (Issue)" }],
       "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Transfers" }],
@@ -508,6 +514,7 @@ export function AppShell({ children }) {
       "/inventory/barcodes": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Barcodes & Tags" }],
       "/inventory/warehouses": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Facility Overview" }],
       "/inventory/locations": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Storage Locations" }],
+      "/inventory/racks-bins": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Racks & Bins" }],
       "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock In (Receipt)" }],
       "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Out (Issue)" }],
       "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Transfers" }],
@@ -563,6 +570,7 @@ export function AppShell({ children }) {
       "/inventory/barcodes": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Barcodes & Tags" }],
       "/inventory/warehouses": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Facility Overview" }],
       "/inventory/locations": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Storage Locations" }],
+      "/inventory/racks-bins": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Racks & Bins" }],
       "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock In (Receipt)" }],
       "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Out (Issue)" }],
       "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Transfers" }],

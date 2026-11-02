@@ -15,6 +15,7 @@ const UnitsPage = lazy(() => import("../pages/UnitsPage.jsx").then(m => ({ defau
 const BarcodesPage = lazy(() => import("../pages/BarcodesPage.jsx").then(m => ({ default: m.BarcodesPage })));
 const WarehousesPage = lazy(() => import("../pages/WarehousesPage.jsx").then(m => ({ default: m.WarehousesPage })));
 const LocationsPage = lazy(() => import("../pages/LocationsPage.jsx").then(m => ({ default: m.LocationsPage })));
+const RackBinPage = lazy(() => import("../pages/RackBinPage.jsx").then(m => ({ default: m.RackBinPage })));
 const StockMovementsPage = lazy(() => import("../pages/StockMovementsPage.jsx").then(m => ({ default: m.StockMovementsPage })));
 const StockLedgerPage = lazy(() => import("../pages/StockLedgerPage.jsx").then(m => ({ default: m.StockLedgerPage })));
 const StockBalancesPage = lazy(() => import("../pages/StockBalancesPage.jsx").then(m => ({ default: m.StockBalancesPage })));
@@ -57,6 +58,9 @@ export default function App() {
                 <Route path="/inventory/warehouses" element={<WarehousesPage />} />
                 <Route path="/inventory/warehouses/overview" element={<WarehousesPage />} />
                 <Route path="/inventory/locations" element={<LocationsPage />} />
+                <Route path="/inventory/racks-bins" element={<RackBinPage />} />
+                <Route path="/inventory/racks" element={<RackBinPage />} />
+                <Route path="/inventory/bins" element={<RackBinPage />} />
 
                 {/* Stock Operations */}
                 <Route path="/inventory/operations/stock-in" element={<StockMovementsPage initialType="RECEIPT" />} />
@@ -92,6 +96,9 @@ export default function App() {
                 <Route path="/barcodes" element={<Navigate to="/inventory/barcodes" replace />} />
                 <Route path="/warehouses" element={<Navigate to="/inventory/warehouses" replace />} />
                 <Route path="/locations" element={<Navigate to="/inventory/locations" replace />} />
+                <Route path="/racks-bins" element={<Navigate to="/inventory/racks-bins" replace />} />
+                <Route path="/racks" element={<Navigate to="/inventory/racks-bins" replace />} />
+                <Route path="/bins" element={<Navigate to="/inventory/racks-bins" replace />} />
                 <Route path="/ledger" element={<Navigate to="/inventory/control/ledger" replace />} />
                 <Route path="/balances" element={<Navigate to="/inventory/control/balances" replace />} />
                 <Route path="/batches" element={<Navigate to="/inventory/control/batches" replace />} />

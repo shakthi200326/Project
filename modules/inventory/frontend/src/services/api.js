@@ -381,46 +381,101 @@ export const DEMO_WAREHOUSES = [
     id: 1,
     code: "WH-MAIN",
     name: "Main Central Fulfillment Hub",
+    warehouse_type: "Main Warehouse",
+    description: "Primary distribution center with high-rack automated picking and bulk receipt.",
     address: "Logistics Blvd 101, Industrial Park",
+    city: "Chicago",
+    state: "Illinois",
+    country: "United States",
+    postal_code: "60601",
+    manager: "Alex Morgan",
+    contact_number: "+1 (312) 555-0192",
     capacity_used: 78,
     zones_count: 5,
     locations_count: 120,
     total_skus: 420,
-    status: "ACTIVE",
+    status: "Active",
     is_active: true,
   },
   {
     id: 2,
     code: "WH-EAST",
     name: "East Coast Logistics Terminal",
+    warehouse_type: "Distribution Warehouse",
+    description: "Port-adjacent intermodal terminal handling maritime imports and transshipments.",
     address: "Harbor Road 42, Terminal 3",
+    city: "Newark",
+    state: "New Jersey",
+    country: "United States",
+    postal_code: "07101",
+    manager: "Sarah Chen",
+    contact_number: "+1 (973) 555-0144",
     capacity_used: 45,
     zones_count: 3,
     locations_count: 65,
     total_skus: 180,
-    status: "ACTIVE",
+    status: "Active",
     is_active: true,
   },
   {
     id: 3,
     code: "WH-COLD",
     name: "Specialized Temperature Vault",
+    warehouse_type: "Production Warehouse",
+    description: "Cold-chain facility maintaining strict ISO cleanroom specs for sensitive materials.",
     address: "Arctic Avenue 7, Zone B",
+    city: "Dallas",
+    state: "Texas",
+    country: "United States",
+    postal_code: "75201",
+    manager: "David Kim",
+    contact_number: "+1 (214) 555-0188",
     capacity_used: 92,
     zones_count: 2,
     locations_count: 30,
     total_skus: 45,
-    status: "ACTIVE",
+    status: "Active",
     is_active: true,
   },
 ];
 
 export const DEMO_LOCATIONS = [
-  { id: 1, code: "A3-RB", name: "Aisle 3 - Rack B", warehouse: "WH-MAIN", warehouse_code: "WH-MAIN", warehouse_name: "Main Central Fulfillment Hub", zone: "Zone A", aisle: "A3", rack: "RB", bin: "01", type: "RACK", capacity: "2,000 KG", occupied: 65, is_active: true },
-  { id: 2, code: "A1-B4", name: "Aisle 1 - Bin 4", warehouse: "WH-MAIN", warehouse_code: "WH-MAIN", warehouse_name: "Main Central Fulfillment Hub", zone: "Zone A", aisle: "A1", rack: "R1", bin: "B4", type: "BIN", capacity: "250 KG", occupied: 82, is_active: true },
-  { id: 3, code: "B2-BAY", name: "Bay 2 Staging Area", warehouse: "WH-MAIN", warehouse_code: "WH-MAIN", warehouse_name: "Main Central Fulfillment Hub", zone: "Zone B", aisle: "B2", rack: "--", bin: "--", type: "BAY", capacity: "5,000 KG", occupied: 40, is_active: true },
-  { id: 4, code: "VAULT-CHEM", name: "Chemical Vault Chamber 1", warehouse: "WH-MAIN", warehouse_code: "WH-MAIN", warehouse_name: "Main Central Fulfillment Hub", zone: "Hazardous Zone", aisle: "V1", rack: "C1", bin: "01", type: "RACK", capacity: "10,000 L", occupied: 90, is_active: true },
+  { id: 1, code: "LOC-REC-01", name: "Receiving Bay 01", warehouse: "WH-MAIN", warehouse_code: "WH-MAIN", warehouse_name: "Main Central Fulfillment Hub", location_type: "Receiving", description: "Inbound dock pallet inspection and sorting", status: "Active", is_active: true, capacity: "5,000 KG", occupied: 30 },
+  { id: 2, code: "LOC-STO-A1", name: "Aisle 1 High Rack Storage", warehouse: "WH-MAIN", warehouse_code: "WH-MAIN", warehouse_name: "Main Central Fulfillment Hub", location_type: "Storage", description: "Heavy pallet racking for high runners", status: "Active", is_active: true, capacity: "10,000 KG", occupied: 75 },
+  { id: 3, code: "LOC-PIK-01", name: "Fast Pick Conveyor Zone", warehouse: "WH-MAIN", warehouse_code: "WH-MAIN", warehouse_name: "Main Central Fulfillment Hub", location_type: "Picking", description: "Pick-to-light gravity shelves", status: "Active", is_active: true, capacity: "2,000 KG", occupied: 82 },
+  { id: 4, code: "LOC-PAK-02", name: "Packing Station Bench 2", warehouse: "WH-MAIN", warehouse_code: "WH-MAIN", warehouse_name: "Main Central Fulfillment Hub", location_type: "Packing", description: "Secondary packing and barcode verification", status: "Active", is_active: true, capacity: "1,500 KG", occupied: 40 },
+  { id: 5, code: "LOC-DSP-01", name: "Outbound Dispatch Bay", warehouse: "WH-MAIN", warehouse_code: "WH-MAIN", warehouse_name: "Main Central Fulfillment Hub", location_type: "Dispatch", description: "Trailer staging and carrier handoff", status: "Active", is_active: true, capacity: "8,000 KG", occupied: 55 },
+  { id: 6, code: "LOC-INS-QA", name: "Incoming QA Inspection Lab", warehouse: "WH-MAIN", warehouse_code: "WH-MAIN", warehouse_name: "Main Central Fulfillment Hub", location_type: "Inspection", description: "CMM and visual tolerance verification", status: "Active", is_active: true, capacity: "1,000 KG", occupied: 25 },
+  { id: 7, code: "LOC-QAR-01", name: "Quarantine Vault 1", warehouse: "WH-MAIN", warehouse_code: "WH-MAIN", warehouse_name: "Main Central Fulfillment Hub", location_type: "Quarantine", description: "Held pending disposition / NCR resolution", status: "Blocked", is_active: false, capacity: "3,000 KG", occupied: 90 },
+  { id: 8, code: "LOC-RET-01", name: "Customer Returns RMA Bay", warehouse: "WH-MAIN", warehouse_code: "WH-MAIN", warehouse_name: "Main Central Fulfillment Hub", location_type: "Returns", description: "RMA intake and triage", status: "Active", is_active: true, capacity: "2,000 KG", occupied: 15 },
 ];
+
+export const DEMO_RACKS = [
+  { id: 1, code: "RACK-001", name: "Aisle 1 Heavy Pallet Rack", warehouse: "WH-MAIN", warehouse_code: "WH-MAIN", warehouse_name: "Main Central Fulfillment Hub", location: "LOC-STO-A1", location_code: "LOC-STO-A1", location_name: "Aisle 1 High Rack Storage", number_of_levels: 5, status: "Active" },
+  { id: 2, code: "RACK-002", name: "Aisle 2 Carton Flow Rack", warehouse: "WH-MAIN", warehouse_code: "WH-MAIN", warehouse_name: "Main Central Fulfillment Hub", location: "LOC-STO-A1", location_code: "LOC-STO-A1", location_name: "Aisle 1 High Rack Storage", number_of_levels: 4, status: "Active" },
+  { id: 3, code: "RACK-003", name: "Receiving Staging Rack R3", warehouse: "WH-MAIN", warehouse_code: "WH-MAIN", warehouse_name: "Main Central Fulfillment Hub", location: "LOC-REC-01", location_code: "LOC-REC-01", location_name: "Receiving Bay 01", number_of_levels: 3, status: "Active" },
+  { id: 4, code: "RACK-004", name: "Quarantine Secure Rack Q4", warehouse: "WH-MAIN", warehouse_code: "WH-MAIN", warehouse_name: "Main Central Fulfillment Hub", location: "LOC-QAR-01", location_code: "LOC-QAR-01", location_name: "Quarantine Vault 1", number_of_levels: 3, status: "Blocked" },
+];
+
+export const DEMO_BINS = [
+  { id: 1, code: "BIN-A1-01", name: "Aisle 1 Level 1 Bin 01", warehouse: "WH-MAIN", warehouse_code: "WH-MAIN", warehouse_name: "Main Central Fulfillment Hub", location: "LOC-STO-A1", location_code: "LOC-STO-A1", location_name: "Aisle 1 High Rack Storage", rack: "RACK-001", rack_code: "RACK-001", rack_name: "Aisle 1 Heavy Pallet Rack", rack_level: 1, barcode: "BIN-A1-01-8849", status: "Active" },
+  { id: 2, code: "BIN-A1-02", name: "Aisle 1 Level 2 Bin 02", warehouse: "WH-MAIN", warehouse_code: "WH-MAIN", warehouse_name: "Main Central Fulfillment Hub", location: "LOC-STO-A1", location_code: "LOC-STO-A1", location_name: "Aisle 1 High Rack Storage", rack: "RACK-001", rack_code: "RACK-001", rack_name: "Aisle 1 Heavy Pallet Rack", rack_level: 2, barcode: "BIN-A1-02-1923", status: "Active" },
+  { id: 3, code: "BIN-A2-01", name: "Aisle 2 Level 1 Bin 01", warehouse: "WH-MAIN", warehouse_code: "WH-MAIN", warehouse_name: "Main Central Fulfillment Hub", location: "LOC-STO-A1", location_code: "LOC-STO-A1", location_name: "Aisle 1 High Rack Storage", rack: "RACK-002", rack_code: "RACK-002", rack_name: "Aisle 2 Carton Flow Rack", rack_level: 1, barcode: "BIN-A2-01-4432", status: "Active" },
+  { id: 4, code: "BIN-Q1-01", name: "Quarantine Level 1 Bin 01", warehouse: "WH-MAIN", warehouse_code: "WH-MAIN", warehouse_name: "Main Central Fulfillment Hub", location: "LOC-QAR-01", location_code: "LOC-QAR-01", location_name: "Quarantine Vault 1", rack: "RACK-004", rack_code: "RACK-004", rack_name: "Quarantine Secure Rack Q4", rack_level: 1, barcode: "BIN-Q1-01-9921", status: "Blocked" },
+];
+
+export const DEMO_WAREHOUSE_CONFIG = {
+  default_warehouse: "WH-MAIN",
+  allow_negative_stock: false,
+  require_storage_location: true,
+  require_bin_selection: true,
+  enable_multiple_warehouses: true,
+  allow_inter_warehouse_transfer: true,
+  warehouse_code_prefix: "WH",
+  location_code_prefix: "LOC",
+  rack_code_prefix: "RACK",
+  bin_code_prefix: "BIN",
+};
 
 // ---------------------------------------------------------------------------
 // Dashboard KPI API
@@ -909,11 +964,18 @@ export async function fetchWarehouses() {
       const data = await res.json();
       fetchedList = (data.results || data).map((wh) => ({
         ...wh,
+        warehouse_type: wh.warehouse_type || "Main Warehouse",
+        city: wh.city || "Chicago",
+        state: wh.state || "IL",
+        country: wh.country || "United States",
+        manager: wh.manager || "Alex Morgan",
+        contact_number: wh.contact_number || "+1 (312) 555-0192",
         capacity_used: wh.capacity_used ?? 68,
         zones_count: wh.zones_count ?? 4,
         locations_count: wh.locations_count ?? 50,
         total_skus: wh.total_skus ?? 280,
-        status: wh.is_active === false ? "INACTIVE" : "ACTIVE",
+        status: wh.status || (wh.is_active === false ? "Inactive" : "Active"),
+        is_active: wh.status ? wh.status.toLowerCase() === "active" : (wh.is_active !== false),
       }));
     }
   } catch (e) {
@@ -937,6 +999,9 @@ export async function fetchWarehouses() {
 
 export async function createWarehouse(payload) {
   let created = null;
+  const statusStr = payload.status || (payload.is_active === false ? "Inactive" : "Active");
+  const isActive = statusStr.toLowerCase() === "active";
+
   try {
     const res = await fetch(`${API_BASE}/inventory/warehouses/`, {
       method: "POST",
@@ -944,8 +1009,17 @@ export async function createWarehouse(payload) {
       body: JSON.stringify({
         code: payload.code,
         name: payload.name,
+        warehouse_type: payload.warehouse_type || "Main Warehouse",
+        description: payload.description || "",
         address: payload.address || "",
-        is_active: payload.is_active ?? true,
+        city: payload.city || "",
+        state: payload.state || "",
+        country: payload.country || "United States",
+        postal_code: payload.postal_code || "",
+        manager: payload.manager || "",
+        contact_number: payload.contact_number || "",
+        status: statusStr,
+        is_active: isActive,
       }),
     });
     if (res.ok) {
@@ -953,11 +1027,21 @@ export async function createWarehouse(payload) {
       const data = await res.json();
       created = {
         ...data,
-        capacity_used: payload.capacity_used || 15,
+        warehouse_type: payload.warehouse_type || data.warehouse_type || "Main Warehouse",
+        description: payload.description || "",
+        address: payload.address || "",
+        city: payload.city || "",
+        state: payload.state || "",
+        country: payload.country || "United States",
+        postal_code: payload.postal_code || "",
+        manager: payload.manager || "",
+        contact_number: payload.contact_number || "",
+        capacity_used: payload.capacity_used || 20,
         zones_count: payload.zones_count || 1,
         locations_count: payload.locations_count || 0,
         total_skus: 0,
-        status: data.is_active === false ? "INACTIVE" : "ACTIVE",
+        status: statusStr,
+        is_active: isActive,
       };
     }
   } catch (e) {}
@@ -967,13 +1051,21 @@ export async function createWarehouse(payload) {
       id: `wh-${Date.now()}`,
       code: payload.code,
       name: payload.name,
+      warehouse_type: payload.warehouse_type || "Main Warehouse",
+      description: payload.description || "",
       address: payload.address || "",
-      is_active: payload.is_active ?? true,
+      city: payload.city || "",
+      state: payload.state || "",
+      country: payload.country || "United States",
+      postal_code: payload.postal_code || "",
+      manager: payload.manager || "",
+      contact_number: payload.contact_number || "",
       capacity_used: payload.capacity_used || 25,
       zones_count: payload.zones_count || 2,
       locations_count: payload.locations_count || 12,
       total_skus: 0,
-      status: payload.is_active === false ? "INACTIVE" : "ACTIVE",
+      status: statusStr,
+      is_active: isActive,
     };
   }
 
@@ -982,19 +1074,25 @@ export async function createWarehouse(payload) {
 }
 
 export async function updateWarehouse(id, payload) {
+  const statusStr = payload.status || (payload.is_active === false ? "Inactive" : "Active");
+  const enriched = {
+    ...payload,
+    status: statusStr,
+    is_active: statusStr.toLowerCase() === "active",
+  };
   try {
     const res = await fetch(`${API_BASE}/inventory/warehouses/${id}/`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(enriched),
     });
     if (res.ok) {
       updateApiStatus(true);
     }
   } catch (e) {}
 
-  updateLocalEntity("warehouses", id, payload, "id");
-  return { id, ...payload };
+  updateLocalEntity("warehouses", id, enriched, "id");
+  return { id, ...enriched };
 }
 
 export async function deleteWarehouse(id) {
@@ -1024,7 +1122,10 @@ export async function fetchLocations() {
         warehouse: loc.warehouse_code || (typeof loc.warehouse === "string" ? loc.warehouse : "WH-MAIN"),
         warehouse_code: loc.warehouse_code || "WH-MAIN",
         warehouse_name: loc.warehouse_name || "Main Central Fulfillment Hub",
-        type: loc.zone?.includes("Rack") ? "RACK" : loc.zone?.includes("Bay") ? "BAY" : "BIN",
+        location_type: loc.location_type || "Storage",
+        description: loc.description || "",
+        status: loc.status || (loc.is_active === false ? "Inactive" : "Active"),
+        type: loc.location_type || "Storage",
         capacity: loc.capacity || "1,000 KG",
         occupied: loc.occupied ?? 55,
       }));
@@ -1050,6 +1151,9 @@ export async function fetchLocations() {
 
 export async function createLocation(payload) {
   let created = null;
+  const statusStr = payload.status || "Active";
+  const isActive = statusStr.toLowerCase() === "active";
+
   try {
     const res = await fetch(`${API_BASE}/inventory/locations/`, {
       method: "POST",
@@ -1058,11 +1162,10 @@ export async function createLocation(payload) {
         warehouse: payload.warehouse_id || 1,
         code: payload.code,
         name: payload.name,
-        zone: payload.zone || "",
-        aisle: payload.aisle || "",
-        rack: payload.rack || "",
-        bin: payload.bin || "",
-        is_active: payload.is_active ?? true,
+        location_type: payload.location_type || "Storage",
+        description: payload.description || "",
+        status: statusStr,
+        is_active: isActive,
       }),
     });
     if (res.ok) {
@@ -1073,7 +1176,11 @@ export async function createLocation(payload) {
         warehouse: payload.warehouse_code || payload.warehouse,
         warehouse_code: payload.warehouse_code || payload.warehouse,
         warehouse_name: payload.warehouse_name || "Facility",
-        type: payload.type || "BIN",
+        location_type: payload.location_type || "Storage",
+        description: payload.description || "",
+        status: statusStr,
+        is_active: isActive,
+        type: payload.location_type || "Storage",
         capacity: payload.capacity || "1,000 KG",
         occupied: payload.occupied || 10,
       };
@@ -1088,14 +1195,13 @@ export async function createLocation(payload) {
       warehouse: payload.warehouse_code || payload.warehouse || "WH-MAIN",
       warehouse_code: payload.warehouse_code || payload.warehouse || "WH-MAIN",
       warehouse_name: payload.warehouse_name || "Main Central Hub",
-      zone: payload.zone || "Zone A",
-      aisle: payload.aisle || "",
-      rack: payload.rack || "",
-      bin: payload.bin || "",
-      type: payload.type || "BIN",
+      location_type: payload.location_type || "Storage",
+      description: payload.description || "",
+      status: statusStr,
+      is_active: isActive,
+      type: payload.location_type || "Storage",
       capacity: payload.capacity || "1,000 KG",
       occupied: payload.occupied || 10,
-      is_active: payload.is_active ?? true,
     };
   }
 
@@ -1104,19 +1210,25 @@ export async function createLocation(payload) {
 }
 
 export async function updateLocation(id, payload) {
+  const statusStr = payload.status || "Active";
+  const enriched = {
+    ...payload,
+    status: statusStr,
+    is_active: statusStr.toLowerCase() === "active",
+  };
   try {
     const res = await fetch(`${API_BASE}/inventory/locations/${id}/`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(enriched),
     });
     if (res.ok) {
       updateApiStatus(true);
     }
   } catch (e) {}
 
-  updateLocalEntity("locations", id, payload, "id");
-  return { id, ...payload };
+  updateLocalEntity("locations", id, enriched, "id");
+  return { id, ...enriched };
 }
 
 export async function deleteLocation(id) {
@@ -1129,6 +1241,287 @@ export async function deleteLocation(id) {
   } catch (e) {
     return true;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Racks API with Live Persistence
+// ---------------------------------------------------------------------------
+export async function fetchRacks() {
+  let fetchedList = [];
+  try {
+    const res = await fetch(`${API_BASE}/inventory/racks/`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      fetchedList = (data.results || data).map((r) => ({
+        ...r,
+        warehouse: r.warehouse_code || "WH-MAIN",
+        warehouse_code: r.warehouse_code || "WH-MAIN",
+        location: r.location_code || "",
+        location_code: r.location_code || "",
+        status: r.status || "Active",
+      }));
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+
+  const base = fetchedList.length > 0 ? fetchedList : DEMO_RACKS;
+  const local = getLocalEntities("racks");
+
+  const seen = new Set();
+  const merged = [];
+  for (const item of [...local, ...base]) {
+    const key = (item.code || item.id).toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(item);
+    }
+  }
+  return merged;
+}
+
+export async function createRack(payload) {
+  let created = null;
+  try {
+    const res = await fetch(`${API_BASE}/inventory/racks/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        warehouse: payload.warehouse_id || 1,
+        location: payload.location_id || null,
+        code: payload.code,
+        name: payload.name,
+        number_of_levels: parseInt(payload.number_of_levels, 10) || 4,
+        status: payload.status || "Active",
+      }),
+    });
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      created = {
+        ...data,
+        warehouse: payload.warehouse_code || payload.warehouse,
+        warehouse_code: payload.warehouse_code || payload.warehouse,
+        warehouse_name: payload.warehouse_name || "Facility",
+        location: payload.location_code || payload.location,
+        location_code: payload.location_code || payload.location,
+        location_name: payload.location_name || "Location",
+      };
+    }
+  } catch (e) {}
+
+  if (!created) {
+    created = {
+      id: `rack-${Date.now()}`,
+      code: payload.code,
+      name: payload.name,
+      warehouse: payload.warehouse_code || payload.warehouse || "WH-MAIN",
+      warehouse_code: payload.warehouse_code || payload.warehouse || "WH-MAIN",
+      warehouse_name: payload.warehouse_name || "Facility",
+      location: payload.location_code || payload.location || "",
+      location_code: payload.location_code || payload.location || "",
+      location_name: payload.location_name || "Location",
+      number_of_levels: parseInt(payload.number_of_levels, 10) || 4,
+      status: payload.status || "Active",
+    };
+  }
+
+  saveLocalEntity("racks", created, "code");
+  return created;
+}
+
+export async function updateRack(id, payload) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/racks/${id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) updateApiStatus(true);
+  } catch (e) {}
+
+  updateLocalEntity("racks", id, payload, "id");
+  return { id, ...payload };
+}
+
+export async function deleteRack(id) {
+  deleteLocalEntity("racks", id, "id");
+  try {
+    const res = await fetch(`${API_BASE}/inventory/racks/${id}/`, {
+      method: "DELETE",
+    });
+    return res.ok;
+  } catch (e) {
+    return true;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Bins API with Live Persistence
+// ---------------------------------------------------------------------------
+export async function fetchBins() {
+  let fetchedList = [];
+  try {
+    const res = await fetch(`${API_BASE}/inventory/bins/`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      fetchedList = (data.results || data).map((b) => ({
+        ...b,
+        warehouse: b.warehouse_code || "WH-MAIN",
+        warehouse_code: b.warehouse_code || "WH-MAIN",
+        location: b.location_code || "",
+        location_code: b.location_code || "",
+        rack: b.rack_code || "",
+        rack_code: b.rack_code || "",
+        status: b.status || "Active",
+      }));
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+
+  const base = fetchedList.length > 0 ? fetchedList : DEMO_BINS;
+  const local = getLocalEntities("bins");
+
+  const seen = new Set();
+  const merged = [];
+  for (const item of [...local, ...base]) {
+    const key = (item.code || item.id).toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(item);
+    }
+  }
+  return merged;
+}
+
+export async function createBin(payload) {
+  let created = null;
+  try {
+    const res = await fetch(`${API_BASE}/inventory/bins/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        warehouse: payload.warehouse_id || 1,
+        location: payload.location_id || null,
+        rack: payload.rack_id || null,
+        code: payload.code,
+        name: payload.name,
+        rack_level: parseInt(payload.rack_level, 10) || 1,
+        barcode: payload.barcode || "",
+        status: payload.status || "Active",
+      }),
+    });
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      created = {
+        ...data,
+        warehouse: payload.warehouse_code || payload.warehouse,
+        warehouse_code: payload.warehouse_code || payload.warehouse,
+        warehouse_name: payload.warehouse_name || "Facility",
+        location: payload.location_code || payload.location,
+        location_code: payload.location_code || payload.location,
+        location_name: payload.location_name || "Location",
+        rack: payload.rack_code || payload.rack,
+        rack_code: payload.rack_code || payload.rack,
+        rack_name: payload.rack_name || "Rack",
+      };
+    }
+  } catch (e) {}
+
+  if (!created) {
+    created = {
+      id: `bin-${Date.now()}`,
+      code: payload.code,
+      name: payload.name,
+      warehouse: payload.warehouse_code || payload.warehouse || "WH-MAIN",
+      warehouse_code: payload.warehouse_code || payload.warehouse || "WH-MAIN",
+      warehouse_name: payload.warehouse_name || "Facility",
+      location: payload.location_code || payload.location || "",
+      location_code: payload.location_code || payload.location || "",
+      location_name: payload.location_name || "Location",
+      rack: payload.rack_code || payload.rack || "",
+      rack_code: payload.rack_code || payload.rack || "",
+      rack_name: payload.rack_name || "Rack",
+      rack_level: parseInt(payload.rack_level, 10) || 1,
+      barcode: payload.barcode || `${payload.code}-${Math.floor(1000 + Math.random() * 9000)}`,
+      status: payload.status || "Active",
+    };
+  }
+
+  saveLocalEntity("bins", created, "code");
+  return created;
+}
+
+export async function updateBin(id, payload) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/bins/${id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) updateApiStatus(true);
+  } catch (e) {}
+
+  updateLocalEntity("bins", id, payload, "id");
+  return { id, ...payload };
+}
+
+export async function deleteBin(id) {
+  deleteLocalEntity("bins", id, "id");
+  try {
+    const res = await fetch(`${API_BASE}/inventory/bins/${id}/`, {
+      method: "DELETE",
+    });
+    return res.ok;
+  } catch (e) {
+    return true;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Warehouse Configuration API with Live Persistence
+// ---------------------------------------------------------------------------
+export async function fetchWarehouseConfig() {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/warehouse-config/`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      if (data && typeof data === "object") {
+        return {
+          ...DEMO_WAREHOUSE_CONFIG,
+          ...data,
+          default_warehouse: data.default_warehouse_code || data.default_warehouse || DEMO_WAREHOUSE_CONFIG.default_warehouse,
+        };
+      }
+    }
+  } catch (e) {}
+
+  const local = localStorage.getItem("inv_warehouse_config");
+  if (local) {
+    try {
+      return { ...DEMO_WAREHOUSE_CONFIG, ...JSON.parse(local) };
+    } catch (e) {}
+  }
+  return DEMO_WAREHOUSE_CONFIG;
+}
+
+export async function updateWarehouseConfig(payload) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/warehouse-config/1/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) updateApiStatus(true);
+  } catch (e) {}
+
+  localStorage.setItem("inv_warehouse_config", JSON.stringify(payload));
+  return payload;
 }
 
 // ---------------------------------------------------------------------------

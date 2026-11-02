@@ -9,7 +9,7 @@ from apps.categories.models import InventoryCategory
 from apps.brands.models import Brand
 from apps.units.models import UnitOfMeasure
 from apps.products.models import InventoryItem
-from apps.warehouses.models import Warehouse, StorageLocation
+from apps.warehouses.models import Warehouse, StorageLocation, Rack, Bin, WarehouseConfiguration
 from apps.stock.models import StockBalance, StockLedgerEntry
 from apps.movements.models import StockTransaction, StockTransactionLine
 from apps.valuation.models import InventoryValuation
@@ -26,6 +26,9 @@ from .serializers import (
     InventoryItemSerializer,
     WarehouseSerializer,
     StorageLocationSerializer,
+    RackSerializer,
+    BinSerializer,
+    WarehouseConfigurationSerializer,
     StockBalanceSerializer,
     StockLedgerEntrySerializer,
     StockTransactionSerializer,
@@ -76,6 +79,70 @@ class WarehouseViewSet(viewsets.ModelViewSet):
 class StorageLocationViewSet(viewsets.ModelViewSet):
     queryset = StorageLocation.objects.select_related("warehouse").all()
     serializer_class = StorageLocationSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        wh = self.request.query_params.get("warehouse")
+        if wh:
+            qs = qs.filter(warehouse_id=wh) if wh.isdigit() else qs.filter(warehouse__code=wh)
+        loc_type = self.request.query_params.get("location_type")
+        if loc_type:
+            qs = qs.filter(location_type=loc_type)
+        return qs
+
+class RackViewSet(viewsets.ModelViewSet):
+    queryset = Rack.objects.select_related("warehouse", "location").all()
+    serializer_class = RackSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        wh = self.request.query_params.get("warehouse")
+        if wh:
+            qs = qs.filter(warehouse_id=wh) if wh.isdigit() else qs.filter(warehouse__code=wh)
+        loc = self.request.query_params.get("location")
+        if loc:
+            qs = qs.filter(location_id=loc) if loc.isdigit() else qs.filter(location__code=loc)
+        return qs
+
+class BinViewSet(viewsets.ModelViewSet):
+    queryset = Bin.objects.select_related("warehouse", "location", "rack").all()
+    serializer_class = BinSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        wh = self.request.query_params.get("warehouse")
+        if wh:
+            qs = qs.filter(warehouse_id=wh) if wh.isdigit() else qs.filter(warehouse__code=wh)
+        loc = self.request.query_params.get("location")
+        if loc:
+            qs = qs.filter(location_id=loc) if loc.isdigit() else qs.filter(location__code=loc)
+        rack = self.request.query_params.get("rack")
+        if rack:
+            qs = qs.filter(rack_id=rack) if rack.isdigit() else qs.filter(rack__code=rack)
+        return qs
+
+class WarehouseConfigurationViewSet(viewsets.ModelViewSet):
+    queryset = WarehouseConfiguration.objects.all()
+    serializer_class = WarehouseConfigurationSerializer
+
+    def list(self, request, *args, **kwargs):
+        config = WarehouseConfiguration.objects.first()
+        if not config:
+            wh = Warehouse.objects.first()
+            config = WarehouseConfiguration.objects.create(
+                default_warehouse=wh,
+                allow_negative_stock=False,
+                require_storage_location=True,
+                require_bin_selection=True,
+                enable_multiple_warehouses=True,
+                allow_inter_warehouse_transfer=True,
+                warehouse_code_prefix="WH",
+                location_code_prefix="LOC",
+                rack_code_prefix="RACK",
+                bin_code_prefix="BIN",
+            )
+        serializer = self.get_serializer(config)
+        return Response(serializer.data)
 
 class StockBalanceViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = StockBalance.objects.select_related("item", "warehouse", "location").all()

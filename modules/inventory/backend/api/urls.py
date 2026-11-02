@@ -7,6 +7,9 @@ from .views import (
     ItemViewSet,
     WarehouseViewSet,
     StorageLocationViewSet,
+    RackViewSet,
+    BinViewSet,
+    WarehouseConfigurationViewSet,
     StockBalanceViewSet,
     StockLedgerViewSet,
     StockTransactionViewSet,
@@ -25,6 +28,9 @@ router.register(r"units", UnitOfMeasureViewSet)
 router.register(r"items", ItemViewSet)
 router.register(r"warehouses", WarehouseViewSet)
 router.register(r"locations", StorageLocationViewSet)
+router.register(r"racks", RackViewSet)
+router.register(r"bins", BinViewSet)
+router.register(r"warehouse-config", WarehouseConfigurationViewSet, basename="warehouse-config")
 router.register(r"balances", StockBalanceViewSet)
 router.register(r"ledger", StockLedgerViewSet)
 router.register(r"movements", StockTransactionViewSet)

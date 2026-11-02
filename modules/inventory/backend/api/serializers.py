@@ -4,7 +4,7 @@ from apps.categories.models import InventoryCategory
 from apps.brands.models import Brand
 from apps.units.models import UnitOfMeasure
 from apps.products.models import InventoryItem, InventoryItemVariant
-from apps.warehouses.models import Warehouse, StorageLocation
+from apps.warehouses.models import Warehouse, StorageLocation, Rack, Bin, WarehouseConfiguration
 from apps.stock.models import StockBalance, StockLedgerEntry
 from apps.movements.models import StockTransaction, StockTransactionLine
 from apps.valuation.models import InventoryValuation
@@ -54,6 +54,36 @@ class StorageLocationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StorageLocation
+        fields = "__all__"
+
+class RackSerializer(serializers.ModelSerializer):
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    location_code = serializers.CharField(source="location.code", read_only=True, default="")
+    location_name = serializers.CharField(source="location.name", read_only=True, default="")
+
+    class Meta:
+        model = Rack
+        fields = "__all__"
+
+class BinSerializer(serializers.ModelSerializer):
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    location_code = serializers.CharField(source="location.code", read_only=True, default="")
+    location_name = serializers.CharField(source="location.name", read_only=True, default="")
+    rack_code = serializers.CharField(source="rack.code", read_only=True, default="")
+    rack_name = serializers.CharField(source="rack.name", read_only=True, default="")
+
+    class Meta:
+        model = Bin
+        fields = "__all__"
+
+class WarehouseConfigurationSerializer(serializers.ModelSerializer):
+    default_warehouse_code = serializers.CharField(source="default_warehouse.code", read_only=True, default="")
+    default_warehouse_name = serializers.CharField(source="default_warehouse.name", read_only=True, default="")
+
+    class Meta:
+        model = WarehouseConfiguration
         fields = "__all__"
 
 class StockBalanceSerializer(serializers.ModelSerializer):
