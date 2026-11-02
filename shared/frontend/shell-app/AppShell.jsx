@@ -38,7 +38,6 @@ import {
   ShieldCheck,
   Database,
   Radio,
-  Home,
 } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 import { useWorkspace } from "./ContextSelector";
@@ -92,6 +91,80 @@ export function AppShell({ children }) {
     planning: false,
     analytics: false,
   });
+
+  useEffect(() => {
+    const unsub = subscribeApiStatus(setIsApiLive);
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    const path = location.pathname;
+    if (
+      path.startsWith("/inventory/products") ||
+      path.startsWith("/inventory/categories") ||
+      path.startsWith("/inventory/brands") ||
+      path.startsWith("/inventory/units") ||
+      path.startsWith("/inventory/barcodes")
+    ) {
+      setOpenGroups((p) => ({ ...p, catalog: true }));
+    } else if (
+      path.startsWith("/inventory/warehouses") ||
+      path.startsWith("/inventory/locations")
+    ) {
+      setOpenGroups((p) => ({ ...p, warehouses: true }));
+    } else if (path.startsWith("/inventory/operations")) {
+      setOpenGroups((p) => ({ ...p, operations: true }));
+    } else if (path.startsWith("/inventory/control")) {
+      setOpenGroups((p) => ({ ...p, control: true }));
+    } else if (path.startsWith("/inventory/planning")) {
+      setOpenGroups((p) => ({ ...p, planning: true }));
+    } else if (path.startsWith("/inventory/analytics")) {
+      setOpenGroups((p) => ({ ...p, analytics: true }));
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setIsCommandOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    const getBreadcrumbs = (pathname) => {
+    const map = {
+      "/inventory": [{ label: "Inventory", path: "/inventory" }, { label: "Executive Dashboard" }],
+      "/inventory/products": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Products" }],
+      "/inventory/categories": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Categories" }],
+      "/inventory/brands": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Brands" }],
+      "/inventory/units": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Units of Measure" }],
+      "/inventory/barcodes": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Barcodes & Tags" }],
+      "/inventory/warehouses": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Facility Overview" }],
+      "/inventory/locations": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Storage Locations" }],
+      "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock In (Receipt)" }],
+      "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Out (Issue)" }],
+      "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Transfers" }],
+      "/inventory/operations/adjustments": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Adjustments" }],
+      "/inventory/operations/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Reservations" }],
+      "/inventory/operations/reconciliation": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Physical Reconciliation" }],
+      "/inventory/control/balances": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Stock Balances" }],
+      "/inventory/control/ledger": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Immutable Ledger" }],
+      "/inventory/control/batches": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Batch Tracking" }],
+      "/inventory/control/serials": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Serial Registry" }],
+      "/inventory/planning/replenishment": [{ label: "Inventory", path: "/inventory" }, { label: "Planning", path: "/inventory/planning/replenishment" }, { label: "Replenishment & Alerts" }],
+      "/inventory/analytics/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Valuation Reports" }],
+      "/inventory/analytics/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Analytics Reports" }],
+      "/inventory/settings": [{ label: "Inventory", path: "/inventory" }, { label: "Configuration" }, { label: "Inventory Settings" }],
+    };
+    return map[pathname] || [{ label: "Inventory", path: "/inventory" }, { label: "Module View" }];
+  };
+
+  return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const toggleGroup = (key) => {
+    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const navGroups = [
     {
@@ -160,54 +233,33 @@ export function AppShell({ children }) {
     },
   ];
 
-  useEffect(() => {
-    const unsub = subscribeApiStatus(setIsApiLive);
-    return unsub;
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-        e.preventDefault();
-        setIsCommandOpen((prev) => !prev);
-      }
+  const getBreadcrumbs = (pathname) => {
+    const map = {
+      "/inventory": [{ label: "Inventory", path: "/inventory" }, { label: "Executive Dashboard" }],
+      "/inventory/products": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Products" }],
+      "/inventory/categories": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Categories" }],
+      "/inventory/brands": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Brands" }],
+      "/inventory/units": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Units of Measure" }],
+      "/inventory/barcodes": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Barcodes & Tags" }],
+      "/inventory/warehouses": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Facility Overview" }],
+      "/inventory/locations": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Storage Locations" }],
+      "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock In (Receipt)" }],
+      "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Out (Issue)" }],
+      "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Transfers" }],
+      "/inventory/operations/adjustments": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Adjustments" }],
+      "/inventory/operations/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Reservations" }],
+      "/inventory/operations/reconciliation": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Physical Reconciliation" }],
+      "/inventory/control/balances": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Stock Balances" }],
+      "/inventory/control/ledger": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Immutable Ledger" }],
+      "/inventory/control/batches": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Batch Tracking" }],
+      "/inventory/control/serials": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Serial Registry" }],
+      "/inventory/planning/replenishment": [{ label: "Inventory", path: "/inventory" }, { label: "Planning", path: "/inventory/planning/replenishment" }, { label: "Replenishment & Alerts" }],
+      "/inventory/analytics/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Valuation Reports" }],
+      "/inventory/analytics/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Analytics Reports" }],
+      "/inventory/settings": [{ label: "Inventory", path: "/inventory" }, { label: "Configuration" }, { label: "Inventory Settings" }],
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  // Auto-expand group corresponding to active pathname
-  useEffect(() => {
-    for (const group of navGroups) {
-      if (group.key && group.items?.some((item) => location.pathname === item.path || location.pathname.startsWith(item.path + "/"))) {
-        setOpenGroups((prev) => (prev[group.key] ? prev : { ...prev, [group.key]: true }));
-      }
-    }
-  }, [location.pathname]);
-
-  const toggleGroup = (key) => {
-    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+    return map[pathname] || [{ label: "Inventory", path: "/inventory" }, { label: "Module View" }];
   };
-
-  // Derive breadcrumbs for top header
-  const getBreadcrumbs = () => {
-    for (const group of navGroups) {
-      const matched = group.items?.find((item) => item.path === location.pathname);
-      if (matched) {
-        return { groupTitle: group.title, itemLabel: matched.label };
-      }
-    }
-    // Partial match fallback (e.g. subroutes or query strings)
-    for (const group of navGroups) {
-      const matched = group.items?.find((item) => location.pathname.startsWith(item.path));
-      if (matched) {
-        return { groupTitle: group.title, itemLabel: matched.label };
-      }
-    }
-    return { groupTitle: "Overview", itemLabel: "Dashboard" };
-  };
-
-  const breadcrumbs = getBreadcrumbs();
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-slate-50 text-slate-900 dark:bg-zinc-950 dark:text-zinc-100 font-sans antialiased">
@@ -221,15 +273,15 @@ export function AppShell({ children }) {
         <div className="flex h-16 items-center justify-between px-4 border-b border-slate-200/80 dark:border-zinc-800/80 bg-white/50 dark:bg-zinc-900/50">
           <Link
             to="/inventory"
-            className="flex items-center gap-3 overflow-hidden group cursor-pointer focus:outline-none"
-            title="Return to Dashboard"
+            className="flex items-center gap-3 overflow-hidden group cursor-pointer"
+            title="Go to Inventory Dashboard"
           >
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 text-white font-bold shadow-md shadow-blue-500/20 ring-1 ring-white/20 group-hover:scale-105 transition-transform">
               <Boxes className="h-5 w-5" />
             </div>
             {!collapsed && (
               <div className="flex flex-col min-w-0">
-                <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
+                <span className="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                   Business Ecosystem
                 </span>
                 <span className="text-[11px] text-slate-500 dark:text-zinc-400 font-medium truncate">
@@ -253,7 +305,35 @@ export function AppShell({ children }) {
             const hasKey = !!group.key;
             const isOpen = hasKey ? openGroups[group.key] : true;
 
-            return (
+            const getBreadcrumbs = (pathname) => {
+    const map = {
+      "/inventory": [{ label: "Inventory", path: "/inventory" }, { label: "Executive Dashboard" }],
+      "/inventory/products": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Products" }],
+      "/inventory/categories": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Categories" }],
+      "/inventory/brands": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Brands" }],
+      "/inventory/units": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Units of Measure" }],
+      "/inventory/barcodes": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Barcodes & Tags" }],
+      "/inventory/warehouses": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Facility Overview" }],
+      "/inventory/locations": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Storage Locations" }],
+      "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock In (Receipt)" }],
+      "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Out (Issue)" }],
+      "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Transfers" }],
+      "/inventory/operations/adjustments": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Adjustments" }],
+      "/inventory/operations/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Reservations" }],
+      "/inventory/operations/reconciliation": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Physical Reconciliation" }],
+      "/inventory/control/balances": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Stock Balances" }],
+      "/inventory/control/ledger": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Immutable Ledger" }],
+      "/inventory/control/batches": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Batch Tracking" }],
+      "/inventory/control/serials": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Serial Registry" }],
+      "/inventory/planning/replenishment": [{ label: "Inventory", path: "/inventory" }, { label: "Planning", path: "/inventory/planning/replenishment" }, { label: "Replenishment & Alerts" }],
+      "/inventory/analytics/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Valuation Reports" }],
+      "/inventory/analytics/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Analytics Reports" }],
+      "/inventory/settings": [{ label: "Inventory", path: "/inventory" }, { label: "Configuration" }, { label: "Inventory Settings" }],
+    };
+    return map[pathname] || [{ label: "Inventory", path: "/inventory" }, { label: "Module View" }];
+  };
+
+  return (
               <div key={gIdx} className="space-y-1">
                 {!collapsed && (
                   <div
@@ -277,7 +357,35 @@ export function AppShell({ children }) {
                       const isActive = location.pathname === item.path;
                       const Icon = item.icon;
 
-                      return (
+                      const getBreadcrumbs = (pathname) => {
+    const map = {
+      "/inventory": [{ label: "Inventory", path: "/inventory" }, { label: "Executive Dashboard" }],
+      "/inventory/products": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Products" }],
+      "/inventory/categories": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Categories" }],
+      "/inventory/brands": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Brands" }],
+      "/inventory/units": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Units of Measure" }],
+      "/inventory/barcodes": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Barcodes & Tags" }],
+      "/inventory/warehouses": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Facility Overview" }],
+      "/inventory/locations": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Storage Locations" }],
+      "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock In (Receipt)" }],
+      "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Out (Issue)" }],
+      "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Transfers" }],
+      "/inventory/operations/adjustments": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Adjustments" }],
+      "/inventory/operations/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Reservations" }],
+      "/inventory/operations/reconciliation": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Physical Reconciliation" }],
+      "/inventory/control/balances": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Stock Balances" }],
+      "/inventory/control/ledger": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Immutable Ledger" }],
+      "/inventory/control/batches": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Batch Tracking" }],
+      "/inventory/control/serials": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Serial Registry" }],
+      "/inventory/planning/replenishment": [{ label: "Inventory", path: "/inventory" }, { label: "Planning", path: "/inventory/planning/replenishment" }, { label: "Replenishment & Alerts" }],
+      "/inventory/analytics/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Valuation Reports" }],
+      "/inventory/analytics/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Analytics Reports" }],
+      "/inventory/settings": [{ label: "Inventory", path: "/inventory" }, { label: "Configuration" }, { label: "Inventory Settings" }],
+    };
+    return map[pathname] || [{ label: "Inventory", path: "/inventory" }, { label: "Module View" }];
+  };
+
+  return (
                         <Link
                           key={item.path}
                           to={item.path}
@@ -325,20 +433,17 @@ export function AppShell({ children }) {
 
           <Link
             to="/inventory/settings"
-            className="flex items-center gap-3 p-1.5 rounded-xl hover:bg-slate-200/60 dark:hover:bg-zinc-800/60 transition-colors group cursor-pointer"
-            title="Account & System Settings"
+            title="System & Account Settings"
+            className="flex items-center gap-3 p-1.5 rounded-xl hover:bg-slate-100/80 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer group"
           >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-xs font-bold text-white shadow-xs group-hover:scale-105 transition-transform">
               AD
             </div>
             {!collapsed && (
-              <div className="flex flex-col min-w-0 flex-1">
-                <div className="flex items-center justify-between">
-                  <span className="truncate text-xs font-semibold text-slate-900 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                    Operations Admin
-                  </span>
-                  <Settings className="h-3 w-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
+              <div className="flex flex-col min-w-0">
+                <span className="truncate text-xs font-semibold text-slate-900 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  Operations Admin
+                </span>
                 <span className="truncate text-[10px] text-slate-500 dark:text-zinc-400">
                   Universal Modules Host
                 </span>
@@ -364,14 +469,14 @@ export function AppShell({ children }) {
               <Link
                 to="/inventory"
                 onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3"
-                title="Return to Dashboard"
+                className="flex items-center gap-3 cursor-pointer group"
+                title="Go to Inventory Dashboard"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 font-bold text-white shadow-sm">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 font-bold text-white shadow-sm group-hover:scale-105 transition-transform">
                   <Boxes className="h-5 w-5" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">
+                  <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                     Business Ecosystem
                   </span>
                   <span className="text-[11px] font-medium text-slate-500 dark:text-zinc-400">
@@ -393,7 +498,35 @@ export function AppShell({ children }) {
                 const hasKey = !!group.key;
                 const isOpen = hasKey ? openGroups[group.key] : true;
 
-                return (
+                const getBreadcrumbs = (pathname) => {
+    const map = {
+      "/inventory": [{ label: "Inventory", path: "/inventory" }, { label: "Executive Dashboard" }],
+      "/inventory/products": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Products" }],
+      "/inventory/categories": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Categories" }],
+      "/inventory/brands": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Brands" }],
+      "/inventory/units": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Units of Measure" }],
+      "/inventory/barcodes": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Barcodes & Tags" }],
+      "/inventory/warehouses": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Facility Overview" }],
+      "/inventory/locations": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Storage Locations" }],
+      "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock In (Receipt)" }],
+      "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Out (Issue)" }],
+      "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Transfers" }],
+      "/inventory/operations/adjustments": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Adjustments" }],
+      "/inventory/operations/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Reservations" }],
+      "/inventory/operations/reconciliation": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Physical Reconciliation" }],
+      "/inventory/control/balances": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Stock Balances" }],
+      "/inventory/control/ledger": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Immutable Ledger" }],
+      "/inventory/control/batches": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Batch Tracking" }],
+      "/inventory/control/serials": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Serial Registry" }],
+      "/inventory/planning/replenishment": [{ label: "Inventory", path: "/inventory" }, { label: "Planning", path: "/inventory/planning/replenishment" }, { label: "Replenishment & Alerts" }],
+      "/inventory/analytics/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Valuation Reports" }],
+      "/inventory/analytics/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Analytics Reports" }],
+      "/inventory/settings": [{ label: "Inventory", path: "/inventory" }, { label: "Configuration" }, { label: "Inventory Settings" }],
+    };
+    return map[pathname] || [{ label: "Inventory", path: "/inventory" }, { label: "Module View" }];
+  };
+
+  return (
                   <div key={group.title} className="space-y-1">
                     {hasKey ? (
                       <button
@@ -420,7 +553,35 @@ export function AppShell({ children }) {
                           const Icon = item.icon;
                           const isActive = location.pathname === item.path;
 
-                          return (
+                          const getBreadcrumbs = (pathname) => {
+    const map = {
+      "/inventory": [{ label: "Inventory", path: "/inventory" }, { label: "Executive Dashboard" }],
+      "/inventory/products": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Products" }],
+      "/inventory/categories": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Categories" }],
+      "/inventory/brands": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Brands" }],
+      "/inventory/units": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Units of Measure" }],
+      "/inventory/barcodes": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Barcodes & Tags" }],
+      "/inventory/warehouses": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Facility Overview" }],
+      "/inventory/locations": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Storage Locations" }],
+      "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock In (Receipt)" }],
+      "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Out (Issue)" }],
+      "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Transfers" }],
+      "/inventory/operations/adjustments": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Adjustments" }],
+      "/inventory/operations/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Reservations" }],
+      "/inventory/operations/reconciliation": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Physical Reconciliation" }],
+      "/inventory/control/balances": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Stock Balances" }],
+      "/inventory/control/ledger": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Immutable Ledger" }],
+      "/inventory/control/batches": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Batch Tracking" }],
+      "/inventory/control/serials": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Serial Registry" }],
+      "/inventory/planning/replenishment": [{ label: "Inventory", path: "/inventory" }, { label: "Planning", path: "/inventory/planning/replenishment" }, { label: "Replenishment & Alerts" }],
+      "/inventory/analytics/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Valuation Reports" }],
+      "/inventory/analytics/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Analytics Reports" }],
+      "/inventory/settings": [{ label: "Inventory", path: "/inventory" }, { label: "Configuration" }, { label: "Inventory Settings" }],
+    };
+    return map[pathname] || [{ label: "Inventory", path: "/inventory" }, { label: "Module View" }];
+  };
+
+  return (
                             <Link
                               key={item.path}
                               to={item.path}
@@ -456,25 +617,25 @@ export function AppShell({ children }) {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Navigation */}
         <header className="h-15 flex items-center justify-between px-4 lg:px-6 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className="md:hidden p-1.5 rounded-md text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800"
-            >
-              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="md:hidden p-1.5 rounded-md text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800"
+          >
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
 
-            {/* Context Selector: Facility / Warehouse */}
+          {/* Context Selector: Facility / Warehouse & Live API Status */}
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-xs">
               <Warehouse className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-              <span className="text-slate-500 dark:text-zinc-400 hidden sm:inline">Warehouse:</span>
+              <span className="text-slate-500 dark:text-zinc-400">Warehouse:</span>
               <select
                 value={activeFacility.id}
                 onChange={(e) => {
                   const sel = facilities.find((f) => f.id === e.target.value);
                   if (sel) setActiveFacility(sel);
                 }}
-                className="bg-transparent font-medium text-slate-800 dark:text-zinc-200 focus:outline-none cursor-pointer max-w-[130px] sm:max-w-none"
+                className="bg-transparent font-medium text-slate-800 dark:text-zinc-200 focus:outline-none cursor-pointer"
               >
                 {facilities.map((fac) => (
                   <option key={fac.id} value={fac.id} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100">
@@ -484,25 +645,9 @@ export function AppShell({ children }) {
               </select>
             </div>
 
-            {/* Dynamic Breadcrumbs */}
-            <div className="hidden lg:flex items-center gap-1.5 text-xs text-slate-400 dark:text-zinc-500 pl-2">
-              <Link
-                to="/inventory"
-                className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1"
-                title="Home Dashboard"
-              >
-                <Home className="h-3.5 w-3.5" />
-                <span className="font-medium text-slate-600 dark:text-zinc-300">Home</span>
-              </Link>
-              <ChevronRight className="h-3 w-3 text-slate-300 dark:text-zinc-600" />
-              <span>{breadcrumbs.groupTitle}</span>
-              <ChevronRight className="h-3 w-3 text-slate-300 dark:text-zinc-600" />
-              <span className="font-semibold text-slate-900 dark:text-zinc-100">{breadcrumbs.itemLabel}</span>
-            </div>
-
             {/* Connectivity status indicator */}
             <div
-              className={`hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold border ${
+              className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold border ${
                 isApiLive
                   ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/40"
                   : "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900/40"
@@ -525,9 +670,9 @@ export function AppShell({ children }) {
               className="relative hidden sm:flex items-center cursor-pointer select-none"
             >
               <Search className="absolute left-3 h-3.5 w-3.5 text-slate-400 dark:text-zinc-500" />
-              <div className="w-56 lg:w-64 pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-400 dark:text-zinc-500 flex items-center justify-between hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="w-60 pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-400 dark:text-zinc-500 flex items-center justify-between">
                 <span>Quick search (Ctrl+K)...</span>
-                <kbd className="px-1.5 py-0.2 text-[9px] font-mono bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded text-slate-600 dark:text-zinc-400">
+                <kbd className="px-1.5 py-0.2 text-[9px] font-mono bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded">
                   ⌘K
                 </kbd>
               </div>
@@ -594,12 +739,14 @@ export function AppShell({ children }) {
                           <div
                             key={n.id}
                             onClick={() => {
-                              setNotifications((prev) =>
-                                prev.map((item) => (item.id === n.id ? { ...item, unread: false } : item))
-                              );
                               if (n.path) {
                                 navigate(n.path);
                                 setIsNotificationsOpen(false);
+                                setNotifications((prev) =>
+                                  prev.map((item) =>
+                                    item.id === n.id ? { ...item, unread: false } : item
+                                  )
+                                );
                               }
                             }}
                             className={`p-3 flex items-start gap-3 hover:bg-slate-50/80 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer ${
@@ -619,7 +766,7 @@ export function AppShell({ children }) {
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between gap-1">
-                                <span className="font-semibold text-slate-900 dark:text-white truncate">
+                                <span className="font-semibold text-slate-900 dark:text-white truncate hover:text-blue-600 dark:hover:text-blue-400">
                                   {n.title}
                                 </span>
                                 <span className="text-[10px] text-slate-400 shrink-0">{n.time}</span>
@@ -627,11 +774,19 @@ export function AppShell({ children }) {
                               <p className="text-[11px] text-slate-600 dark:text-zinc-300 mt-0.5">
                                 {n.description}
                               </p>
+                              {n.path && (
+                                <span className="inline-block mt-1 text-[10px] font-semibold text-blue-600 dark:text-blue-400">
+                                  Inspect Details →
+                                </span>
+                              )}
                             </div>
                             <button
+                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setNotifications((prev) => prev.filter((item) => item.id !== n.id));
+                                setNotifications((prev) =>
+                                  prev.filter((item) => item.id !== n.id)
+                                );
                               }}
                               className="p-1 rounded text-slate-300 hover:text-rose-500 dark:text-zinc-600 dark:hover:text-rose-400 shrink-0 cursor-pointer"
                               title="Dismiss"

@@ -430,7 +430,22 @@ export async function fetchDashboardKPIs() {
     const res = await fetch(`${API_BASE}/inventory/dashboard/kpis/`);
     if (res.ok) {
       updateApiStatus(true);
-      return await res.json();
+      const data = await res.json();
+      return Object.fromEntries(
+        Object.entries(DEMO_KPIS).map(([key, fallback]) => {
+          const value = data?.[key];
+          const parsed = Number(value);
+          return [
+            key,
+            value !== null &&
+            value !== undefined &&
+            value !== "" &&
+            Number.isFinite(parsed)
+              ? parsed
+              : fallback,
+          ];
+        })
+      );
     }
   } catch (e) {
     updateApiStatus(false);
@@ -1119,6 +1134,64 @@ export async function deleteLocation(id) {
 // ---------------------------------------------------------------------------
 // Stock Movements & Transactions with Live Persistence
 // ---------------------------------------------------------------------------
+export function normalizeMovement(item) {
+  if (!item) return null;
+  const line = Array.isArray(item.lines) && item.lines.length > 0 ? item.lines[0] : null;
+  const rawType = item.type || item.transaction_type || (line && Number(line.quantity) < 0 ? "ISSUE" : "RECEIPT");
+  const type = String(rawType || "RECEIPT").toUpperCase();
+
+  const itemName =
+    item.item ||
+    item.item_name ||
+    (line && (line.item_name || line.item_code)) ||
+    "Industrial Ball Bearing 6205-2RS";
+  const itemCode =
+    item.item_code || (line && line.item_code) || "BRG-6205-2RS";
+  const warehouse =
+    item.warehouse_name ||
+    (typeof item.warehouse === "string" ? item.warehouse : null) ||
+    "Main Central Fulfillment Hub";
+  const location =
+    item.location ||
+    item.location_code ||
+    (line && (line.location_code || line.location)) ||
+    "Aisle 3 - Rack B";
+  const rawQty =
+    item.quantity !== undefined && item.quantity !== null
+      ? Number(item.quantity)
+      : line && line.quantity !== undefined
+      ? Number(line.quantity)
+      : 10;
+  const quantity = type === "ISSUE" && rawQty > 0 ? -rawQty : rawQty;
+  const unit = item.unit || (line && line.unit) || "EA";
+  const unitCost =
+    item.unit_cost !== undefined && item.unit_cost !== null
+      ? Number(item.unit_cost)
+      : line && line.unit_cost !== undefined
+      ? Number(line.unit_cost)
+      : 14.85;
+
+  return {
+    ...item,
+    id: item.id || `tx-${Math.random()}`,
+    document_number:
+      item.document_number ||
+      `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+    type,
+    transaction_type: type,
+    created_at: item.created_at || new Date().toISOString(),
+    item: itemName,
+    item_code: itemCode,
+    warehouse,
+    warehouse_name: warehouse,
+    location,
+    quantity,
+    unit,
+    unit_cost: unitCost,
+    status: item.status || "POSTED",
+  };
+}
+
 export async function fetchStockMovements(params = {}) {
   let fetchedList = [];
   try {
@@ -1127,22 +1200,27 @@ export async function fetchStockMovements(params = {}) {
     if (res.ok) {
       updateApiStatus(true);
       const data = await res.json();
-      fetchedList = data.results || data;
+      const list = data.results || data;
+      if (Array.isArray(list)) {
+        fetchedList = list;
+      }
     }
   } catch (e) {
     updateApiStatus(false);
   }
 
-  const base = fetchedList.length > 0 ? fetchedList : DEMO_TRANSACTIONS;
   const local = getLocalEntities("movements");
+  const basePool = [...local, ...fetchedList, ...DEMO_TRANSACTIONS];
 
   const seen = new Set();
   const merged = [];
-  for (const item of [...local, ...base]) {
-    const key = (item.document_number || item.id).toLowerCase();
+  for (const raw of basePool) {
+    const norm = normalizeMovement(raw);
+    if (!norm) continue;
+    const key = (norm.document_number || String(norm.id)).toLowerCase();
     if (!seen.has(key)) {
       seen.add(key);
-      merged.push(item);
+      merged.push(norm);
     }
   }
   return { results: merged, count: merged.length };
@@ -1165,9 +1243,10 @@ export async function postStockTransaction(payload) {
         warehouse: 1,
         lines: [
           {
-            item: 1,
+            item: payload.itemId || payload.item || 1,
             quantity: qty,
             unit_cost: payload.unitCost || payload.unit_cost || 14.85,
+            location: 1,
           },
         ],
       }),
@@ -1182,26 +1261,23 @@ export async function postStockTransaction(payload) {
     }
   } catch (e) {}
 
-  if (!created) {
-    created = {
-      id: `tx-${Date.now()}`,
-      document_number: docNum,
-      type: txType,
-      transaction_type: txType,
-      created_at: new Date().toISOString(),
-      item: payload.itemSku || payload.item || "Industrial Ball Bearing 6205-2RS",
-      item_code: payload.itemSku || payload.item_code || "BRG-6205-2RS",
-      warehouse: payload.warehouse || "Main Central Fulfillment Hub",
-      warehouse_code: "WH-MAIN",
-      location: payload.location || "Aisle 3 - Rack B",
-      quantity: txType === "ISSUE" ? -Math.abs(qty) : Math.abs(qty),
-      unit: payload.unit || "EA",
-      unit_cost: Number(payload.unitCost || payload.unit_cost) || 14.85,
-      status: "POSTED",
-    };
-  }
+  const mergedTx = normalizeMovement({
+    ...(created || {}),
+    id: (created && created.id) || `tx-${Date.now()}`,
+    document_number: docNum,
+    type: txType,
+    transaction_type: txType,
+    item: payload.itemName || payload.itemSku || payload.item || "Industrial Ball Bearing 6205-2RS",
+    item_code: payload.itemSku || payload.item_code || "BRG-6205-2RS",
+    warehouse: payload.warehouse || "Main Central Fulfillment Hub",
+    location: payload.location || "Aisle 3 - Rack B",
+    quantity: txType === "ISSUE" ? -Math.abs(qty) : Math.abs(qty),
+    unit: payload.unit || "EA",
+    unit_cost: Number(payload.unitCost || payload.unit_cost) || 14.85,
+    status: "POSTED",
+  });
 
-  saveLocalEntity("movements", created, "document_number");
+  saveLocalEntity("movements", mergedTx, "document_number");
 
   // Also update stock level in local product storage
   const itemCode = created.item_code || created.item;
