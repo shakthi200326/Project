@@ -30,7 +30,7 @@ import {
   CartesianGrid,
   ReferenceLine,
 } from "recharts";
-import { fetchCategories } from "../services/api";
+import { fetchCategories, createCategory } from "../services/api";
 
 const categoryTreemapData = [
   {
@@ -198,19 +198,24 @@ export function CategoriesPage() {
       c.code.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     if (!newCat.name || !newCat.code) return;
-    const item = {
-      id: `cat-${Date.now()}`,
-      name: newCat.name,
-      code: newCat.code.toUpperCase(),
-      items_count: 0,
-      parent: newCat.parent || null,
-    };
-    setCategories((prev) => [...prev, item]);
-    setNewCat({ name: "", code: "", parent: "" });
-    setIsCreateOpen(false);
+    try {
+      const item = await createCategory({
+        name: newCat.name.trim(),
+        code: newCat.code.trim().toUpperCase(),
+        parent: newCat.parent || null,
+      });
+      setCategories((prev) => [
+        item,
+        ...prev.filter((c) => c.id !== item.id && c.code !== item.code),
+      ]);
+      setNewCat({ name: "", code: "", parent: "" });
+      setIsCreateOpen(false);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (

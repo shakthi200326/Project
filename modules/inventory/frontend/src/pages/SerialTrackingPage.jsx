@@ -141,27 +141,29 @@ export function SerialTrackingPage() {
         .filter((s) => s.length > 0);
       if (lines.length === 0) return;
 
-      const newItems = lines.map((sn, idx) => ({
-        id: `sn-${Date.now()}-${idx}`,
-        serial_number: sn,
-        item_code: singleForm.item_code,
-        item_name: singleForm.item_name,
-        warehouse: singleForm.warehouse,
-        location: singleForm.location,
-        status: "IN_STOCK",
-        received_at: new Date().toISOString(),
-        warranty_until: singleForm.warranty_until,
-      }));
+      const createdItems = [];
+      for (const sn of lines) {
+        const item = await createSerialNumber({
+          serial_number: sn,
+          item_code: singleForm.item_code,
+          item_name: singleForm.item_name,
+          warehouse: singleForm.warehouse,
+          location: singleForm.location,
+          status: "IN_STOCK",
+          warranty_until: singleForm.warranty_until,
+        });
+        createdItems.push(item);
+      }
 
-      setSerials((prev) => [...newItems, ...prev]);
+      setSerials((prev) => [...createdItems, ...prev]);
       setShowRegisterModal(false);
       setBulkInput("");
-      showToast(`${lines.length} serial numbers registered successfully.`);
+      showToast(`${lines.length} serial numbers registered & persisted.`);
     } else {
       const created = await createSerialNumber(singleForm);
       setSerials((prev) => [created, ...prev]);
       setShowRegisterModal(false);
-      showToast(`Serial ${singleForm.serial_number} registered.`);
+      showToast(`Serial ${singleForm.serial_number} registered & persisted.`);
     }
   };
 

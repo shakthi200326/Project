@@ -15,6 +15,7 @@ import {
   FileText,
   Sparkles,
 } from "lucide-react";
+import { postStockTransaction } from "../services/api";
 
 export function StockTransactionModal({ isOpen, initialType = "RECEIPT", onClose, onPosted }) {
   const [txType, setTxType] = useState(initialType);
@@ -41,7 +42,7 @@ export function StockTransactionModal({ isOpen, initialType = "RECEIPT", onClose
     setFormData((p) => ({ ...p, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.quantity || Number(formData.quantity) <= 0) {
       setError("Quantity must be greater than zero.");
@@ -50,26 +51,31 @@ export function StockTransactionModal({ isOpen, initialType = "RECEIPT", onClose
     setError("");
     setSubmitting(true);
 
-    setTimeout(() => {
-      setSubmitting(false);
-      const docNum = `DEMO-INV-${Math.floor(1000 + Math.random() * 9000)}`;
+    try {
+      const posted = await postStockTransaction({
+        type: txType,
+        transaction_type: txType,
+        itemSku: formData.itemSku,
+        item: formData.itemSku,
+        warehouse: formData.warehouse,
+        location: formData.location,
+        quantity: Number(formData.quantity),
+        unitCost: Number(formData.unitCost) || 14.85,
+        batchNumber: formData.batchNumber,
+        expiryDate: formData.expiryDate,
+        reason: formData.reason,
+        notes: formData.notes,
+      });
+
       if (onPosted) {
-        onPosted({
-          id: `tx-${Date.now()}`,
-          document_number: docNum,
-          type: txType,
-          item: formData.itemSku,
-          warehouse: formData.warehouse,
-          location: formData.location,
-          quantity: txType === "ISSUE" ? -Number(formData.quantity) : Number(formData.quantity),
-          unit: "EA",
-          unit_cost: Number(formData.unitCost) || 14.85,
-          status: "POSTED",
-          created_at: new Date().toISOString(),
-        });
+        onPosted(posted);
       }
       onClose();
-    }, 700);
+    } catch (err) {
+      setError("Failed to post stock transaction.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

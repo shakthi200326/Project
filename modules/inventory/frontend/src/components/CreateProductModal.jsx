@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Package, Layers, Tag, Ruler, Barcode, Shield, Save, AlertCircle, Sparkles } from "lucide-react";
+import { createProduct, fetchCategories } from "../services/api";
 
 export function CreateProductModal({ isOpen, onClose, onCreated }) {
   const [tab, setTab] = useState("basic");
+  const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState({
     code: "",
     name: "",
@@ -20,6 +22,15 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (isOpen) {
+      fetchCategories().then((res) => {
+        const list = res.results || res || [];
+        if (list.length > 0) setCategories(list);
+      });
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleChange = (e) => {
@@ -27,7 +38,7 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.code || !formData.name) {
       setError("Item code and product name are required.");
@@ -36,29 +47,25 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
     setError("");
     setSubmitting(true);
 
-    setTimeout(() => {
-      setSubmitting(false);
+    try {
+      const created = await createProduct({
+        ...formData,
+        code: formData.code.trim().toUpperCase(),
+        name: formData.name.trim(),
+        reorder_point: Number(formData.reorder_point) || 0,
+        reorder_quantity: Number(formData.reorder_quantity) || 0,
+        initial_cost: Number(formData.initial_cost) || 0,
+      });
+
       if (onCreated) {
-        onCreated({
-          id: `prod-${Date.now()}`,
-          sku: formData.code,
-          name: formData.name,
-          category: formData.category,
-          brand: formData.brand || "Generic",
-          unit: formData.base_unit,
-          variants_count: 1,
-          status: "ACTIVE",
-          stock_status: "IN_STOCK",
-          on_hand: 0,
-          reserved: 0,
-          available: 0,
-          reorder_point: Number(formData.reorder_point),
-          unit_cost: Number(formData.initial_cost) || 10.0,
-          currency: "USD",
-        });
+        onCreated(created);
       }
       onClose();
-    }, 600);
+    } catch (err) {
+      setError("Failed to register item. Please check network and field validity.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -77,7 +84,7 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                 </h2>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/50">
                   <Sparkles className="h-2.5 w-2.5" />
-                  Item Master
+                  Live Sync
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
@@ -185,11 +192,21 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                       onChange={handleChange}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
                     >
-                      <option value="Mechanical Components">Mechanical Components</option>
-                      <option value="Hydraulics & Pneumatics">Hydraulics & Pneumatics</option>
-                      <option value="Power Transmission">Power Transmission</option>
-                      <option value="Sensors & Automation">Sensors & Automation</option>
-                      <option value="Chemicals & Fluids">Chemicals & Fluids</option>
+                      {categories.length > 0 ? (
+                        categories.map((c) => (
+                          <option key={c.id || c.code} value={c.name}>
+                            {c.name}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="Mechanical Components">Mechanical Components</option>
+                          <option value="Hydraulics & Pneumatics">Hydraulics & Pneumatics</option>
+                          <option value="Power Transmission">Power Transmission</option>
+                          <option value="Sensors & Automation">Sensors & Automation</option>
+                          <option value="Chemicals & Fluids">Chemicals & Fluids</option>
+                        </>
+                      )}
                     </select>
                   </div>
 
@@ -356,7 +373,7 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold shadow-xs hover:shadow-blue-500/25 disabled:opacity-50 transition-all cursor-pointer"
             >
               <Save className="h-4 w-4" />
-              <span>{submitting ? "Saving Product..." : "Save & Register Item"}</span>
+              <span>{submitting ? "Saving & Syncing..." : "Save & Register Item"}</span>
             </button>
           </div>
         </form>

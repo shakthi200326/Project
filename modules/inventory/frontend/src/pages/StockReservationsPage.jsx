@@ -30,7 +30,7 @@ import {
   Legend,
   ReferenceLine,
 } from "recharts";
-import { fetchReservations } from "../services/api";
+import { fetchReservations, createReservation } from "../services/api";
 
 export function StockReservationsPage() {
   const [reservations, setReservations] = useState([]);
@@ -99,27 +99,35 @@ export function StockReservationsPage() {
     showToast(`Reservation ${item ? item.reference_doc : ""} fulfilled and dispatched.`);
   };
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     if (!newRes.reference_doc) return;
-    const expDate = new Date();
-    expDate.setDate(expDate.getDate() + Number(newRes.expires_days));
-    
-    const created = {
-      id: `res-${Date.now()}`,
-      reference_doc: newRes.reference_doc,
-      item_sku: newRes.item_sku,
-      item_name: newRes.item_sku === "BRG-6205-2RS" ? "Industrial Ball Bearing 6205-2RS" : "Hydraulic Valve",
-      warehouse: newRes.warehouse,
-      quantity: Number(newRes.quantity),
-      unit: "EA",
-      status: "PENDING",
-      expires_at: expDate.toISOString(),
-    };
-    setReservations((prev) => [created, ...prev]);
-    setIsModalOpen(false);
-    showToast(`Reservation hold ${newRes.reference_doc} successfully locked.`);
-    setNewRes({ reference_doc: "", item_sku: "BRG-6205-2RS", quantity: 10, warehouse: "Main Central Hub", expires_days: 7 });
+    try {
+      const created = await createReservation({
+        reference_doc: newRes.reference_doc.trim(),
+        item_sku: newRes.item_sku,
+        quantity: Number(newRes.quantity) || 10,
+        warehouse: newRes.warehouse,
+        expires_days: Number(newRes.expires_days) || 7,
+      });
+      setReservations((prev) => [
+        created,
+        ...prev.filter(
+          (r) => r.id !== created.id && r.reference_doc !== created.reference_doc
+        ),
+      ]);
+      setIsModalOpen(false);
+      showToast(`Reservation hold ${newRes.reference_doc} successfully locked & persisted.`);
+      setNewRes({
+        reference_doc: "",
+        item_sku: "BRG-6205-2RS",
+        quantity: 10,
+        warehouse: "Main Central Hub",
+        expires_days: 7,
+      });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const pendingHolds = reservations.filter((r) => r.status === "PENDING");

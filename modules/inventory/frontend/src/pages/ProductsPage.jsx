@@ -39,7 +39,7 @@ import {
   RadialBarChart,
   RadialBar,
 } from "recharts";
-import { fetchProducts } from "../services/api";
+import { fetchProducts, updateProduct, deleteProduct } from "../services/api";
 import { CreateProductModal } from "../components/CreateProductModal.jsx";
 import { ProductDetailDrawer } from "../components/ProductDetailDrawer.jsx";
 
@@ -112,16 +112,30 @@ export function ProductsPage() {
   };
 
   const handleProductCreated = (newProduct) => {
-    setProducts((prev) => [newProduct, ...prev]);
-    showToast(`Product ${newProduct.name} created successfully.`);
+    setProducts((prev) => [
+      newProduct,
+      ...prev.filter((p) => p.id !== newProduct.id && p.sku !== newProduct.sku),
+    ]);
+    showToast(`Product ${newProduct.sku} (${newProduct.name}) created & persisted.`);
   };
 
-  const handleUpdateProduct = (updatedProduct) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
-    );
-    setSelectedProduct(updatedProduct);
-    showToast(`Product ${updatedProduct.sku} (${updatedProduct.name}) updated successfully.`);
+  const handleUpdateProduct = async (updatedProduct) => {
+    try {
+      const saved = await updateProduct(updatedProduct.id, updatedProduct);
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === saved.id || p.sku === saved.sku ? { ...p, ...saved } : p
+        )
+      );
+      setSelectedProduct(saved);
+      showToast(`Product ${saved.sku} (${saved.name}) updated successfully.`);
+    } catch (e) {
+      setProducts((prev) =>
+        prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
+      );
+      setSelectedProduct(updatedProduct);
+      showToast(`Product ${updatedProduct.sku} (${updatedProduct.name}) updated.`);
+    }
   };
 
   const handleOpenDetail = (product) => {

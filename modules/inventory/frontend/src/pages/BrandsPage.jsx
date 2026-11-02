@@ -29,7 +29,7 @@ import {
   ReferenceLine,
   Legend,
 } from "recharts";
-import { fetchBrands, DEMO_BRANDS } from "../services/api";
+import { fetchBrands, createBrand, DEMO_BRANDS } from "../services/api";
 
 const brandSlaData = [
   {
@@ -167,21 +167,27 @@ export function BrandsPage() {
       (b.country && b.country.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     if (!newBrand.name || !newBrand.code) return;
-    const createdItem = {
-      id: `br-${Date.now()}`,
-      name: newBrand.name,
-      code: newBrand.code.toUpperCase(),
-      country: newBrand.country || "Global",
-      skus_count: 0,
-      is_active: true,
-    };
-    setBrands((prev) => [createdItem, ...prev]);
-    showToast(`Brand OEM "${newBrand.name}" registered successfully.`);
-    setNewBrand({ name: "", code: "", country: "" });
-    setIsModalOpen(false);
+    try {
+      const createdItem = await createBrand({
+        name: newBrand.name.trim(),
+        code: newBrand.code.trim().toUpperCase(),
+        country: newBrand.country || "Global",
+      });
+      setBrands((prev) => [
+        createdItem,
+        ...prev.filter(
+          (b) => b.id !== createdItem.id && b.code !== createdItem.code
+        ),
+      ]);
+      showToast(`Brand OEM "${newBrand.name}" registered & persisted.`);
+      setNewBrand({ name: "", code: "", country: "" });
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (

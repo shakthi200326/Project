@@ -30,7 +30,7 @@ import {
   PieChart,
   Pie,
 } from "recharts";
-import { fetchUnits, DEMO_UNITS } from "../services/api";
+import { fetchUnits, createUnit, DEMO_UNITS } from "../services/api";
 
 const conversionLadderData = [
   {
@@ -127,31 +127,37 @@ export function UnitsPage() {
       u.code.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     if (!newUnit.code || !newUnit.name) return;
-    const created = {
-      id: `uom-${Date.now()}`,
-      code: newUnit.code.toUpperCase(),
-      name: newUnit.name,
-      symbol: newUnit.symbol || newUnit.code.toLowerCase(),
-      decimal_places: Number(newUnit.decimal_places) || 0,
-      is_base: newUnit.is_base,
-      conversion_factor: newUnit.is_base ? 1 : Number(newUnit.conversion_factor) || 1,
-      base_unit: newUnit.is_base ? null : newUnit.base_unit,
-    };
-    setUnits((prev) => [...prev, created]);
-    showToast(`Unit of measure ${created.code} (${created.name}) created successfully.`);
-    setIsModalOpen(false);
-    setNewUnit({
-      code: "",
-      name: "",
-      symbol: "",
-      decimal_places: 0,
-      is_base: true,
-      conversion_factor: 1,
-      base_unit: "EA",
-    });
+    try {
+      const created = await createUnit({
+        code: newUnit.code.trim().toUpperCase(),
+        name: newUnit.name.trim(),
+        symbol: newUnit.symbol || newUnit.code.toLowerCase(),
+        decimal_places: Number(newUnit.decimal_places) || 0,
+        is_base: newUnit.is_base,
+        conversion_factor: newUnit.is_base ? 1 : Number(newUnit.conversion_factor) || 1,
+        base_unit: newUnit.is_base ? null : newUnit.base_unit,
+      });
+      setUnits((prev) => [
+        created,
+        ...prev.filter((u) => u.id !== created.id && u.code !== created.code),
+      ]);
+      showToast(`Unit of measure ${created.code} (${created.name}) created & persisted.`);
+      setIsModalOpen(false);
+      setNewUnit({
+        code: "",
+        name: "",
+        symbol: "",
+        decimal_places: 0,
+        is_base: true,
+        conversion_factor: 1,
+        base_unit: "EA",
+      });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
