@@ -17,6 +17,14 @@ import {
   SlidersHorizontal,
   Compass,
   Sparkles,
+  Zap,
+  Activity,
+  ShieldCheck,
+  TrendingUp,
+  Warehouse,
+  Gauge,
+  Clock,
+  Maximize2,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -25,6 +33,13 @@ import {
   PolarGrid,
   PolarAngleAxis,
   PolarRadiusAxis,
+  ComposedChart,
+  Bar,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ReferenceLine,
   Tooltip,
   Legend,
 } from "recharts";
@@ -41,6 +56,45 @@ const FACILITY_RADAR_DATA = [
   { metric: "Accuracy %", WH_MAIN: 96, WH_EAST: 94, WH_COLD: 98, fullMark: 100 },
   { metric: "Buffer Safety", WH_MAIN: 82, WH_EAST: 90, WH_COLD: 85, fullMark: 100 },
   { metric: "Dock Velocity", WH_MAIN: 72, WH_EAST: 84, WH_COLD: 68, fullMark: 100 },
+];
+
+const FACILITY_VELOCITY_DATA = [
+  {
+    facility: "WH-MAIN",
+    fullName: "Chicago Central Hub",
+    utilizedM2: 32.8,
+    totalM2: 42.0,
+    dockTurnaroundHrs: 2.8,
+    fillPct: 78,
+    status: "Optimal Flow",
+  },
+  {
+    facility: "WH-EAST",
+    fullName: "Newark Port Terminal",
+    utilizedM2: 15.6,
+    totalM2: 24.5,
+    dockTurnaroundHrs: 3.4,
+    fillPct: 64,
+    status: "Healthy Buffer",
+  },
+  {
+    facility: "WH-COLD",
+    fullName: "Dallas Cold Chain Hub",
+    utilizedM2: 7.5,
+    totalM2: 18.0,
+    dockTurnaroundHrs: 4.2,
+    fillPct: 42,
+    status: "High Reserve",
+  },
+  {
+    facility: "WH-WEST",
+    fullName: "Reno Gateway Hub",
+    utilizedM2: 4.9,
+    totalM2: 14.0,
+    dockTurnaroundHrs: 2.1,
+    fillPct: 35,
+    status: "Rapid Cross-Dock",
+  },
 ];
 
 export function WarehousesPage() {
@@ -204,14 +258,14 @@ export function WarehousesPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Warehouses & Distribution Facilities
+              Warehouses & Distribution Facilities Overview
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-900">
               Multi-Facility Topology
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-            Physical fulfillment centers, storage zones, logistics terminals, and capacity management.
+            Physical fulfillment centers, storage zones, dock turnaround SLA, logistics terminals & volumetric capacity.
           </p>
         </div>
 
@@ -224,62 +278,237 @@ export function WarehousesPage() {
         </button>
       </div>
 
-      {/* High-Configuration Multi-Facility Operational Radar Chart */}
-      <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Compass className="h-4 w-4 text-indigo-500" />
-                Multi-Facility Operational Capability Radar
-              </h2>
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200/60">
-                5-Axis Benchmark
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
-              Comprehensive performance radar comparing facility storage density, pick velocity SLA, accuracy %, safety buffers, and dock turnaround.
-            </p>
+      {/* KPI Overview Strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-xs font-medium text-slate-600 dark:text-zinc-400">Operational Facilities</span>
+            <Warehouse className="h-4 w-4 text-blue-500" />
           </div>
-          <div className="flex items-center gap-3 text-xs font-semibold">
-            <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
-              <span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> WH-MAIN (Chicago)
-            </span>
-            <span className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
-              <span className="h-2.5 w-2.5 rounded-full bg-indigo-500" /> WH-EAST (Newark)
-            </span>
-            <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> WH-COLD (Dallas)
-            </span>
+          <div className="text-xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">
+            {warehouses.length || 4} Distribution Hubs
+          </div>
+          <div className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5 font-medium flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            100% Active Multi-Hub Network
           </div>
         </div>
 
-        <div className="h-68 w-full pt-1 flex items-center justify-center">
-          <ResponsiveContainer width="100%" height="100%">
-            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={FACILITY_RADAR_DATA}>
-              <PolarGrid stroke="#e2e8f0" strokeDasharray="3 3" opacity={0.6} />
-              <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }} />
-              <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9, fill: "#94a3b8" }} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "rgba(24, 24, 27, 0.95)",
-                  borderColor: "rgba(63, 63, 70, 0.5)",
-                  borderRadius: "14px",
-                  color: "#fff",
-                  fontSize: "12px",
-                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.4)",
-                  backdropFilter: "blur(12px)",
-                }}
-                formatter={(val, name) => [
-                  `${val}% Score`,
-                  name === "WH_MAIN" ? "WH-MAIN Hub" : name === "WH_EAST" ? "WH-EAST Terminal" : "WH-COLD Facility",
-                ]}
-              />
-              <Radar name="WH_MAIN" dataKey="WH_MAIN" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.25} />
-              <Radar name="WH_EAST" dataKey="WH_EAST" stroke="#6366F1" fill="#6366F1" fillOpacity={0.25} />
-              <Radar name="WH_COLD" dataKey="WH_COLD" stroke="#10B981" fill="#10B981" fillOpacity={0.25} />
-            </RadarChart>
-          </ResponsiveContainer>
+        <div className="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-xs font-medium text-slate-600 dark:text-zinc-400">Fleet Footprint</span>
+            <Maximize2 className="h-4 w-4 text-purple-500" />
+          </div>
+          <div className="text-xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">
+            98,500 m²
+          </div>
+          <div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+            High-Bay Racking & Cold Chain
+          </div>
+        </div>
+
+        <div className="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-xs font-medium text-slate-600 dark:text-zinc-400">Storage Saturation</span>
+            <Gauge className="h-4 w-4 text-emerald-500" />
+          </div>
+          <div className="text-xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">
+            61.7% Fleet Fill
+          </div>
+          <div className="text-[11px] text-blue-600 dark:text-blue-400 mt-0.5 font-mono">
+            Safe buffer (18.3% below 80%)
+          </div>
+        </div>
+
+        <div className="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-xs font-medium text-slate-600 dark:text-zinc-400">Mapped Bin Locations</span>
+            <Boxes className="h-4 w-4 text-amber-500" />
+          </div>
+          <div className="text-xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">
+            1,420 Locations
+          </div>
+          <div className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5 font-medium">
+            0 unmapped orphan bins
+          </div>
+        </div>
+      </div>
+
+      {/* High-Configuration Unique Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Chart 1: Multi-Facility Operational Capability Radar */}
+        <div className="lg:col-span-6 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Compass className="h-4 w-4 text-indigo-500" />
+                  Operational Capability Radar
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200/60">
+                  5-Axis Benchmark
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">
+                Multi-facility benchmark: Space Density, Pick SLA, Accuracy %, Buffer Safety & Dock Velocity.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-[10px] font-bold">
+              <span className="text-blue-500">WH-MAIN</span>
+              <span className="text-indigo-500">WH-EAST</span>
+              <span className="text-emerald-500">WH-COLD</span>
+            </div>
+          </div>
+
+          <div className="h-[270px] w-full flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart cx="50%" cy="50%" outerRadius="75%" data={FACILITY_RADAR_DATA}>
+                <PolarGrid stroke="#94a3b8" strokeDasharray="3 3" opacity={0.2} />
+                <PolarAngleAxis dataKey="metric" tick={{ fontSize: 10, fill: "#64748b", fontWeight: 600 }} />
+                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 8, fill: "#94a3b8" }} />
+                <Tooltip
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    return (
+                      <div className="rounded-xl border border-slate-700/80 bg-slate-900/95 backdrop-blur-md px-3.5 py-2 text-white shadow-2xl text-xs space-y-1">
+                        <div className="font-bold text-slate-100">{label} Benchmark</div>
+                        <div className="grid grid-cols-3 gap-2 pt-0.5 text-[11px]">
+                          <span className="text-blue-400 font-mono">MAIN: {payload[0]?.value}%</span>
+                          <span className="text-indigo-300 font-mono">EAST: {payload[1]?.value}%</span>
+                          <span className="text-emerald-400 font-mono">COLD: {payload[2]?.value}%</span>
+                        </div>
+                      </div>
+                    );
+                  }}
+                />
+                <Radar name="WH_MAIN" dataKey="WH_MAIN" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.25} />
+                <Radar name="WH_EAST" dataKey="WH_EAST" stroke="#6366F1" fill="#6366F1" fillOpacity={0.25} />
+                <Radar name="WH_COLD" dataKey="WH_COLD" stroke="#10B981" fill="#10B981" fillOpacity={0.25} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Chart 2: Volumetric Storage Utilization vs Dock Turnaround Velocity */}
+        <div className="lg:col-span-6 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-blue-500" />
+                  Storage Utilization vs Dock Velocity
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200/60">
+                  Dual-Axis Throughput
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">
+                Active Storage Utilized (k m²) vs Dock Carrier Turnaround SLA (Hrs) with 80% Buffer Line.
+              </p>
+            </div>
+            <div className="flex items-center gap-2.5 text-xs font-semibold">
+              <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400 text-[11px]">
+                <span className="h-2 w-2 rounded-full bg-blue-500" /> Storage (k m²)
+              </span>
+              <span className="flex items-center gap-1 text-amber-500 text-[11px]">
+                <span className="h-2 w-2 rounded-full bg-amber-500" /> Dock SLA (Hrs)
+              </span>
+            </div>
+          </div>
+
+          <div className="h-[270px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                data={FACILITY_VELOCITY_DATA}
+                margin={{ top: 10, right: 15, left: -10, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.15} vertical={false} />
+                <XAxis
+                  dataKey="facility"
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={{ stroke: "#64748b", opacity: 0.2 }}
+                />
+                <YAxis
+                  yAxisId="left"
+                  stroke="#94a3b8"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={{ stroke: "#64748b", opacity: 0.2 }}
+                  tickFormatter={(v) => `${v}k`}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  stroke="#f59e0b"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={{ stroke: "#f59e0b", opacity: 0.2 }}
+                  tickFormatter={(v) => `${v}h`}
+                />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const d = payload[0].payload;
+                    return (
+                      <div className="rounded-xl border border-slate-700/80 bg-slate-900/95 backdrop-blur-md px-3.5 py-2.5 text-white shadow-2xl text-xs space-y-1.5">
+                        <div className="flex items-center justify-between gap-4 border-b border-slate-700/60 pb-1">
+                          <span className="font-bold text-slate-100">{d.fullName} ({d.facility})</span>
+                          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                            {d.fillPct}% Fill
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] pt-0.5">
+                          <div>
+                            <span className="text-slate-400 text-[10px]">Utilized Storage:</span>
+                            <div className="font-mono font-bold text-blue-400">{d.utilizedM2}k / {d.totalM2}k m²</div>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 text-[10px]">Dock Turnaround:</span>
+                            <div className="font-mono font-bold text-amber-400">{d.dockTurnaroundHrs} Hours</div>
+                          </div>
+                          <div className="col-span-2 text-[10px] text-slate-300">
+                            Status: <span className="font-semibold text-emerald-400">{d.status}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }}
+                />
+                <ReferenceLine
+                  yAxisId="left"
+                  y={33.6}
+                  stroke="#f43f5e"
+                  strokeDasharray="4 4"
+                  strokeWidth={1.5}
+                  label={{
+                    value: "80% Buffer Line",
+                    fill: "#f43f5e",
+                    fontSize: 9,
+                    position: "insideTopLeft",
+                  }}
+                />
+                <Bar
+                  yAxisId="left"
+                  dataKey="utilizedM2"
+                  fill="#3b82f6"
+                  radius={[6, 6, 0, 0]}
+                  isAnimationActive={true}
+                />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="dockTurnaroundHrs"
+                  stroke="#f59e0b"
+                  strokeWidth={2.5}
+                  dot={{ r: 4, fill: "#f59e0b", strokeWidth: 2, stroke: "#ffffff" }}
+                  activeDot={{ r: 6, fill: "#f59e0b", strokeWidth: 2, stroke: "#ffffff" }}
+                  isAnimationActive={true}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
