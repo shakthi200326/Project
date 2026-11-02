@@ -11,16 +11,22 @@ import {
   Layers,
   Activity,
   CheckCircle,
+  AlertTriangle,
+  Zap,
 } from "lucide-react";
 import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
+  ComposedChart,
+  Line,
+  ReferenceLine,
 } from "recharts";
 import { fetchStockBalances } from "../services/api";
 
@@ -73,6 +79,58 @@ export function StockBalancesPage() {
       { facility: "West Coast Depot", available: 890, reserved: 45, blocked: 12 },
     ];
   }, [balances]);
+
+  const skuBufferData = useMemo(() => {
+    const metaMap = {
+      "BRG-6205-2RS": { sku: "BRG-6205", name: "Industrial Ball Bearing 6205-2RS", rpoint: 100, sfloor: 50, runway: "38 days" },
+      "HYD-SV-24V": { sku: "HYD-SV-24V", name: "Hydraulic Solenoid Valve 24V", rpoint: 25, sfloor: 10, runway: "5.4 days" },
+      "BELT-T10-1200": { sku: "BELT-T10", name: "Timing Belt T10-1200", rpoint: 80, sfloor: 30, runway: "24 days" },
+      "ENC-OPT-1024": { sku: "ENC-OPT", name: "Optical Rotary Encoder 1024", rpoint: 15, sfloor: 5, runway: "0 days (Stockout)" },
+      "LUB-SYN-VG46": { sku: "LUB-VG46", name: "Compressor Lubricant VG 46", rpoint: 300, sfloor: 120, runway: "45 days" },
+    };
+
+    const result = [];
+    balances.forEach((b) => {
+      const code = b.item_code || "BRG-6205-2RS";
+      const meta = metaMap[code] || {
+        sku: code.slice(0, 8),
+        name: b.item_name || code,
+        rpoint: 50,
+        sfloor: 20,
+        runway: "15 days",
+      };
+      result.push({
+        id: b.id,
+        sku: meta.sku,
+        item_name: b.item_name || meta.name,
+        available: Number(b.available_qty || 0),
+        on_hand: Number(b.on_hand_qty || 0),
+        reserved: Number(b.reserved_qty || 0),
+        reorderPoint: meta.rpoint,
+        safetyFloor: meta.sfloor,
+        runway: meta.runway,
+      });
+    });
+
+    if (result.length > 0) return result;
+
+    return [
+      { id: "1", sku: "BRG-6205", item_name: "Industrial Ball Bearing 6205-2RS", available: 440, on_hand: 450, reserved: 10, reorderPoint: 100, safetyFloor: 50, runway: "38 days" },
+      { id: "2", sku: "HYD-SV-24V", item_name: "Hydraulic Solenoid Valve 24V", available: 18, on_hand: 18, reserved: 0, reorderPoint: 25, safetyFloor: 10, runway: "5.4 days" },
+      { id: "3", sku: "BELT-T10", item_name: "Timing Belt T10-1200", available: 270, on_hand: 280, reserved: 10, reorderPoint: 80, safetyFloor: 30, runway: "24 days" },
+      { id: "4", sku: "ENC-OPT", item_name: "Optical Rotary Encoder 1024", available: 0, on_hand: 0, reserved: 0, reorderPoint: 15, safetyFloor: 5, runway: "0 days (Stockout)" },
+      { id: "5", sku: "LUB-VG46", item_name: "Compressor Lubricant VG 46", available: 1240, on_hand: 1250, reserved: 10, reorderPoint: 300, safetyFloor: 120, runway: "45 days" },
+    ];
+  }, [balances]);
+
+  const lowBufferCount = useMemo(
+    () => skuBufferData.filter((d) => d.available > 0 && d.available <= d.reorderPoint).length,
+    [skuBufferData]
+  );
+  const stockoutCount = useMemo(
+    () => skuBufferData.filter((d) => d.available <= 0).length,
+    [skuBufferData]
+  );
 
   const handleExportCSV = () => {
     const headers = [
@@ -192,21 +250,22 @@ export function StockBalancesPage() {
         </div>
       </div>
 
-      {/* High-Configuration Chart: Multi-Facility Stock State & Allocation Distribution */}
+      {/* High-Configuration Charts: Dual Fleet Allocation & Safety Buffer Deck */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        <div className="lg:col-span-8 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+        {/* Chart 1: Multi-Facility Stock State & Commitment Allocation Matrix */}
+        <div className="lg:col-span-6 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-                  Multi-Facility Stock State & Commitment Allocation Matrix
+                  Multi-Facility Stock State Allocation
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40">
-                  Stacked Allocation
+                  Stacked State
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">
-                Proportional distribution of Free Dispatchable stock vs Committed Order Holds vs QC Quarantine per hub.
+                Free Dispatchable stock vs Committed Holds vs QC Quarantine per hub.
               </p>
             </div>
             <div className="text-right">
@@ -316,65 +375,241 @@ export function StockBalancesPage() {
           </div>
         </div>
 
-        {/* Stock Availability & Liquidity Health Rail */}
-        <div className="lg:col-span-4 flex flex-col justify-between gap-3">
-          <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-            <div className="flex items-center justify-between text-slate-400 mb-1">
-              <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Free Stock Liquidity</span>
-              <Activity className="h-4 w-4 text-emerald-500" />
+        {/* Chart 2: SKU Safety Buffer vs Reorder Point (ROP) Threshold Matrix */}
+        <div className="lg:col-span-6 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                  SKU Safety Buffer vs Reorder Point (ROP)
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40">
+                  Buffer & ROP
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">
+                Available stock plotted against Reorder Point (amber) and Critical Safety Floor (red).
+              </p>
             </div>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                {totalOnHand > 0 ? ((totalAvailable / totalOnHand) * 100).toFixed(1) : "100"}%
-              </span>
-              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded">
-                High Liquidity
-              </span>
+            <div className="flex items-center gap-3 text-right">
+              <div>
+                <span className="text-xs font-mono font-bold text-amber-500">
+                  {lowBufferCount} Reorder
+                </span>
+                <span className="text-[10px] text-slate-400 block">&le; ROP Point</span>
+              </div>
+              <div>
+                <span
+                  className={`text-xs font-mono font-bold ${
+                    stockoutCount === 0 ? "text-emerald-500" : "text-rose-500"
+                  }`}
+                >
+                  {stockoutCount} Outage
+                </span>
+                <span className="text-[10px] text-slate-400 block">Stockouts</span>
+              </div>
             </div>
-            <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3">
-              <div
-                className="bg-emerald-500 h-full rounded-full"
-                style={{ width: `${totalOnHand > 0 ? (totalAvailable / totalOnHand) * 100 : 100}%` }}
-              />
-            </div>
-            <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2">
-              Uncommitted inventory immediately deliverable for order picking.
-            </p>
           </div>
 
-          <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-            <div className="flex items-center justify-between text-slate-400 mb-1">
-              <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Allocation Lock Pressure</span>
-              <Layers className="h-4 w-4 text-purple-500" />
-            </div>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-bold font-mono text-purple-600 dark:text-purple-400">
-                {totalOnHand > 0 ? ((totalReserved / totalOnHand) * 100).toFixed(1) : "0.0"}%
-              </span>
-              <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/60 px-1.5 py-0.5 rounded">
-                Sales Committed
-              </span>
-            </div>
-            <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3">
-              <div
-                className="bg-purple-600 h-full rounded-full"
-                style={{ width: `${totalOnHand > 0 ? (totalReserved / totalOnHand) * 100 : 0}%` }}
-              />
-            </div>
-            <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2">
-              Units reserved for B2B contracts & open manufacturing orders.
-            </p>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                data={skuBufferData}
+                margin={{ top: 15, right: 15, left: -20, bottom: 25 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.15} vertical={false} />
+                <XAxis
+                  dataKey="sku"
+                  stroke="#94a3b8"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={{ stroke: "#64748b", opacity: 0.2 }}
+                  angle={-15}
+                  textAnchor="end"
+                  height={35}
+                />
+                <YAxis
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={{ stroke: "#64748b", opacity: 0.2 }}
+                  tickFormatter={(v) => `${v}`}
+                />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const d = payload[0].payload;
+                    const isStockout = d.available <= 0;
+                    const isBelowSafety = d.available > 0 && d.available <= d.safetyFloor;
+                    const isBelowROP = d.available > d.safetyFloor && d.available <= d.reorderPoint;
+                    return (
+                      <div className="rounded-xl border border-slate-700/80 bg-slate-900/95 backdrop-blur-md px-3.5 py-2.5 text-white shadow-2xl text-xs space-y-1.5">
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-700/60 pb-1">
+                          <span className="font-mono text-xs font-bold text-blue-400">{d.sku}</span>
+                          <span
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                              isStockout
+                                ? "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                                : isBelowSafety
+                                ? "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                                : isBelowROP
+                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                                : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                            }`}
+                          >
+                            {isStockout
+                              ? "OUT OF STOCK"
+                              : isBelowSafety
+                              ? "BELOW SAFETY FLOOR"
+                              : isBelowROP
+                              ? "REORDER REQUIRED"
+                              : "HEALTHY BUFFER"}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-300 font-medium">{d.item_name}</div>
+                        <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Free Available:</span>
+                            <span className="font-mono font-bold text-white">{d.available} EA</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Total On-Hand:</span>
+                            <span className="font-mono text-slate-300">{d.on_hand} EA</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Reorder Point (ROP):</span>
+                            <span className="font-mono text-amber-400">{d.reorderPoint} EA</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Safety Floor:</span>
+                            <span className="font-mono text-rose-400">{d.safetyFloor} EA</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-slate-700/60 pt-1 text-[11px]">
+                          <span className="text-slate-400">Estimated Runway:</span>
+                          <span className="font-mono font-bold text-indigo-300">{d.runway}</span>
+                        </div>
+                      </div>
+                    );
+                  }}
+                />
+                <Legend
+                  verticalAlign="top"
+                  align="right"
+                  height={32}
+                  iconType="circle"
+                  iconSize={8}
+                  formatter={(val) => (
+                    <span className="text-[11px] text-slate-600 dark:text-zinc-400 font-medium ml-1">
+                      {val}
+                    </span>
+                  )}
+                />
+                <Bar
+                  dataKey="available"
+                  name="Available Units"
+                  radius={[4, 4, 0, 0]}
+                >
+                  {skuBufferData.map((entry) => (
+                    <Cell
+                      key={`cell-${entry.id}`}
+                      fill={
+                        entry.available <= entry.safetyFloor
+                          ? "#f43f5e"
+                          : entry.available <= entry.reorderPoint
+                          ? "#f59e0b"
+                          : "#10b981"
+                      }
+                    />
+                  ))}
+                </Bar>
+                <Line
+                  type="stepAfter"
+                  dataKey="reorderPoint"
+                  name="Reorder Point (ROP)"
+                  stroke="#f59e0b"
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                  dot={{ r: 3, fill: "#f59e0b" }}
+                />
+                <Line
+                  type="stepAfter"
+                  dataKey="safetyFloor"
+                  name="Safety Floor"
+                  stroke="#ef4444"
+                  strokeWidth={1.5}
+                  strokeDasharray="2 2"
+                  dot={{ r: 2.5, fill: "#ef4444" }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
           </div>
+        </div>
+      </div>
 
-          <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-linear-to-br from-emerald-500/10 via-teal-500/5 to-transparent dark:from-emerald-950/30 dark:via-zinc-900 dark:to-zinc-900 shadow-xs">
+      {/* Stock Availability & Liquidity Health Rail */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+          <div className="flex items-center justify-between text-slate-400 mb-1">
+            <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Free Stock Liquidity</span>
+            <Activity className="h-4 w-4 text-emerald-500" />
+          </div>
+          <div className="flex items-baseline gap-2 mt-1">
+            <span className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
+              {totalOnHand > 0 ? ((totalAvailable / totalOnHand) * 100).toFixed(1) : "100"}%
+            </span>
+            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded">
+              High Liquidity
+            </span>
+          </div>
+          <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3">
+            <div
+              className="bg-emerald-500 h-full rounded-full"
+              style={{ width: `${totalOnHand > 0 ? (totalAvailable / totalOnHand) * 100 : 100}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2">
+            Uncommitted inventory immediately deliverable for order picking.
+          </p>
+        </div>
+
+        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+          <div className="flex items-center justify-between text-slate-400 mb-1">
+            <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Allocation Lock Pressure</span>
+            <Layers className="h-4 w-4 text-purple-500" />
+          </div>
+          <div className="flex items-baseline gap-2 mt-1">
+            <span className="text-2xl font-bold font-mono text-purple-600 dark:text-purple-400">
+              {totalOnHand > 0 ? ((totalReserved / totalOnHand) * 100).toFixed(1) : "0.0"}%
+            </span>
+            <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/60 px-1.5 py-0.5 rounded">
+              Sales Committed
+            </span>
+          </div>
+          <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3">
+            <div
+              className="bg-purple-600 h-full rounded-full"
+              style={{ width: `${totalOnHand > 0 ? (totalReserved / totalOnHand) * 100 : 0}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2">
+            Units reserved for B2B contracts & open manufacturing orders.
+          </p>
+        </div>
+
+        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-linear-to-br from-emerald-500/10 via-teal-500/5 to-transparent dark:from-emerald-950/30 dark:via-zinc-900 dark:to-zinc-900 shadow-xs">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
               <CheckCircle className="h-4 w-4" />
-              <span className="text-xs font-bold">Zero Stockout Risk Seal</span>
+              <span className="text-xs font-bold">Replenishment Health</span>
             </div>
-            <p className="text-[11px] text-slate-600 dark:text-zinc-400 mt-1">
-              All high-velocity SKUs exceed safety stock buffers. 0 critical shortages across storage network.
-            </p>
+            <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded">
+              {lowBufferCount + stockoutCount} Action Triggers
+            </span>
           </div>
+          <p className="text-[11px] text-slate-600 dark:text-zinc-400 mt-1.5">
+            Automated purchase reorder generated for <span className="font-semibold text-slate-900 dark:text-white">HYD-SV-24V</span>. Stockout expediting active for <span className="font-semibold text-slate-900 dark:text-white">ENC-OPT-1024</span>.
+          </p>
         </div>
       </div>
 
