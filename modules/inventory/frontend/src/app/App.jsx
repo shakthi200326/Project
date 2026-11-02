@@ -25,6 +25,7 @@ const ReconciliationPage = lazy(() => import("../pages/ReconciliationPage.jsx").
 const BatchTrackingPage = lazy(() => import("../pages/BatchTrackingPage.jsx").then(m => ({ default: m.BatchTrackingPage })));
 const SerialTrackingPage = lazy(() => import("../pages/SerialTrackingPage.jsx").then(m => ({ default: m.SerialTrackingPage })));
 const StockReservationsPage = lazy(() => import("../pages/StockReservationsPage.jsx").then(m => ({ default: m.StockReservationsPage })));
+const StockReturnsPage = lazy(() => import("../pages/StockReturnsPage.jsx").then(m => ({ default: m.StockReturnsPage })));
 const ReplenishmentPage = lazy(() => import("../pages/ReplenishmentPage.jsx").then(m => ({ default: m.ReplenishmentPage })));
 const ReportsPage = lazy(() => import("../pages/ReportsPage.jsx").then(m => ({ default: m.ReportsPage })));
 
@@ -67,7 +68,7 @@ export default function App() {
                 <Route path="/inventory/operations/stock-out" element={<StockMovementsPage initialType="ISSUE" />} />
                 <Route path="/inventory/operations/transfers" element={<StockMovementsPage initialType="TRANSFER" />} />
                 <Route path="/inventory/operations/adjustments" element={<StockMovementsPage initialType="ADJUSTMENT" />} />
-                <Route path="/inventory/operations/returns" element={<StockMovementsPage initialType="RETURN" />} />
+                <Route path="/inventory/operations/returns" element={<StockReturnsPage />} />
                 <Route path="/inventory/operations/reservations" element={<StockReservationsPage />} />
                 <Route path="/inventory/operations/reconciliation" element={<ReconciliationPage />} />
 
@@ -110,6 +111,7 @@ export default function App() {
                 <Route path="/reports" element={<Navigate to="/inventory/analytics/reports" replace />} />
                 <Route path="/settings" element={<Navigate to="/inventory/settings" replace />} />
                 <Route path="/returns" element={<Navigate to="/inventory/operations/returns" replace />} />
+                <Route path="/inventory/returns" element={<Navigate to="/inventory/operations/returns" replace />} />
                 <Route path="/reconciliation" element={<Navigate to="/inventory/operations/reconciliation" replace />} />
 
                 <Route path="*" element={<Navigate to="/inventory" replace />} />

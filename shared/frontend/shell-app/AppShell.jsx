@@ -146,9 +146,11 @@ export function AppShell({ children }) {
       "/inventory/racks-bins": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Racks & Bins" }],
       "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock In (Receipt)" }],
       "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Out (Issue)" }],
-      "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Transfers" }],
-      "/inventory/operations/adjustments": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Adjustments" }],
-      "/inventory/operations/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Reservations" }],
+      "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/transfers" }, { label: "Transfers" }],
+      "/inventory/operations/adjustments": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/adjustments" }, { label: "Adjustments" }],
+      "/inventory/operations/returns": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/returns" }, { label: "Stock Returns" }],
+      "/inventory/returns": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/returns" }, { label: "Stock Returns" }],
+      "/inventory/operations/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/reservations" }, { label: "Reservations" }],
       "/inventory/operations/reconciliation": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Physical Reconciliation" }],
       "/inventory/control/balances": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Stock Balances" }],
       "/inventory/control/ledger": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Immutable Ledger" }],
@@ -251,9 +253,11 @@ export function AppShell({ children }) {
       "/inventory/racks-bins": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Racks & Bins" }],
       "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock In (Receipt)" }],
       "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Out (Issue)" }],
-      "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Transfers" }],
-      "/inventory/operations/adjustments": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Adjustments" }],
-      "/inventory/operations/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Reservations" }],
+      "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/transfers" }, { label: "Transfers" }],
+      "/inventory/operations/adjustments": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/adjustments" }, { label: "Adjustments" }],
+      "/inventory/operations/returns": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/returns" }, { label: "Stock Returns" }],
+      "/inventory/returns": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/returns" }, { label: "Stock Returns" }],
+      "/inventory/operations/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/reservations" }, { label: "Reservations" }],
       "/inventory/operations/reconciliation": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Physical Reconciliation" }],
       "/inventory/control/balances": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Stock Balances" }],
       "/inventory/control/ledger": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Immutable Ledger" }],
@@ -311,36 +315,7 @@ export function AppShell({ children }) {
             const hasKey = !!group.key;
             const isOpen = hasKey ? openGroups[group.key] : true;
 
-            const getBreadcrumbs = (pathname) => {
-    const map = {
-      "/inventory": [{ label: "Inventory", path: "/inventory" }, { label: "Executive Dashboard" }],
-      "/inventory/products": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Products" }],
-      "/inventory/categories": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Categories" }],
-      "/inventory/brands": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Brands" }],
-      "/inventory/units": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Units of Measure" }],
-      "/inventory/barcodes": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Barcodes & Tags" }],
-      "/inventory/warehouses": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Facility Overview" }],
-      "/inventory/locations": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Storage Locations" }],
-      "/inventory/racks-bins": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Racks & Bins" }],
-      "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock In (Receipt)" }],
-      "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Out (Issue)" }],
-      "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Transfers" }],
-      "/inventory/operations/adjustments": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Adjustments" }],
-      "/inventory/operations/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Reservations" }],
-      "/inventory/operations/reconciliation": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Physical Reconciliation" }],
-      "/inventory/control/balances": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Stock Balances" }],
-      "/inventory/control/ledger": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Immutable Ledger" }],
-      "/inventory/control/batches": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Batch Tracking" }],
-      "/inventory/control/serials": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Serial Registry" }],
-      "/inventory/planning/replenishment": [{ label: "Inventory", path: "/inventory" }, { label: "Planning", path: "/inventory/planning/replenishment" }, { label: "Replenishment & Alerts" }],
-      "/inventory/analytics/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Valuation Reports" }],
-      "/inventory/analytics/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Analytics Reports" }],
-      "/inventory/settings": [{ label: "Inventory", path: "/inventory" }, { label: "Configuration" }, { label: "Inventory Settings" }],
-    };
-    return map[pathname] || [{ label: "Inventory", path: "/inventory" }, { label: "Module View" }];
-  };
-
-  return (
+            return (
               <div key={gIdx} className="space-y-1">
                 {!collapsed && (
                   <div
@@ -377,9 +352,11 @@ export function AppShell({ children }) {
       "/inventory/racks-bins": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Racks & Bins" }],
       "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock In (Receipt)" }],
       "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Out (Issue)" }],
-      "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Transfers" }],
-      "/inventory/operations/adjustments": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Adjustments" }],
-      "/inventory/operations/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Reservations" }],
+      "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/transfers" }, { label: "Transfers" }],
+      "/inventory/operations/adjustments": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/adjustments" }, { label: "Adjustments" }],
+      "/inventory/operations/returns": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/returns" }, { label: "Stock Returns" }],
+      "/inventory/returns": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/returns" }, { label: "Stock Returns" }],
+      "/inventory/operations/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/reservations" }, { label: "Reservations" }],
       "/inventory/operations/reconciliation": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Physical Reconciliation" }],
       "/inventory/control/balances": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Stock Balances" }],
       "/inventory/control/ledger": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Immutable Ledger" }],
@@ -519,9 +496,11 @@ export function AppShell({ children }) {
       "/inventory/racks-bins": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Racks & Bins" }],
       "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock In (Receipt)" }],
       "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Out (Issue)" }],
-      "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Transfers" }],
-      "/inventory/operations/adjustments": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Adjustments" }],
-      "/inventory/operations/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Reservations" }],
+      "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/transfers" }, { label: "Transfers" }],
+      "/inventory/operations/adjustments": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/adjustments" }, { label: "Adjustments" }],
+      "/inventory/operations/returns": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/returns" }, { label: "Stock Returns" }],
+      "/inventory/returns": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/returns" }, { label: "Stock Returns" }],
+      "/inventory/operations/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/reservations" }, { label: "Reservations" }],
       "/inventory/operations/reconciliation": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Physical Reconciliation" }],
       "/inventory/control/balances": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Stock Balances" }],
       "/inventory/control/ledger": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Immutable Ledger" }],
@@ -562,36 +541,7 @@ export function AppShell({ children }) {
                           const Icon = item.icon;
                           const isActive = location.pathname === item.path;
 
-                          const getBreadcrumbs = (pathname) => {
-    const map = {
-      "/inventory": [{ label: "Inventory", path: "/inventory" }, { label: "Executive Dashboard" }],
-      "/inventory/products": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Products" }],
-      "/inventory/categories": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Categories" }],
-      "/inventory/brands": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Brands" }],
-      "/inventory/units": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Units of Measure" }],
-      "/inventory/barcodes": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Barcodes & Tags" }],
-      "/inventory/warehouses": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Facility Overview" }],
-      "/inventory/locations": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Storage Locations" }],
-      "/inventory/racks-bins": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Racks & Bins" }],
-      "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock In (Receipt)" }],
-      "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Out (Issue)" }],
-      "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Transfers" }],
-      "/inventory/operations/adjustments": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Adjustments" }],
-      "/inventory/operations/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Reservations" }],
-      "/inventory/operations/reconciliation": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Physical Reconciliation" }],
-      "/inventory/control/balances": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Stock Balances" }],
-      "/inventory/control/ledger": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Immutable Ledger" }],
-      "/inventory/control/batches": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Batch Tracking" }],
-      "/inventory/control/serials": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Serial Registry" }],
-      "/inventory/planning/replenishment": [{ label: "Inventory", path: "/inventory" }, { label: "Planning", path: "/inventory/planning/replenishment" }, { label: "Replenishment & Alerts" }],
-      "/inventory/analytics/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Valuation Reports" }],
-      "/inventory/analytics/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Analytics Reports" }],
-      "/inventory/settings": [{ label: "Inventory", path: "/inventory" }, { label: "Configuration" }, { label: "Inventory Settings" }],
-    };
-    return map[pathname] || [{ label: "Inventory", path: "/inventory" }, { label: "Module View" }];
-  };
-
-  return (
+                          return (
                             <Link
                               key={item.path}
                               to={item.path}
