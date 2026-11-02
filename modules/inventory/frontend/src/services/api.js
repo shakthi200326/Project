@@ -372,6 +372,20 @@ export async function fetchCategories() {
   return DEMO_CATEGORIES;
 }
 
+export async function fetchBrands() {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/brands/`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      return data.results || data;
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  return DEMO_BRANDS;
+}
+
 export async function fetchWarehouses() {
   try {
     const res = await fetch(`${API_BASE}/inventory/warehouses/`);
