@@ -25,6 +25,8 @@ import {
   ShieldCheck,
   Sparkles,
   Layers,
+  Scan,
+  Camera,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -39,7 +41,13 @@ import {
   RadialBarChart,
   RadialBar,
 } from "recharts";
-import { fetchProducts, updateProduct, deleteProduct } from "../services/api";
+import {
+  fetchProducts,
+  updateProduct,
+  deleteProduct,
+  playScanBeep,
+  lookupProductByBarcode,
+} from "../services/api";
 import { CreateProductModal } from "../components/CreateProductModal.jsx";
 import { ProductDetailDrawer } from "../components/ProductDetailDrawer.jsx";
 
@@ -69,6 +77,8 @@ export function ProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [importText, setImportText] = useState("");
+  const [isBarcodeScanModalOpen, setIsBarcodeScanModalOpen] = useState(false);
+  const [barcodeScanInput, setBarcodeScanInput] = useState("");
 
   useEffect(() => {
     fetchProducts().then((res) => setProducts(res.results || []));
@@ -79,11 +89,37 @@ export function ProductsPage() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  const handleExecuteScan = (rawCode) => {
+    const clean = rawCode?.trim();
+    if (!clean) return;
+    const match = lookupProductByBarcode(clean, products);
+    if (match) {
+      playScanBeep();
+      setSelectedProduct(match);
+      setIsDrawerOpen(true);
+      setIsBarcodeScanModalOpen(false);
+      setBarcodeScanInput("");
+      showToast(`Scanned product matched: ${match.name} (${match.sku})`);
+    } else {
+      showToast(`No product matched barcode "${clean}".`);
+    }
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === "Enter" && search.trim()) {
+      e.preventDefault();
+      handleExecuteScan(search);
+    }
+  };
+
   const filteredProducts = products.filter((p) => {
+    const q = search.trim().toLowerCase();
     const matchesSearch =
-      p.name?.toLowerCase().includes(search.toLowerCase()) ||
-      p.sku?.toLowerCase().includes(search.toLowerCase()) ||
-      p.brand?.toLowerCase().includes(search.toLowerCase());
+      !q ||
+      p.name?.toLowerCase().includes(q) ||
+      p.sku?.toLowerCase().includes(q) ||
+      p.brand?.toLowerCase().includes(q) ||
+      (p.barcode && String(p.barcode).toLowerCase().includes(q));
     const matchesCategory =
       categoryFilter === "ALL" || p.category === categoryFilter;
     const matchesStatus =
@@ -508,19 +544,34 @@ export function ProductsPage() {
 
       {/* Toolbar & Filters */}
       <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        {/* Search */}
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setCurrentPage(1);
+        {/* Search & Barcode Scan Trigger */}
+        <div className="flex items-center gap-2 flex-1 max-w-lg">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
+              onKeyDown={handleSearchKeyDown}
+              placeholder="Search or scan barcode/SKU (Press Enter to inspect)..."
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setIsBarcodeScanModalOpen(true);
+              setBarcodeScanInput("");
             }}
-            placeholder="Search by SKU, product name, brand or barcode..."
-            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-xs font-semibold cursor-pointer transition-colors shadow-xs shrink-0"
+            title="Scan Barcode with Optical Camera or USB Reader"
+          >
+            <Scan className="h-3.5 w-3.5" />
+            <span>Scan Barcode</span>
+          </button>
         </div>
 
         {/* Filters */}
@@ -796,6 +847,133 @@ export function ProductsPage() {
         onClose={() => setIsDrawerOpen(false)}
         onSave={handleUpdateProduct}
       />
+
+      {/* Barcode Scanner Station Modal */}
+      {isBarcodeScanModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="p-5 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/50">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
+                  <Scan className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    Barcode Scanner Station
+                    <span className="flex h-2 w-2 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20 animate-pulse" />
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                    Scan or enter any barcode/SKU to immediately inspect full product specifications.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsBarcodeScanModalOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Viewfinder Graphic */}
+            <div className="p-6 space-y-4">
+              <div className="relative h-44 rounded-2xl bg-slate-950 flex flex-col items-center justify-center overflow-hidden border border-slate-800 shadow-inner">
+                {/* Viewfinder Corners */}
+                <div className="absolute top-4 left-4 h-6 w-6 border-t-2 border-l-2 border-blue-500 rounded-tl-md" />
+                <div className="absolute top-4 right-4 h-6 w-6 border-t-2 border-r-2 border-blue-500 rounded-tr-md" />
+                <div className="absolute bottom-4 left-4 h-6 w-6 border-b-2 border-l-2 border-blue-500 rounded-bl-md" />
+                <div className="absolute bottom-4 right-4 h-6 w-6 border-b-2 border-r-2 border-blue-500 rounded-br-md" />
+
+                {/* Animated Red Laser Scanning Beam */}
+                <div className="absolute inset-x-8 top-1/2 -translate-y-1/2 h-0.5 bg-rose-500 shadow-lg shadow-rose-500/80 animate-pulse" />
+
+                {/* Center Content */}
+                <div className="text-center space-y-1 text-slate-300 z-10 pointer-events-none">
+                  <Camera className="h-7 w-7 mx-auto text-blue-400 opacity-80" />
+                  <div className="text-xs font-semibold tracking-wide">
+                    Align Barcode or QR Code within Frame
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-mono">
+                    Ready for Handheld Scanner or Rapid Keyboard Input
+                  </div>
+                </div>
+              </div>
+
+              {/* Fast Barcode Input Form */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleExecuteScan(barcodeScanInput);
+                }}
+                className="space-y-2"
+              >
+                <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                  Scan Barcode or Enter Barcode / SKU:
+                </label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Barcode className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <input
+                      autoFocus
+                      type="text"
+                      value={barcodeScanInput}
+                      onChange={(e) => setBarcodeScanInput(e.target.value)}
+                      placeholder="e.g. 890123620501 or BRG-6205-2RS"
+                      className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                  >
+                    Inspect
+                  </button>
+                </div>
+              </form>
+
+              {/* Quick Barcode Test Deck */}
+              <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-zinc-800">
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400 flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-blue-500" /> Quick-Test Catalog Barcodes:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { code: "890123620501", label: "Ball Bearing (890123620501)" },
+                    { code: "890123240012", label: "Hydraulic Valve (890123240012)" },
+                    { code: "890123120034", label: "Timing Belt (890123120034)" },
+                    { code: "890123102498", label: "Encoder (890123102498)" },
+                    { code: "890123460077", label: "Lubricant (890123460077)" },
+                  ].map((pill) => (
+                    <button
+                      key={pill.code}
+                      type="button"
+                      onClick={() => handleExecuteScan(pill.code)}
+                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-zinc-800 dark:hover:bg-blue-950/60 text-slate-700 hover:text-blue-600 dark:text-zinc-300 dark:hover:text-blue-300 font-mono text-[10px] font-semibold border border-slate-200/80 dark:border-zinc-700 transition-colors cursor-pointer"
+                    >
+                      {pill.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 px-6 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 flex items-center justify-between text-xs">
+              <span className="text-[11px] text-slate-500 dark:text-zinc-400 flex items-center gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Audio scan chime enabled
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsBarcodeScanModalOpen(false)}
+                className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 font-semibold cursor-pointer"
+              >
+                Close Station
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

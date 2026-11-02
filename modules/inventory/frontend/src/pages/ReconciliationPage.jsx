@@ -18,6 +18,12 @@ import {
   TrendingDown,
   TrendingUp,
   Scale,
+  Scan,
+  Barcode,
+  Camera,
+  Sparkles,
+  Package,
+  Eye,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -35,11 +41,15 @@ import {
   createStockCount,
   reconcileStockCount,
   fetchWarehouses,
+  fetchProducts,
+  playScanBeep,
+  lookupProductByBarcode,
 } from "@/services/api";
 
 export function ReconciliationPage() {
   const [counts, setCounts] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCountId, setActiveCountId] = useState("cnt-1");
@@ -47,6 +57,11 @@ export function ReconciliationPage() {
   const [postingAdjustment, setPostingAdjustment] = useState(false);
   const [reconciledState, setReconciledState] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
+
+  // Barcode Scanner & Line Inspection State
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scannerInput, setScannerInput] = useState("");
+  const [scannedLineDetail, setScannedLineDetail] = useState(null);
 
   // New Count Form
   const [newCountForm, setNewCountForm] = useState({
@@ -118,16 +133,58 @@ export function ReconciliationPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [countsData, whData] = await Promise.all([
+      const [countsData, whData, prodsData] = await Promise.all([
         fetchReconciliationCounts(),
         fetchWarehouses(),
+        fetchProducts(),
       ]);
       setCounts(countsData.results || countsData || []);
       setWarehouses(whData || []);
+      setProducts(prodsData.results || prodsData || []);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const productMap = React.useMemo(() => {
+    const map = {};
+    products.forEach((p) => {
+      const key = p.sku || p.code || p.id;
+      if (key) map[key] = p;
+    });
+    return map;
+  }, [products]);
+
+  const handleExecuteScan = (rawCode) => {
+    const clean = rawCode?.trim();
+    if (!clean) return;
+
+    const matchedProduct = lookupProductByBarcode(clean, products);
+    const targetSku = matchedProduct ? matchedProduct.sku : clean;
+    const line = activeCountLines.find(
+      (l) =>
+        l.sku?.toLowerCase() === targetSku?.toLowerCase() ||
+        l.item?.toLowerCase().includes(clean.toLowerCase())
+    );
+
+    if (line) {
+      playScanBeep();
+      setScannedLineDetail({ line, product: matchedProduct || productMap[line.sku] || {} });
+      setSearchTerm(line.sku);
+      setIsScannerOpen(false);
+      setScannerInput("");
+      showToast(`Scanned audit line: ${line.item} (${line.sku})`);
+    } else {
+      showToast(`No audit line found for barcode "${clean}".`);
+    }
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === "Enter" && searchTerm.trim()) {
+      e.preventDefault();
+      handleExecuteScan(searchTerm);
     }
   };
 
@@ -198,12 +255,17 @@ export function ReconciliationPage() {
     showToast("Discrepancies report downloaded as CSV.");
   };
 
-  const filteredLines = activeCountLines.filter(
-    (l) =>
-      l.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      l.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      l.location.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredLines = activeCountLines.filter((l) => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return true;
+    const prod = productMap[l.sku];
+    return (
+      l.sku.toLowerCase().includes(q) ||
+      l.item.toLowerCase().includes(q) ||
+      l.location.toLowerCase().includes(q) ||
+      (prod?.barcode && String(prod.barcode).toLowerCase().includes(q))
+    );
+  });
 
   const totalVarianceValue = activeCountLines.reduce((acc, l) => {
     return acc + (Number(l.counted_qty) - Number(l.snapshot_qty)) * l.unit_cost;
@@ -605,15 +667,30 @@ export function ReconciliationPage() {
 
       {/* Search and Table Filter Controls */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[240px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Filter by SKU, item description, or bin location..."
-            className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
+        <div className="flex items-center gap-2 flex-1 min-w-[280px] max-w-lg">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              placeholder="Search or scan barcode/SKU (Press Enter to locate)..."
+              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setIsScannerOpen(true);
+              setScannerInput("");
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-xs font-semibold cursor-pointer transition-colors shadow-xs shrink-0"
+            title="Scan Barcode to Audit Item"
+          >
+            <Scan className="h-3.5 w-3.5" />
+            <span>Scan Barcode</span>
+          </button>
         </div>
         <div className="text-xs text-slate-500 dark:text-zinc-400">
           Showing {filteredLines.length} of {activeCountLines.length} audit lines
@@ -634,6 +711,7 @@ export function ReconciliationPage() {
                 <th className="py-3.5 px-4 font-semibold text-right">Variance Qty</th>
                 <th className="py-3.5 px-4 font-semibold text-right">Unit WAV</th>
                 <th className="py-3.5 px-4 font-semibold text-right">Valuation Impact</th>
+                <th className="py-3.5 px-4 font-semibold text-center">Inspect</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
@@ -699,6 +777,16 @@ export function ReconciliationPage() {
                       }`}
                     >
                       {valueImpact > 0 ? `+$${valueImpact.toFixed(2)}` : valueImpact < 0 ? `-$${Math.abs(valueImpact).toFixed(2)}` : "$0.00"}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleExecuteScan(line.sku)}
+                        className="p-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 text-slate-500 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                        title="Audit & Barcode Verification"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </button>
                     </td>
                   </tr>
                 );
@@ -857,6 +945,285 @@ export function ReconciliationPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Barcode Scanner Station Modal */}
+      {isScannerOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="p-5 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/50">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
+                  <Scan className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    Physical Stock Count Barcode Scanner
+                    <span className="flex h-2 w-2 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20 animate-pulse" />
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                    Scan pallet, carton, or item barcodes during physical warehouse stock cycle sweeps.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsScannerOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Viewfinder Graphic */}
+            <div className="p-6 space-y-4">
+              <div className="relative h-44 rounded-2xl bg-slate-950 flex flex-col items-center justify-center overflow-hidden border border-slate-800 shadow-inner">
+                {/* Viewfinder Corners */}
+                <div className="absolute top-4 left-4 h-6 w-6 border-t-2 border-l-2 border-blue-500 rounded-tl-md" />
+                <div className="absolute top-4 right-4 h-6 w-6 border-t-2 border-r-2 border-blue-500 rounded-tr-md" />
+                <div className="absolute bottom-4 left-4 h-6 w-6 border-b-2 border-l-2 border-blue-500 rounded-bl-md" />
+                <div className="absolute bottom-4 right-4 h-6 w-6 border-b-2 border-r-2 border-blue-500 rounded-br-md" />
+
+                {/* Red Laser Scanning Beam */}
+                <div className="absolute inset-x-8 top-1/2 -translate-y-1/2 h-0.5 bg-rose-500 shadow-lg shadow-rose-500/80 animate-pulse" />
+
+                <div className="text-center space-y-1 text-slate-300 z-10 pointer-events-none">
+                  <Camera className="h-7 w-7 mx-auto text-blue-400 opacity-80" />
+                  <div className="text-xs font-semibold tracking-wide">
+                    Align Item Barcode or SKU Label
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-mono">
+                    Ready for Handheld Scanner or Rapid Keyboard Input
+                  </div>
+                </div>
+              </div>
+
+              {/* Fast Barcode Input Form */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleExecuteScan(scannerInput);
+                }}
+                className="space-y-2"
+              >
+                <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                  Scan Barcode or Enter SKU:
+                </label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Barcode className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <input
+                      autoFocus
+                      type="text"
+                      value={scannerInput}
+                      onChange={(e) => setScannerInput(e.target.value)}
+                      placeholder="e.g. 890123620501 or BRG-6205-2RS"
+                      className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                  >
+                    Locate
+                  </button>
+                </div>
+              </form>
+
+              {/* Quick Barcode Test Deck */}
+              <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-zinc-800">
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400 flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-blue-500" /> Quick-Test Audit Barcodes:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { code: "890123620501", label: "Ball Bearing (890123620501)" },
+                    { code: "890123240012", label: "Hydraulic Valve (890123240012)" },
+                    { code: "890123120034", label: "Timing Belt (890123120034)" },
+                    { code: "890123102498", label: "Encoder (890123102498)" },
+                    { code: "890123460077", label: "Lubricant (890123460077)" },
+                  ].map((pill) => (
+                    <button
+                      key={pill.code}
+                      type="button"
+                      onClick={() => handleExecuteScan(pill.code)}
+                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-zinc-800 dark:hover:bg-blue-950/60 text-slate-700 hover:text-blue-600 dark:text-zinc-300 dark:hover:text-blue-300 font-mono text-[10px] font-semibold border border-slate-200/80 dark:border-zinc-700 transition-colors cursor-pointer"
+                    >
+                      {pill.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 px-6 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 flex items-center justify-between text-xs">
+              <span className="text-[11px] text-slate-500 dark:text-zinc-400 flex items-center gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Audio scan chime enabled
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsScannerOpen(false)}
+                className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 font-semibold cursor-pointer"
+              >
+                Close Station
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Scanned Audit Item Details Modal */}
+      {scannedLineDetail && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="p-6 border-b border-slate-100 dark:border-zinc-800 flex items-start justify-between bg-slate-50/50 dark:bg-zinc-900/50">
+              <div className="flex items-start gap-3.5">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20 shrink-0">
+                  <Package className="h-6 w-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
+                      {scannedLineDetail.line.sku}
+                    </span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300">
+                      {scannedLineDetail.line.location}
+                    </span>
+                  </div>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white mt-1">
+                    {scannedLineDetail.line.item}
+                  </h2>
+                </div>
+              </div>
+              <button
+                onClick={() => setScannedLineDetail(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4 text-xs">
+              {/* Barcode Banner */}
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700/60 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Barcode className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold">Primary Barcode</span>
+                    <div className="font-mono font-bold text-slate-900 dark:text-white">
+                      {scannedLineDetail.product?.barcode || scannedLineDetail.line.sku}
+                    </div>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  Audit Verified
+                </span>
+              </div>
+
+              {/* Audit Counts Comparison */}
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="p-3 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40">
+                  <span className="text-[10px] text-slate-400 block font-medium">System Snapshot</span>
+                  <span className="text-lg font-bold font-mono text-slate-900 dark:text-white mt-0.5 block tabular-nums">
+                    {scannedLineDetail.line.snapshot_qty}
+                  </span>
+                  <span className="text-[9px] text-slate-400">{scannedLineDetail.line.unit}</span>
+                </div>
+                <div className="p-3 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40">
+                  <span className="text-[10px] text-slate-400 block font-medium">Physical Counted</span>
+                  <span className="text-lg font-bold font-mono text-blue-600 dark:text-blue-400 mt-0.5 block tabular-nums">
+                    {scannedLineDetail.line.counted_qty}
+                  </span>
+                  <span className="text-[9px] text-slate-400">{scannedLineDetail.line.unit}</span>
+                </div>
+                <div className="p-3 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40">
+                  <span className="text-[10px] text-slate-400 block font-medium">Variance</span>
+                  <span
+                    className={`text-lg font-bold font-mono mt-0.5 block tabular-nums ${
+                      scannedLineDetail.line.counted_qty - scannedLineDetail.line.snapshot_qty === 0
+                        ? "text-slate-400"
+                        : scannedLineDetail.line.counted_qty - scannedLineDetail.line.snapshot_qty > 0
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-rose-600 dark:text-rose-400"
+                    }`}
+                  >
+                    {scannedLineDetail.line.counted_qty - scannedLineDetail.line.snapshot_qty > 0
+                      ? `+${scannedLineDetail.line.counted_qty - scannedLineDetail.line.snapshot_qty}`
+                      : scannedLineDetail.line.counted_qty - scannedLineDetail.line.snapshot_qty}
+                  </span>
+                  <span className="text-[9px] text-slate-400">{scannedLineDetail.line.unit}</span>
+                </div>
+              </div>
+
+              {/* Adjust Count Inline Form */}
+              <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-3">
+                <label className="block text-xs font-bold text-slate-800 dark:text-zinc-200">
+                  Update Physical Count on Bin:
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = Math.max(0, scannedLineDetail.line.counted_qty - 1);
+                      handleCountChange(scannedLineDetail.line.id, next);
+                      setScannedLineDetail((prev) => ({
+                        ...prev,
+                        line: { ...prev.line, counted_qty: next },
+                      }));
+                    }}
+                    className="h-9 w-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 font-bold hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer text-sm"
+                  >
+                    -1
+                  </button>
+                  <input
+                    type="number"
+                    value={scannedLineDetail.line.counted_qty}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      handleCountChange(scannedLineDetail.line.id, val);
+                      setScannedLineDetail((prev) => ({
+                        ...prev,
+                        line: { ...prev.line, counted_qty: val },
+                      }));
+                    }}
+                    className="flex-1 px-3 py-1.5 text-center text-sm font-bold font-mono rounded-xl border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = scannedLineDetail.line.counted_qty + 1;
+                      handleCountChange(scannedLineDetail.line.id, next);
+                      setScannedLineDetail((prev) => ({
+                        ...prev,
+                        line: { ...prev.line, counted_qty: next },
+                      }));
+                    }}
+                    className="h-9 w-9 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 font-bold hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer text-sm"
+                  >
+                    +1
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 px-6 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 flex items-center justify-between text-xs">
+              <span className="text-[11px] text-slate-500 dark:text-zinc-400 font-mono">
+                Valuation: ${(scannedLineDetail.line.unit_cost * scannedLineDetail.line.counted_qty).toFixed(2)}
+              </span>
+              <button
+                type="button"
+                onClick={() => setScannedLineDetail(null)}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer shadow-xs transition-colors"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}

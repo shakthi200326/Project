@@ -4,6 +4,12 @@ import { createProduct, fetchCategories } from "../services/api";
 
 export function CreateProductModal({ isOpen, onClose, onCreated }) {
   const [tab, setTab] = useState("basic");
+  const steps = [
+    { key: "basic", label: "1. Basic Details" },
+    { key: "tracking", label: "2. Unit & Tracking" },
+    { key: "reorder", label: "3. Reorder Parameters" },
+  ];
+  const currentStepIndex = steps.findIndex((step) => step.key === tab);
   const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState({
     code: "",
@@ -24,9 +30,31 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
 
   useEffect(() => {
     if (isOpen) {
+      setTab("basic");
+      setError("");
       fetchCategories().then((res) => {
         const list = res.results || res || [];
-        if (list.length > 0) setCategories(list);
+        if (list.length > 0) {
+          setCategories(list);
+          setFormData((prev) => {
+            const selectedCategory = list.find(
+              (category) =>
+                String(category.id) === prev.category ||
+                category.name === prev.category
+            );
+            return {
+              ...prev,
+              category: String(
+                selectedCategory?.id ?? list[0].id ?? list[0].name
+              ),
+            };
+          });
+        } else {
+          setFormData((prev) => ({
+            ...prev,
+            category: prev.category || "Mechanical Components",
+          }));
+        }
       });
     }
   }, [isOpen]);
@@ -40,16 +68,36 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.code || !formData.name) {
-      setError("Item code and product name are required.");
+
+    if (tab === "basic") {
+      if (!formData.code.trim() || !formData.name.trim()) {
+        setError("Item code and product name are required.");
+        return;
+      }
+      setError("");
+      setTab("tracking");
       return;
     }
+
+    if (tab === "tracking") {
+      setError("");
+      setTab("reorder");
+      return;
+    }
+
     setError("");
     setSubmitting(true);
 
     try {
+      const selectedCategory = categories.find(
+        (category) =>
+          String(category.id) === formData.category ||
+          category.name === formData.category
+      );
       const created = await createProduct({
         ...formData,
+        category_id: selectedCategory?.id,
+        category_name: selectedCategory?.name || formData.category,
         code: formData.code.trim().toUpperCase(),
         name: formData.name.trim(),
         reorder_point: Number(formData.reorder_point) || 0,
@@ -102,19 +150,23 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
 
         {/* Tab Buttons */}
         <div className="flex items-center gap-2 px-6 border-b border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs">
-          {[
-            { key: "basic", label: "1. Basic Details" },
-            { key: "tracking", label: "2. Unit & Tracking" },
-            { key: "reorder", label: "3. Reorder Parameters" },
-          ].map((t) => (
+          {steps.map((t, index) => (
             <button
               key={t.key}
-              onClick={() => setTab(t.key)}
+              onClick={() => {
+                if (index <= currentStepIndex) {
+                  setError("");
+                  setTab(t.key);
+                }
+              }}
+              disabled={index > currentStepIndex}
               type="button"
-              className={`py-3 font-semibold border-b-2 transition-colors cursor-pointer ${
+              className={`py-3 font-semibold border-b-2 transition-colors ${
                 tab === t.key
                   ? "border-blue-600 text-blue-600 dark:text-blue-400"
-                  : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-zinc-200"
+                  : index < currentStepIndex
+                  ? "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-zinc-200 cursor-pointer"
+                  : "border-transparent text-slate-400 cursor-not-allowed"
               }`}
             >
               {t.label}
@@ -194,7 +246,7 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                     >
                       {categories.length > 0 ? (
                         categories.map((c) => (
-                          <option key={c.id || c.code} value={c.name}>
+                          <option key={c.id || c.code} value={String(c.id ?? c.name)}>
                             {c.name}
                           </option>
                         ))
@@ -362,18 +414,31 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
           <div className="p-4 px-6 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 flex items-center justify-between text-xs">
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => {
+                if (currentStepIndex === 0) {
+                  onClose();
+                } else {
+                  setError("");
+                  setTab(steps[currentStepIndex - 1].key);
+                }
+              }}
               className="px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 font-semibold transition-colors cursor-pointer"
             >
-              Cancel
+              {currentStepIndex === 0 ? "Cancel" : "Back"}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold shadow-xs hover:shadow-blue-500/25 disabled:opacity-50 transition-all cursor-pointer"
             >
-              <Save className="h-4 w-4" />
-              <span>{submitting ? "Saving & Syncing..." : "Save & Register Item"}</span>
+              {currentStepIndex === steps.length - 1 ? (
+                <>
+                  <Save className="h-4 w-4" />
+                  <span>{submitting ? "Saving & Syncing..." : "Save & Register Item"}</span>
+                </>
+              ) : (
+                <span>Continue</span>
+              )}
             </button>
           </div>
         </form>

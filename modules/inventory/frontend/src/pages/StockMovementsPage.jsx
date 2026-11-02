@@ -34,7 +34,7 @@ import {
   Legend,
   ReferenceLine,
 } from "recharts";
-import { fetchStockMovements } from "../services/api";
+import { fetchStockMovements, fetchProducts, lookupProductByBarcode, playScanBeep } from "../services/api";
 import { StockTransactionModal } from "../components/StockTransactionModal.jsx";
 
 const movementPipelineData = [
@@ -59,6 +59,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
   const [movements, setMovements] = useState([]);
   const [activeTab, setActiveTab] = useState(initialType);
   const [search, setSearch] = useState("");
+  const [products, setProducts] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
@@ -68,6 +69,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
 
   useEffect(() => {
     fetchStockMovements().then((data) => setMovements(data.results || []));
+    fetchProducts().then((res) => setProducts(res.results || res || []));
   }, []);
 
   const showToast = (msg) => {
@@ -75,14 +77,37 @@ export function StockMovementsPage({ initialType = "ALL" }) {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  const productMap = React.useMemo(() => {
+    const map = {};
+    products.forEach((p) => {
+      const key = p.sku || p.code || p.id;
+      if (key) map[key] = p;
+    });
+    return map;
+  }, [products]);
+
   const filteredMovements = movements.filter((m) => {
     const matchesTab = activeTab === "ALL" || m.type === activeTab;
+    const q = search.trim().toLowerCase();
+    if (!q) return matchesTab;
+    const prod = productMap[m.item];
     const matchesSearch =
-      m.document_number?.toLowerCase().includes(search.toLowerCase()) ||
-      m.item?.toLowerCase().includes(search.toLowerCase()) ||
-      m.warehouse?.toLowerCase().includes(search.toLowerCase());
+      m.document_number?.toLowerCase().includes(q) ||
+      m.item?.toLowerCase().includes(q) ||
+      m.warehouse?.toLowerCase().includes(q) ||
+      (prod?.barcode && String(prod.barcode).toLowerCase().includes(q));
     return matchesTab && matchesSearch;
   });
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === "Enter" && search.trim()) {
+      const matched = lookupProductByBarcode(search, products);
+      if (matched) {
+        playScanBeep();
+        showToast(`Scanned product matched: ${matched.name} (${matched.sku})`);
+      }
+    }
+  };
 
   const handleTransactionPosted = (newTx) => {
     setMovements((prev) => [newTx, ...prev]);
@@ -477,8 +502,9 @@ export function StockMovementsPage({ initialType = "ALL" }) {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by document number, product name or facility..."
-            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/80 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+            onKeyDown={handleSearchKeyDown}
+            placeholder="Search or scan barcode, SKU, doc #, or warehouse..."
+            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/80 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500 font-medium"
           />
         </div>
         <span className="text-xs text-slate-400 dark:text-zinc-500 font-mono tabular-nums">

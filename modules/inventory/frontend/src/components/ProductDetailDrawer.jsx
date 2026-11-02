@@ -26,11 +26,13 @@ import {
   fetchAttachments,
   uploadAttachment,
   deleteAttachment,
+  fetchCategories,
 } from "@/services/api";
 
 export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [attachments, setAttachments] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -49,9 +51,23 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
   useEffect(() => {
     if (isOpen && product) {
       loadAttachments();
+      fetchCategories().then((list) => {
+        setCategories(list);
+        const selectedCategory = list.find(
+          (category) =>
+            String(category.id) === String(product.category_id) ||
+            category.name === product.category
+        );
+        if (selectedCategory) {
+          setEditForm((prev) => ({
+            ...prev,
+            category: String(selectedCategory.id ?? selectedCategory.name),
+          }));
+        }
+      });
       setEditForm({
         name: product.name || "",
-        category: product.category || "",
+        category: String(product.category_id ?? product.category ?? ""),
         brand: product.brand || "",
         unit: product.unit || "EA",
         unit_cost: product.unit_cost || 0,
@@ -114,10 +130,17 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
     if (e) e.preventDefault();
     if (!editForm.name.trim()) return;
 
+    const selectedCategory = categories.find(
+      (category) =>
+        String(category.id) === editForm.category ||
+        category.name === editForm.category
+    );
     const updated = {
       ...product,
       name: editForm.name,
-      category: editForm.category,
+      category: selectedCategory?.name || editForm.category,
+      category_id: selectedCategory?.id ?? product.category_id,
+      category_name: selectedCategory?.name || editForm.category,
       brand: editForm.brand,
       unit: editForm.unit,
       unit_cost: parseFloat(editForm.unit_cost) || product.unit_cost,
@@ -227,12 +250,35 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
                     onChange={(e) => setEditForm((prev) => ({ ...prev, category: e.target.value }))}
                     className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 text-xs"
                   >
-                    <option value="Mechanical Components">Mechanical Components</option>
-                    <option value="Hydraulics & Pneumatics">Hydraulics & Pneumatics</option>
-                    <option value="Sensors & Automation">Sensors & Automation</option>
-                    <option value="Power Transmission">Power Transmission</option>
-                    <option value="Chemicals & Fluids">Chemicals & Fluids</option>
-                    <option value="Structural Elements">Structural Elements</option>
+                    {categories.length > 0 ? (
+                      categories.map((category) => (
+                        <option
+                          key={category.id || category.code}
+                          value={String(category.id ?? category.name)}
+                        >
+                          {category.name}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="Mechanical Components">Mechanical Components</option>
+                        <option value="Hydraulics & Pneumatics">Hydraulics & Pneumatics</option>
+                        <option value="Sensors & Automation">Sensors & Automation</option>
+                        <option value="Power Transmission">Power Transmission</option>
+                        <option value="Chemicals & Fluids">Chemicals & Fluids</option>
+                        <option value="Structural Elements">Structural Elements</option>
+                      </>
+                    )}
+                    {editForm.category &&
+                      !categories.some(
+                        (category) =>
+                          String(category.id) === editForm.category ||
+                          category.name === editForm.category
+                      ) && (
+                        <option value={editForm.category}>
+                          {product.category || editForm.category}
+                        </option>
+                      )}
                   </select>
                 </div>
                 <div>
@@ -331,7 +377,8 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
                       <div>
                         <span className="text-slate-400">Primary Barcode:</span>
                         <div className="font-mono font-medium text-slate-800 dark:text-zinc-200 flex items-center gap-1">
-                          <Barcode className="h-3.5 w-3.5 text-slate-400" /> 890123984210
+                          <Barcode className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                          <span>{product.barcode || product.sku || "N/A"}</span>
                         </div>
                       </div>
                       <div>

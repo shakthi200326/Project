@@ -22,6 +22,46 @@ function updateApiStatus(connected) {
 }
 
 // ---------------------------------------------------------------------------
+// Barcode Scanner & Optical Chime Audio Helper
+// ---------------------------------------------------------------------------
+export function playScanBeep() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(1850, ctx.currentTime);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.1);
+  } catch (e) {}
+}
+
+export function lookupProductByBarcode(query, productsList = []) {
+  if (!query) return null;
+  const clean = String(query).trim().toLowerCase();
+  return (
+    productsList.find((p) => {
+      const barcode = String(p.barcode || "").trim().toLowerCase();
+      const sku = String(p.sku || p.code || "").trim().toLowerCase();
+      const name = String(p.name || "").trim().toLowerCase();
+      return barcode === clean || sku === clean || name === clean;
+    }) ||
+    productsList.find((p) => {
+      const barcode = String(p.barcode || "").trim().toLowerCase();
+      const sku = String(p.sku || p.code || "").trim().toLowerCase();
+      return (barcode && barcode.includes(clean)) || (sku && sku.includes(clean));
+    }) ||
+    null
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Universal Local Storage Persistence Helpers
 // Guarantees 100% persistence on page refresh across all entities & offline mode
 // ---------------------------------------------------------------------------
@@ -82,12 +122,13 @@ function resolveCategoryId(cat) {
   if (typeof cat === "number" && !isNaN(cat)) return cat;
   if (!cat) return 1;
   const s = String(cat).toLowerCase().trim();
-  if (s.includes("mech") || s === "1" || s === "cat-1") return 1;
-  if (s.includes("hyd") || s === "2" || s === "cat-2") return 2;
-  if (s.includes("trans") || s === "3" || s === "cat-3") return 3;
-  if (s.includes("sens") || s === "4" || s === "cat-4") return 4;
-  if (s.includes("chem") || s === "5" || s === "cat-5") return 5;
-  return 1;
+  if (/^\d+$/.test(s)) return Number(s);
+  if (s.includes("mech") || s === "cat-1") return 1;
+  if (s.includes("hyd") || s === "cat-2") return 2;
+  if (s.includes("trans") || s === "cat-3") return 3;
+  if (s.includes("sens") || s === "cat-4") return 4;
+  if (s.includes("chem") || s === "cat-5") return 5;
+  return null;
 }
 
 function resolveCategoryName(cat) {
@@ -104,7 +145,9 @@ function resolveCategoryName(cat) {
     case 5:
       return "Chemicals & Fluids";
     default:
-      return typeof cat === "string" ? cat : "Mechanical Components";
+      return typeof cat === "string" && !/^\d+$/.test(cat)
+        ? cat
+        : "Mechanical Components";
   }
 }
 
@@ -417,6 +460,7 @@ export async function fetchProducts(params = {}) {
           ...p,
           sku: p.code || p.sku,
           name: p.name,
+          category_id: p.category,
           category: p.category_name || resolveCategoryName(p.category),
           brand: p.brand || "Preferred OEM",
           unit: p.base_unit || p.unit || "EA",
@@ -463,13 +507,16 @@ export async function fetchProducts(params = {}) {
 }
 
 export async function createProduct(payload) {
-  const categoryId = resolveCategoryId(payload.category);
-  const categoryName = resolveCategoryName(payload.category || categoryId);
+  const categoryValue = payload.category_id ?? payload.category;
+  const categoryId = resolveCategoryId(categoryValue);
+  const categoryName =
+    payload.category_name || resolveCategoryName(payload.category || categoryId);
   const sku = (payload.code || payload.sku || `SKU-${Date.now().toString().slice(-6)}`).toUpperCase();
   const name = payload.name || "Untitled Product";
   const reorderPoint = Number(payload.reorder_point ?? 50);
   const reorderQty = Number(payload.reorder_quantity ?? (reorderPoint * 2));
   const initialCost = Number(payload.initial_cost || payload.unit_cost || 14.85);
+  const barcode = payload.barcode?.trim() || `890123${Math.floor(100000 + Math.random() * 900000)}`;
 
   const requestBody = {
     code: sku,
@@ -478,7 +525,7 @@ export async function createProduct(payload) {
     category: categoryId,
     base_unit: payload.base_unit || payload.unit || "EA",
     item_type: payload.item_type || "STOCK",
-    barcode: payload.barcode || "",
+    barcode: barcode,
     brand: payload.brand || "Preferred OEM",
     tracking: payload.tracking || "NONE",
     reorder_point: reorderPoint,
@@ -502,8 +549,10 @@ export async function createProduct(payload) {
         id: apiItem.id,
         sku: apiItem.code || sku,
         name: apiItem.name || name,
-        category: categoryName,
-        category_name: categoryName,
+        barcode: apiItem.barcode || barcode,
+        category_id: apiItem.category ?? categoryId,
+        category: apiItem.category_name || categoryName,
+        category_name: apiItem.category_name || categoryName,
         brand: apiItem.brand || payload.brand || "Preferred OEM",
         unit: apiItem.base_unit || "EA",
         unit_cost: initialCost,
@@ -527,6 +576,8 @@ export async function createProduct(payload) {
       sku,
       code: sku,
       name,
+      barcode: barcode,
+      category_id: categoryId,
       category: categoryName,
       category_name: categoryName,
       brand: payload.brand || "Preferred OEM",
@@ -539,7 +590,6 @@ export async function createProduct(payload) {
       stock_status: "OUT_OF_STOCK",
       reorder_point: reorderPoint,
       reorder_quantity: reorderQty,
-      barcode: payload.barcode || "",
       variants_count: 1,
       status: "ACTIVE",
       currency: "USD",
@@ -567,9 +617,17 @@ export async function createProduct(payload) {
 }
 
 export async function updateProduct(id, payload) {
-  const categoryId = payload.category ? resolveCategoryId(payload.category) : undefined;
-  const patchData = { ...payload };
-  if (categoryId) patchData.category = categoryId;
+  const categoryValue = payload.category_id ?? payload.category;
+  const categoryId = categoryValue ? resolveCategoryId(categoryValue) : undefined;
+  const patchData = {
+    name: payload.name,
+    brand: payload.brand,
+    base_unit: payload.base_unit || payload.unit,
+    reorder_point: payload.reorder_point,
+  };
+  if (categoryId !== undefined && categoryId !== null) {
+    patchData.category = categoryId;
+  }
 
   let updatedProduct = null;
 
@@ -586,7 +644,11 @@ export async function updateProduct(id, payload) {
         ...payload,
         ...apiItem,
         sku: apiItem.code || payload.sku,
-        category: resolveCategoryName(apiItem.category || payload.category),
+        category_id: apiItem.category ?? payload.category_id,
+        category:
+          apiItem.category_name ||
+          payload.category_name ||
+          resolveCategoryName(payload.category || apiItem.category),
       };
     }
   } catch (e) {}

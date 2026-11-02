@@ -32,10 +32,7 @@ export function SettingsPage() {
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
               Inventory Configuration & Architecture
             </h1>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60">
-              <Cpu className="h-2.5 w-2.5" />
-              v3.1 Core
-            </span>
+           
           </div>
           <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
             Global valuation policies, stock alert horizons, replenishment triggers, and pluggable storage backends.

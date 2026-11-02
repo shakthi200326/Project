@@ -14,11 +14,24 @@ import {
   DollarSign,
   FileText,
   Sparkles,
+  Barcode,
+  Scan,
+  CheckCircle2,
+  Package,
 } from "lucide-react";
-import { postStockTransaction } from "../services/api";
+import {
+  postStockTransaction,
+  fetchProducts,
+  playScanBeep,
+  lookupProductByBarcode,
+} from "../services/api";
 
 export function StockTransactionModal({ isOpen, initialType = "RECEIPT", onClose, onPosted }) {
   const [txType, setTxType] = useState(initialType);
+  const [products, setProducts] = useState([]);
+  const [barcodeInput, setBarcodeInput] = useState("");
+  const [verifiedProduct, setVerifiedProduct] = useState(null);
+
   const [formData, setFormData] = useState({
     warehouse: "Main Central Fulfillment Hub",
     destWarehouse: "East Coast Logistics Terminal",
@@ -35,11 +48,64 @@ export function StockTransactionModal({ isOpen, initialType = "RECEIPT", onClose
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  React.useEffect(() => {
+    fetchProducts().then((res) => {
+      const list = res.results || res || [];
+      setProducts(list);
+      if (list.length > 0) {
+        const init = list.find((p) => p.sku === formData.itemSku) || list[0];
+        setVerifiedProduct(init);
+        if (init && !formData.itemSku) {
+          setFormData((prev) => ({
+            ...prev,
+            itemSku: init.sku,
+            unitCost: init.unit_cost || prev.unitCost,
+          }));
+        }
+      }
+    });
+  }, []);
+
   if (!isOpen) return null;
+
+  const handleApplyProduct = (product) => {
+    if (!product) return;
+    playScanBeep();
+    setVerifiedProduct(product);
+    setFormData((prev) => ({
+      ...prev,
+      itemSku: product.sku || product.code,
+      unitCost: product.unit_cost !== undefined ? Number(product.unit_cost) : prev.unitCost,
+    }));
+    setError("");
+  };
+
+  const handleBarcodeScan = (code) => {
+    const clean = code?.trim();
+    if (!clean) return;
+    const match = lookupProductByBarcode(clean, products);
+    if (match) {
+      handleApplyProduct(match);
+      setBarcodeInput("");
+    } else {
+      setError(`No product matched barcode "${clean}".`);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((p) => ({ ...p, [name]: value }));
+
+    if (name === "itemSku") {
+      const found = products.find((p) => p.sku === value || p.code === value);
+      if (found) {
+        setVerifiedProduct(found);
+        setFormData((prev) => ({
+          ...prev,
+          unitCost: found.unit_cost !== undefined ? Number(found.unit_cost) : prev.unitCost,
+        }));
+      }
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -160,6 +226,64 @@ export function StockTransactionModal({ isOpen, initialType = "RECEIPT", onClose
 
         <form onSubmit={handleSubmit}>
           <div className="p-6 space-y-4 text-xs">
+            {/* Barcode Scanner Input */}
+            <div className="p-3.5 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/80 dark:border-blue-900/60 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
+                  <Scan className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  Scan Barcode / SKU Reader
+                </label>
+                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                  Press Enter or scan label to auto-populate
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Barcode className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                  <input
+                    type="text"
+                    value={barcodeInput}
+                    onChange={(e) => setBarcodeInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleBarcodeScan(barcodeInput);
+                      }
+                    }}
+                    placeholder="Scan or enter barcode (e.g. 890123620501 or BRG-6205-2RS)..."
+                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-blue-200 dark:border-blue-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white font-mono text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleBarcodeScan(barcodeInput)}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer transition-colors shadow-xs"
+                >
+                  Decode
+                </button>
+              </div>
+
+              {/* Verified Product Telemetry Card */}
+              {verifiedProduct && (
+                <div className="pt-2 mt-2 border-t border-blue-200/60 dark:border-blue-900/40 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <div>
+                      <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <span>{verifiedProduct.name}</span>
+                        <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
+                          {verifiedProduct.sku || verifiedProduct.code}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-500 dark:text-zinc-400 font-mono mt-0.5">
+                        Barcode: <strong className="text-slate-700 dark:text-zinc-300">{verifiedProduct.barcode || verifiedProduct.sku}</strong> • On-Hand: <strong className="text-emerald-600 dark:text-emerald-400">{verifiedProduct.available ?? verifiedProduct.on_hand ?? 450} {verifiedProduct.unit || "EA"}</strong> • Valuation: <strong className="text-slate-700 dark:text-zinc-300">${Number(verifiedProduct.unit_cost || 14.85).toFixed(2)}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Item & Quantity Row */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -172,10 +296,20 @@ export function StockTransactionModal({ isOpen, initialType = "RECEIPT", onClose
                   onChange={handleChange}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
                 >
-                  <option value="BRG-6205-2RS">BRG-6205-2RS (Ball Bearing)</option>
-                  <option value="HYD-SV-24V">HYD-SV-24V (Solenoid Valve)</option>
-                  <option value="BELT-T10-1200">BELT-T10-1200 (Timing Belt)</option>
-                  <option value="LUB-SYN-VG46">LUB-SYN-VG46 (Synthetic Oil)</option>
+                  {products.length > 0 ? (
+                    products.map((p) => (
+                      <option key={p.id || p.sku} value={p.sku}>
+                        {p.sku} - {p.name} {p.barcode ? `[${p.barcode}]` : ""}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="BRG-6205-2RS">BRG-6205-2RS (Ball Bearing)</option>
+                      <option value="HYD-SV-24V">HYD-SV-24V (Solenoid Valve)</option>
+                      <option value="BELT-T10-1200">BELT-T10-1200 (Timing Belt)</option>
+                      <option value="LUB-SYN-VG46">LUB-SYN-VG46 (Synthetic Oil)</option>
+                    </>
+                  )}
                 </select>
               </div>
 

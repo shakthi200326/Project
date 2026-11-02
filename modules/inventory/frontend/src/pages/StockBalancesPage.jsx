@@ -13,6 +13,13 @@ import {
   CheckCircle,
   AlertTriangle,
   Zap,
+  Scan,
+  Barcode,
+  Eye,
+  X,
+  Package,
+  Camera,
+  Sparkles,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -28,16 +35,28 @@ import {
   Line,
   ReferenceLine,
 } from "recharts";
-import { fetchStockBalances } from "../services/api";
+import {
+  fetchStockBalances,
+  fetchProducts,
+  playScanBeep,
+  lookupProductByBarcode,
+} from "../services/api";
 
 export function StockBalancesPage() {
   const [balances, setBalances] = useState([]);
+  const [products, setProducts] = useState([]);
   const [search, setSearch] = useState("");
   const [warehouseFilter, setWarehouseFilter] = useState("ALL");
   const [toastMessage, setToastMessage] = useState(null);
 
+  // Barcode Scanner & Details Modal State
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scannerInput, setScannerInput] = useState("");
+  const [selectedDetail, setSelectedDetail] = useState(null);
+
   useEffect(() => {
     fetchStockBalances().then((res) => setBalances(res.results || []));
+    fetchProducts().then((res) => setProducts(res.results || res || []));
   }, []);
 
   const showToast = (msg) => {
@@ -45,12 +64,78 @@ export function StockBalancesPage() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  const productMap = useMemo(() => {
+    const map = {};
+    products.forEach((p) => {
+      const key = p.sku || p.code || p.id;
+      if (key) map[key] = p;
+    });
+    return map;
+  }, [products]);
+
+  const handleExecuteScan = (rawCode) => {
+    const clean = rawCode?.trim();
+    if (!clean) return;
+
+    // First try lookup in products catalog
+    const matchedProduct = lookupProductByBarcode(clean, products);
+    // Also try finding in balances
+    const matchedBalance = balances.find((b) =>
+      b.item_code?.toLowerCase() === clean.toLowerCase() ||
+      b.item_name?.toLowerCase().includes(clean.toLowerCase()) ||
+      (matchedProduct && b.item_code?.toLowerCase() === matchedProduct.sku?.toLowerCase())
+    );
+
+    if (matchedProduct || matchedBalance) {
+      playScanBeep();
+      const code = matchedProduct?.sku || matchedBalance?.item_code;
+      const prod = matchedProduct || productMap[code] || {};
+      const bal = matchedBalance || balances.find((b) => b.item_code === code) || {};
+
+      setSelectedDetail({
+        sku: code,
+        name: prod.name || bal.item_name || "Catalog Product",
+        barcode: prod.barcode || clean,
+        warehouse: bal.warehouse_name || "Main Central Hub",
+        location: bal.location_code || "A3-RB",
+        on_hand: bal.on_hand_qty ?? prod.on_hand ?? 0,
+        reserved: bal.reserved_qty ?? prod.reserved ?? 0,
+        blocked: bal.blocked_qty ?? 0,
+        available: bal.available_qty ?? prod.available ?? 0,
+        unit: bal.unit || prod.unit || "EA",
+        unit_cost: prod.unit_cost || 14.85,
+        category: prod.category || "Mechanical Components",
+        brand: prod.brand || "OEM Standard",
+        reorder_point: prod.reorder_point || 50,
+      });
+
+      setSearch(code || clean);
+      setIsScannerOpen(false);
+      setScannerInput("");
+      showToast(`Scanned: ${prod.name || bal.item_name} (${code})`);
+    } else {
+      showToast(`No stock balance or catalog item for barcode "${clean}".`);
+    }
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === "Enter" && search.trim()) {
+      e.preventDefault();
+      handleExecuteScan(search);
+    }
+  };
+
   const filtered = balances.filter((b) => {
     const matchesWh = warehouseFilter === "ALL" || b.warehouse_name === warehouseFilter;
+    const q = search.trim().toLowerCase();
+    const productForCode = productMap[b.item_code];
     const matchesSearch =
-      b.item_name?.toLowerCase().includes(search.toLowerCase()) ||
-      b.item_code?.toLowerCase().includes(search.toLowerCase()) ||
-      b.location_code?.toLowerCase().includes(search.toLowerCase());
+      !q ||
+      b.item_name?.toLowerCase().includes(q) ||
+      b.item_code?.toLowerCase().includes(q) ||
+      b.location_code?.toLowerCase().includes(q) ||
+      (b.barcode && String(b.barcode).toLowerCase().includes(q)) ||
+      (productForCode?.barcode && String(productForCode.barcode).toLowerCase().includes(q));
     return matchesWh && matchesSearch;
   });
 
@@ -615,15 +700,30 @@ export function StockBalancesPage() {
 
       {/* Toolbar */}
       <div className="p-3 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by SKU, product name or location..."
-            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/80 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-          />
+        <div className="flex items-center gap-2 flex-1 max-w-lg">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              placeholder="Search or scan barcode/SKU (Press Enter to inspect)..."
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/80 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500 font-medium"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setIsScannerOpen(true);
+              setScannerInput("");
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-xs font-semibold cursor-pointer transition-colors shadow-xs shrink-0"
+            title="Scan Barcode to View Stock Balances & Specs"
+          >
+            <Scan className="h-3.5 w-3.5" />
+            <span>Scan Barcode</span>
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -654,6 +754,7 @@ export function StockBalancesPage() {
                 <th className="py-3.5 px-4 font-semibold text-right">Blocked (QC)</th>
                 <th className="py-3.5 px-4 font-semibold text-right">Free Available</th>
                 <th className="py-3.5 px-4 text-center">Status</th>
+                <th className="py-3.5 px-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
@@ -701,12 +802,289 @@ export function StockBalancesPage() {
                       {b.available_qty <= 0 ? "OUT OF STOCK" : b.available_qty < 25 ? "LOW STOCK" : "IN STOCK"}
                     </span>
                   </td>
+                  <td className="py-3.5 px-4 text-center">
+                    <button
+                      type="button"
+                      onClick={() => handleExecuteScan(b.item_code)}
+                      className="p-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 text-slate-500 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                      title="Inspect Product & Barcode Details"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Barcode Scanner Station Modal */}
+      {isScannerOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="p-5 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/50">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
+                  <Scan className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    Stock Balance Barcode Scanner
+                    <span className="flex h-2 w-2 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20 animate-pulse" />
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                    Scan any product barcode or SKU to inspect facility balances and specifications.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsScannerOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Viewfinder Graphic */}
+            <div className="p-6 space-y-4">
+              <div className="relative h-44 rounded-2xl bg-slate-950 flex flex-col items-center justify-center overflow-hidden border border-slate-800 shadow-inner">
+                {/* Viewfinder Corners */}
+                <div className="absolute top-4 left-4 h-6 w-6 border-t-2 border-l-2 border-blue-500 rounded-tl-md" />
+                <div className="absolute top-4 right-4 h-6 w-6 border-t-2 border-r-2 border-blue-500 rounded-tr-md" />
+                <div className="absolute bottom-4 left-4 h-6 w-6 border-b-2 border-l-2 border-blue-500 rounded-bl-md" />
+                <div className="absolute bottom-4 right-4 h-6 w-6 border-b-2 border-r-2 border-blue-500 rounded-br-md" />
+
+                {/* Red Laser Scanning Beam */}
+                <div className="absolute inset-x-8 top-1/2 -translate-y-1/2 h-0.5 bg-rose-500 shadow-lg shadow-rose-500/80 animate-pulse" />
+
+                <div className="text-center space-y-1 text-slate-300 z-10 pointer-events-none">
+                  <Camera className="h-7 w-7 mx-auto text-blue-400 opacity-80" />
+                  <div className="text-xs font-semibold tracking-wide">
+                    Align Barcode within Scanning Viewfinder
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-mono">
+                    Ready for Handheld Scanner or Rapid Keyboard Input
+                  </div>
+                </div>
+              </div>
+
+              {/* Fast Barcode Input Form */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleExecuteScan(scannerInput);
+                }}
+                className="space-y-2"
+              >
+                <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                  Scan Barcode or Enter Barcode / SKU:
+                </label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Barcode className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <input
+                      autoFocus
+                      type="text"
+                      value={scannerInput}
+                      onChange={(e) => setScannerInput(e.target.value)}
+                      placeholder="e.g. 890123620501 or BRG-6205-2RS"
+                      className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                  >
+                    Inspect
+                  </button>
+                </div>
+              </form>
+
+              {/* Quick Barcode Test Deck */}
+              <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-zinc-800">
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400 flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-blue-500" /> Quick-Test Catalog Barcodes:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { code: "890123620501", label: "Ball Bearing (890123620501)" },
+                    { code: "890123240012", label: "Hydraulic Valve (890123240012)" },
+                    { code: "890123120034", label: "Timing Belt (890123120034)" },
+                    { code: "890123102498", label: "Encoder (890123102498)" },
+                    { code: "890123460077", label: "Lubricant (890123460077)" },
+                  ].map((pill) => (
+                    <button
+                      key={pill.code}
+                      type="button"
+                      onClick={() => handleExecuteScan(pill.code)}
+                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-zinc-800 dark:hover:bg-blue-950/60 text-slate-700 hover:text-blue-600 dark:text-zinc-300 dark:hover:text-blue-300 font-mono text-[10px] font-semibold border border-slate-200/80 dark:border-zinc-700 transition-colors cursor-pointer"
+                    >
+                      {pill.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 px-6 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 flex items-center justify-between text-xs">
+              <span className="text-[11px] text-slate-500 dark:text-zinc-400 flex items-center gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Audio scan chime enabled
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsScannerOpen(false)}
+                className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 font-semibold cursor-pointer"
+              >
+                Close Station
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Scanned Product Details Modal */}
+      {selectedDetail && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-xl bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="p-6 border-b border-slate-100 dark:border-zinc-800 flex items-start justify-between bg-slate-50/50 dark:bg-zinc-900/50">
+              <div className="flex items-start gap-3.5">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20 shrink-0">
+                  <Package className="h-6 w-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
+                      {selectedDetail.sku}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                        selectedDetail.available > 0
+                          ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300"
+                          : "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300"
+                      }`}
+                    >
+                      {selectedDetail.available > 0 ? "IN STOCK" : "OUT OF STOCK"}
+                    </span>
+                  </div>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white mt-1">
+                    {selectedDetail.name}
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                    {selectedDetail.category} • {selectedDetail.brand}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedDetail(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-5 text-xs">
+              {/* Barcode Banner */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700/60 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-xs">
+                    <Barcode className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                      Primary Barcode (EAN-13 / GS1)
+                    </span>
+                    <div className="font-mono font-bold text-slate-900 dark:text-white text-sm">
+                      {selectedDetail.barcode || selectedDetail.sku}
+                    </div>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  Grade A Verified
+                </span>
+              </div>
+
+              {/* Balances Telemetry Strip */}
+              <div className="grid grid-cols-4 gap-2.5 text-center">
+                <div className="p-3 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40">
+                  <span className="text-[10px] text-slate-400 block font-medium">On-Hand</span>
+                  <span className="text-base font-bold font-mono text-slate-900 dark:text-white mt-0.5 block tabular-nums">
+                    {selectedDetail.on_hand}
+                  </span>
+                  <span className="text-[9px] text-slate-400">{selectedDetail.unit}</span>
+                </div>
+                <div className="p-3 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40">
+                  <span className="text-[10px] text-slate-400 block font-medium">Available</span>
+                  <span className="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 block tabular-nums">
+                    {selectedDetail.available}
+                  </span>
+                  <span className="text-[9px] text-slate-400">{selectedDetail.unit}</span>
+                </div>
+                <div className="p-3 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40">
+                  <span className="text-[10px] text-slate-400 block font-medium">Reserved</span>
+                  <span className="text-base font-bold font-mono text-purple-600 dark:text-purple-400 mt-0.5 block tabular-nums">
+                    {selectedDetail.reserved}
+                  </span>
+                  <span className="text-[9px] text-slate-400">{selectedDetail.unit}</span>
+                </div>
+                <div className="p-3 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40">
+                  <span className="text-[10px] text-slate-400 block font-medium">Blocked QC</span>
+                  <span className="text-base font-bold font-mono text-amber-600 dark:text-amber-400 mt-0.5 block tabular-nums">
+                    {selectedDetail.blocked}
+                  </span>
+                  <span className="text-[9px] text-slate-400">{selectedDetail.unit}</span>
+                </div>
+              </div>
+
+              {/* Warehouse & Location Specs */}
+              <div className="grid grid-cols-2 gap-3 p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                <div>
+                  <span className="text-slate-400 block text-[10px]">Assigned Facility:</span>
+                  <span className="font-semibold text-slate-800 dark:text-zinc-200 block mt-0.5">
+                    {selectedDetail.warehouse}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">Storage Bin / Rack:</span>
+                  <span className="font-mono font-bold text-slate-800 dark:text-zinc-200 block mt-0.5">
+                    {selectedDetail.location}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">WAV Unit Valuation:</span>
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 block mt-0.5">
+                    ${Number(selectedDetail.unit_cost).toFixed(2)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">Total Holding Capital:</span>
+                  <span className="font-mono font-bold text-blue-600 dark:text-blue-400 block mt-0.5">
+                    ${(Number(selectedDetail.on_hand) * Number(selectedDetail.unit_cost)).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 px-6 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 flex items-center justify-between text-xs">
+              <span className="text-[11px] text-slate-500 dark:text-zinc-400 font-mono">
+                System Status: Active Registered Catalog
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedDetail(null)}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer shadow-xs transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
