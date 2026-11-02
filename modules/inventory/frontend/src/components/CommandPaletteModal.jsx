@@ -19,6 +19,15 @@ import {
   ChevronRight,
   Barcode,
   Scan,
+  Layers,
+  Tag,
+  Ruler,
+  MapPin,
+  SlidersHorizontal,
+  BookmarkCheck,
+  TrendingUp,
+  PieChart,
+  Settings,
 } from "lucide-react";
 import { useTheme } from "@shared/shell-app/ThemeProvider.jsx";
 import { useWorkspace } from "@shared/shell-app/ContextSelector.jsx";
@@ -53,18 +62,27 @@ export function CommandPaletteModal({ isOpen, onClose }) {
 
   const actions = [
     { label: "Dashboard Overview", path: "/inventory", icon: LayoutDashboard, category: "Navigation" },
-    { label: "Products & Catalog", path: "/inventory/products", icon: Package, category: "Navigation" },
-    { label: "Barcodes & QR Code Station", path: "/inventory/barcodes", icon: Barcode, category: "Navigation" },
-    { label: "Warehouses & Facilities", path: "/inventory/warehouses", icon: Building2, category: "Navigation" },
+    { label: "Products & Catalog", path: "/inventory/products", icon: Package, category: "Catalog" },
+    { label: "Categories & Taxonomy", path: "/inventory/categories", icon: Layers, category: "Catalog" },
+    { label: "Brands & Manufacturers", path: "/inventory/brands", icon: Tag, category: "Catalog" },
+    { label: "Units of Measure (UOM)", path: "/inventory/units", icon: Ruler, category: "Catalog" },
+    { label: "Barcodes & QR Station", path: "/inventory/barcodes", icon: Barcode, category: "Catalog" },
+    { label: "Warehouses & Facilities", path: "/inventory/warehouses", icon: Building2, category: "Facilities" },
+    { label: "Storage Locations & Bins", path: "/inventory/locations", icon: MapPin, category: "Facilities" },
     { label: "Stock In (Goods Receipt)", path: "/inventory/operations/stock-in", icon: ArrowDownLeft, category: "Operations" },
     { label: "Stock Out (Stock Issue)", path: "/inventory/operations/stock-out", icon: ArrowUpRight, category: "Operations" },
     { label: "Warehouse Transfers", path: "/inventory/operations/transfers", icon: ArrowLeftRight, category: "Operations" },
-    { label: "Physical Stock Reconciliation", path: "/inventory/operations/reconciliation", icon: CheckCircle2, category: "Operations" },
+    { label: "Cycle Adjustments", path: "/inventory/operations/adjustments", icon: SlidersHorizontal, category: "Operations" },
+    { label: "Stock Reservations", path: "/inventory/operations/reservations", icon: BookmarkCheck, category: "Operations" },
+    { label: "Physical Reconciliation", path: "/inventory/operations/reconciliation", icon: CheckCircle2, category: "Operations" },
     { label: "Stock Balances & Liquidity", path: "/inventory/control/balances", icon: Package, category: "Stock Control" },
     { label: "Immutable Stock Ledger", path: "/inventory/control/ledger", icon: FileSpreadsheet, category: "Stock Control" },
     { label: "Batch & Lot Tracking", path: "/inventory/control/batches", icon: Hash, category: "Stock Control" },
     { label: "Serial Number Registry", path: "/inventory/control/serials", icon: Cpu, category: "Stock Control" },
-    { label: "Inventory Valuation (WAV)", path: "/inventory/analytics/valuation", icon: DollarSign, category: "Analytics" },
+    { label: "Replenishment & Alerts", path: "/inventory/planning/replenishment", icon: TrendingUp, category: "Planning" },
+    { label: "Valuation Reports (WAV)", path: "/inventory/analytics/valuation", icon: DollarSign, category: "Analytics" },
+    { label: "Analytics & KPI Reports", path: "/inventory/analytics/reports", icon: PieChart, category: "Analytics" },
+    { label: "Inventory Settings", path: "/inventory/settings", icon: Settings, category: "Configuration" },
   ];
 
   const q = query.trim().toLowerCase();

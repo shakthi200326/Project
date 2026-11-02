@@ -80,6 +80,27 @@ export default function App() {
 
                 {/* Settings */}
                 <Route path="/inventory/settings" element={<SettingsPage />} />
+
+                {/* Direct & Convenience Route Aliases */}
+                <Route path="/products" element={<Navigate to="/inventory/products" replace />} />
+                <Route path="/categories" element={<Navigate to="/inventory/categories" replace />} />
+                <Route path="/brands" element={<Navigate to="/inventory/brands" replace />} />
+                <Route path="/variants" element={<Navigate to="/inventory/products" replace />} />
+                <Route path="/units" element={<Navigate to="/inventory/units" replace />} />
+                <Route path="/barcodes" element={<Navigate to="/inventory/barcodes" replace />} />
+                <Route path="/warehouses" element={<Navigate to="/inventory/warehouses" replace />} />
+                <Route path="/locations" element={<Navigate to="/inventory/locations" replace />} />
+                <Route path="/ledger" element={<Navigate to="/inventory/control/ledger" replace />} />
+                <Route path="/balances" element={<Navigate to="/inventory/control/balances" replace />} />
+                <Route path="/batches" element={<Navigate to="/inventory/control/batches" replace />} />
+                <Route path="/control/batches" element={<Navigate to="/inventory/control/batches" replace />} />
+                <Route path="/serials" element={<Navigate to="/inventory/control/serials" replace />} />
+                <Route path="/replenishment" element={<Navigate to="/inventory/planning/replenishment" replace />} />
+                <Route path="/valuation" element={<Navigate to="/inventory/analytics/valuation" replace />} />
+                <Route path="/reports" element={<Navigate to="/inventory/analytics/reports" replace />} />
+                <Route path="/settings" element={<Navigate to="/inventory/settings" replace />} />
+                <Route path="/reconciliation" element={<Navigate to="/inventory/operations/reconciliation" replace />} />
+
                 <Route path="*" element={<Navigate to="/inventory" replace />} />
               </Routes>
             </Suspense>

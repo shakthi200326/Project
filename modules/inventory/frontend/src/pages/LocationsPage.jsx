@@ -740,7 +740,7 @@ export function LocationsPage() {
 
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  Friendly Location Title / Description
+                  Location Title / Description
                 </label>
                 <input
                   type="text"

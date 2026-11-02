@@ -224,14 +224,14 @@ export function ProductsPage() {
   const handleBulkPrintBarcodes = () => {
     showToast(`Directing ${selectedIds.length} items to Barcode Generator...`);
     setTimeout(() => {
-      navigate("/barcodes");
+      navigate("/inventory/barcodes");
     }, 600);
   };
 
   const handleBulkUpdateReorder = () => {
     showToast(`Directing ${selectedIds.length} items to Replenishment Matrix...`);
     setTimeout(() => {
-      navigate("/replenishment");
+      navigate("/inventory/planning/replenishment");
     }, 600);
   };
 

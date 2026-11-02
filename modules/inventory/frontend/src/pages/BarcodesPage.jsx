@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 import {
   Barcode,
   Search,
   Printer,
   Download,
   Eye,
-  QrCode,
   CheckCircle2,
   Copy,
   Scan,
@@ -16,7 +17,6 @@ import {
   Radio,
   Sliders,
   Check,
-  Camera,
   ExternalLink,
   Layers,
   Boxes,
@@ -43,6 +43,7 @@ import {
   PieChart,
   Pie,
 } from "recharts";
+import JsBarcode from "jsbarcode";
 import { DEMO_PRODUCTS, fetchProducts, playScanBeep, lookupProductByBarcode } from "../services/api";
 
 const symbologyData = [
@@ -115,12 +116,101 @@ const ansiGradeData = [
   { name: "Grade D/F (<2)", label: "Grade D/F (Fail)", value: 0.7, fill: "#f43f5e", desc: "Thermal ribbon void or burn-in" },
 ];
 
+const THERMAL_LABEL_SIZES = {
+  "50x30": { label: "50 × 30 mm", width: 50, height: 30, barcodeHeight: 28 },
+  "75x50": { label: "75 × 50 mm", width: 75, height: 50, barcodeHeight: 48 },
+  "100x50": { label: "100 × 50 mm", width: 100, height: 50, barcodeHeight: 48 },
+};
+
+function ScannableBarcode({ value, height = 56 }) {
+  const svgRef = useRef(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg || !value) return;
+
+    svg.replaceChildren();
+    setError("");
+    try {
+      JsBarcode(svg, String(value), {
+        format: "CODE128",
+        displayValue: false,
+        height,
+        margin: 8,
+        background: "#ffffff",
+        lineColor: "#111827",
+      });
+    } catch (renderError) {
+      console.error("Failed to generate product barcode", renderError);
+      setError("This value cannot be encoded as a Code 128 barcode.");
+    }
+  }, [height, value]);
+
+  if (!value) {
+    return <p className="py-4 text-center text-xs text-slate-500">No barcode assigned</p>;
+  }
+
+  return (
+    <div className="flex min-h-16 flex-col items-center justify-center bg-white px-2">
+      <svg
+        ref={svgRef}
+        role="img"
+        aria-label={`Code 128 barcode for ${value}`}
+        className="h-auto max-h-16 max-w-full"
+      />
+      {error && (
+        <p role="alert" className="mt-1 text-center text-[10px] text-rose-600">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ThermalLabel({ product, size, preview = false }) {
+  const sku = product.sku || product.code || "—";
+  const unit = product.base_unit || product.unit || "EA";
+
+  return (
+    <div
+      className={`thermal-label-content${preview ? " thermal-label-preview" : ""}`}
+      style={
+        preview
+          ? {
+              width: `${size.width * 3.78}px`,
+              height: `${size.height * 3.78}px`,
+              maxWidth: "100%",
+            }
+          : undefined
+      }
+    >
+      <div>
+        <div className="thermal-label-name">{product.name || "Unnamed product"}</div>
+        <div className="thermal-label-sku">SKU: {sku}</div>
+      </div>
+      <div className="thermal-label-barcode">
+        <ScannableBarcode value={product.barcode} height={size.barcodeHeight} />
+      </div>
+      <div className="thermal-label-footer">
+        <span>{product.barcode || "No barcode assigned"}</span>
+        <span>UOM: {unit}</span>
+      </div>
+    </div>
+  );
+}
+
 export function BarcodesPage() {
+  const navigate = useNavigate();
   const [products, setProducts] = useState(DEMO_PRODUCTS);
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(DEMO_PRODUCTS[0]);
   const [scanResult, setScanResult] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
+  const [printProduct, setPrintProduct] = useState(null);
+  const [labelSize, setLabelSize] = useState("50x30");
+  const [labelCopies, setLabelCopies] = useState("1");
+  const [printError, setPrintError] = useState("");
 
   // Scanner Station & Product Details Modal States
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -161,6 +251,7 @@ export function BarcodesPage() {
       (p.barcode && String(p.barcode).toLowerCase().includes(q))
     );
   });
+  const catalogProductsWithBarcodes = products.filter((product) => product.barcode);
 
   // Universal Barcode Decode Handler
   const handleExecuteScan = (barcodeQuery, openDetailsModal = false) => {
@@ -207,16 +298,32 @@ export function BarcodesPage() {
     setScannerInput("");
   };
 
-  const handleTestPillClick = (testBarcode) => {
-    setScannerInput(testBarcode);
-    handleExecuteScan(testBarcode, true);
+  const handleCatalogBarcodeClick = (barcode) => {
+    setScannerInput(barcode);
+    setScanResult(null);
+    scannerInputRef.current?.focus();
   };
 
-  const handlePrint = (barcode) => {
-    showToast(`Sending thermal print job for barcode ${barcode || selectedProduct?.sku}...`);
-    setTimeout(() => {
-      window.print();
-    }, 400);
+  const handlePrint = (product) => {
+    if (!product) return;
+    setPrintProduct(product);
+    setLabelCopies("1");
+    setPrintError("");
+  };
+
+  const handlePrintLabels = () => {
+    const copies = Number(labelCopies);
+    if (!Number.isInteger(copies) || copies < 1 || copies > 500) {
+      setPrintError("Enter a whole number of copies between 1 and 500.");
+      return;
+    }
+    if (!printProduct?.barcode) {
+      setPrintError("This product has no barcode to print.");
+      return;
+    }
+
+    setPrintError("");
+    window.print();
   };
 
   const handleCopy = (barcode) => {
@@ -260,7 +367,7 @@ export function BarcodesPage() {
             <span>Interactive Barcode Scanner</span>
           </button>
           <button
-            onClick={() => handlePrint(selectedProduct?.barcode)}
+            onClick={() => handlePrint(selectedProduct)}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 text-xs font-semibold shadow-2xs transition-all cursor-pointer"
           >
             <Printer className="h-4 w-4 text-slate-500 dark:text-zinc-400" />
@@ -636,7 +743,7 @@ export function BarcodesPage() {
                         </td>
                         <td className="py-3.5 px-4">
                           <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200/60 dark:border-zinc-700">
-                            EAN-13
+                            CODE 128
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-right font-mono tabular-nums font-bold text-slate-900 dark:text-white">
@@ -663,7 +770,7 @@ export function BarcodesPage() {
           </div>
         </div>
 
-        {/* Right: Printable Label Simulation Panel */}
+        {/* Right: Printable Label Preview */}
         <div className="space-y-4">
           <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
@@ -672,52 +779,19 @@ export function BarcodesPage() {
                 Physical Label Preview
               </h2>
               <span className="text-[10px] font-mono text-slate-400 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded">
-                Thermal 4x2 in
+                {THERMAL_LABEL_SIZES[labelSize].label}
               </span>
             </div>
 
-            {/* Simulated Industrial Label */}
-            <div className="p-4 rounded-xl border-2 border-dashed border-slate-300 dark:border-zinc-700 bg-white text-slate-900 space-y-3 font-sans shadow-inner">
-              <div className="flex items-start justify-between border-b border-slate-200 pb-2">
-                <div>
-                  <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-                    INVENTORY TAG
-                  </div>
-                  <div className="text-xs font-bold leading-tight">{selectedProduct?.name}</div>
-                  <div className="font-mono text-[10px] font-semibold text-blue-700 mt-0.5">
-                    SKU: {selectedProduct?.sku || selectedProduct?.code}
-                  </div>
-                </div>
-                <div className="flex h-10 w-10 items-center justify-center border border-slate-300 rounded p-1">
-                  <QrCode className="h-full w-full text-slate-900" />
-                </div>
+            {selectedProduct && (
+              <div className="flex justify-center">
+                <ThermalLabel
+                  product={selectedProduct}
+                  size={THERMAL_LABEL_SIZES[labelSize]}
+                  preview
+                />
               </div>
-
-              {/* Barcode graphic lines simulation */}
-              <div className="text-center py-2 space-y-1">
-                <div className="flex items-center justify-center gap-[2px] h-14 w-full px-2 overflow-hidden bg-slate-50 p-1 rounded">
-                  {Array.from({ length: 48 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="bg-slate-900 h-full"
-                      style={{
-                        width: i % 3 === 0 ? "3px" : i % 5 === 0 ? "1px" : "2px",
-                        marginRight: i % 4 === 0 ? "2px" : "1px",
-                      }}
-                    />
-                  ))}
-                </div>
-                <div className="font-mono text-xs tracking-widest font-bold tabular-nums">
-                  {selectedProduct?.barcode || "No barcode assigned"}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between text-[9px] text-slate-500 pt-1 border-t border-slate-200">
-                <span>Facility: WH-MAIN</span>
-                <span>UOM: {selectedProduct?.base_unit || selectedProduct?.unit || "EA"}</span>
-                <span className="font-bold text-emerald-700">Verified: OK</span>
-              </div>
-            </div>
+            )}
 
             {/* Product Details Card */}
             {selectedProduct && (
@@ -778,7 +852,7 @@ export function BarcodesPage() {
 
             <div className="flex items-center gap-2 pt-1">
               <button
-                onClick={() => handlePrint(selectedProduct?.barcode)}
+                onClick={() => handlePrint(selectedProduct)}
                 className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs shadow-blue-500/25 active:scale-[0.98] transition-all cursor-pointer"
               >
                 <Printer className="h-3.5 w-3.5" />
@@ -826,30 +900,7 @@ export function BarcodesPage() {
               </button>
             </div>
 
-            {/* Viewfinder Graphic */}
             <div className="p-6 space-y-4">
-              <div className="relative h-44 rounded-2xl bg-slate-950 flex flex-col items-center justify-center overflow-hidden border border-slate-800 shadow-inner">
-                {/* Viewfinder Target Corners */}
-                <div className="absolute top-4 left-4 h-6 w-6 border-t-2 border-l-2 border-blue-500 rounded-tl-md" />
-                <div className="absolute top-4 right-4 h-6 w-6 border-t-2 border-r-2 border-blue-500 rounded-tr-md" />
-                <div className="absolute bottom-4 left-4 h-6 w-6 border-b-2 border-l-2 border-blue-500 rounded-bl-md" />
-                <div className="absolute bottom-4 right-4 h-6 w-6 border-b-2 border-r-2 border-blue-500 rounded-br-md" />
-
-                {/* Animated Red Laser Scanning Beam */}
-                <div className="absolute inset-x-8 top-1/2 -translate-y-1/2 h-0.5 bg-rose-500 shadow-lg shadow-rose-500/80 animate-pulse" />
-
-                {/* Center Content */}
-                <div className="text-center space-y-1 text-slate-300 z-10 pointer-events-none">
-                  <Camera className="h-7 w-7 mx-auto text-blue-400 opacity-80" />
-                  <div className="text-xs font-semibold tracking-wide">
-                    Align Barcode or QR Code within Frame
-                  </div>
-                  <div className="text-[10px] text-slate-500 font-mono">
-                    Ready for Handheld Scanner or Rapid Keyboard Input
-                  </div>
-                </div>
-              </div>
-
               {/* Fast Barcode Input Form */}
               <form onSubmit={handleScannerSubmit} className="space-y-2">
                 <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
@@ -876,28 +927,32 @@ export function BarcodesPage() {
                 </div>
               </form>
 
-              {/* Quick Barcode Test Deck */}
+              {/* Catalog Barcode List */}
               <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-zinc-800">
                 <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400 flex items-center gap-1">
-                  <Sparkles className="h-3 w-3 text-blue-500" /> Quick-Test Catalog Barcodes:
+                  <Barcode className="h-3 w-3 text-blue-500" /> Existing Catalog Barcodes:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { code: "890123620501", label: "Ball Bearing (890123620501)" },
-                    { code: "890123240012", label: "Hydraulic Valve (890123240012)" },
-                    { code: "890123120034", label: "Timing Belt (890123120034)" },
-                    { code: "890123102498", label: "Encoder (890123102498)" },
-                    { code: "890123460077", label: "Lubricant (890123460077)" },
-                  ].map((pill) => (
-                    <button
-                      key={pill.code}
-                      type="button"
-                      onClick={() => handleTestPillClick(pill.code)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-zinc-800 dark:hover:bg-blue-950/60 text-slate-700 hover:text-blue-600 dark:text-zinc-300 dark:hover:text-blue-300 font-mono text-[10px] font-semibold border border-slate-200/80 dark:border-zinc-700 transition-colors cursor-pointer"
-                    >
-                      {pill.label}
-                    </button>
-                  ))}
+                  {catalogProductsWithBarcodes.length > 0 ? (
+                    catalogProductsWithBarcodes.map((product) => (
+                      <button
+                        key={product.id || product.sku || product.barcode}
+                        type="button"
+                        onClick={() =>
+                          handleCatalogBarcodeClick(String(product.barcode))
+                        }
+                        title={`${product.name} (${product.barcode})`}
+                        className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-zinc-800 dark:hover:bg-blue-950/60 text-slate-700 hover:text-blue-600 dark:text-zinc-300 dark:hover:text-blue-300 text-[10px] font-semibold border border-slate-200/80 dark:border-zinc-700 transition-colors cursor-pointer"
+                      >
+                        {product.name}{" "}
+                        <span className="font-mono">({product.barcode})</span>
+                      </button>
+                    ))
+                  ) : (
+                    <span className="text-[10px] text-slate-400">
+                      No catalog products have a barcode yet.
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -965,24 +1020,27 @@ export function BarcodesPage() {
             {/* Body */}
             <div className="p-6 space-y-5 text-xs">
               {/* Barcode & Identity Strip */}
-              <div className="p-4 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50/80 dark:bg-zinc-800/40 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Registered Barcode</span>
-                  <div className="font-mono text-base font-bold text-slate-900 dark:text-white tracking-widest mt-0.5">
-                    {selectedProduct.barcode || "No Barcode Assigned"}
+              <div className="p-4 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50/80 dark:bg-zinc-800/40 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Registered Barcode</span>
+                    <div className="font-mono text-base font-bold text-slate-900 dark:text-white tracking-widest mt-0.5">
+                      {selectedProduct.barcode || "No Barcode Assigned"}
+                    </div>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
+                      <CheckCircle2 className="h-3 w-3" /> Code 128
+                    </span>
                   </div>
-                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
-                    <CheckCircle2 className="h-3 w-3" /> GS1 Verified / EAN-13 Symbology
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(selectedProduct.barcode)}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-50 text-slate-700 dark:text-zinc-200 font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    <span>Copy</span>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleCopy(selectedProduct.barcode)}
-                  className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-50 text-slate-700 dark:text-zinc-200 font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                  <span>Copy</span>
-                </button>
+                <ScannableBarcode value={selectedProduct.barcode} />
               </div>
 
               {/* Stock Telemetry 4-Pack */}
@@ -1063,7 +1121,18 @@ export function BarcodesPage() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => handlePrint(selectedProduct.barcode)}
+                  onClick={() => {
+                    setIsDetailModalOpen(false);
+                    navigate(`/inventory/products?sku=${encodeURIComponent(selectedProduct.sku || selectedProduct.code)}`);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-semibold cursor-pointer transition-colors"
+                >
+                  <Eye className="h-4 w-4" />
+                  <span>View in Catalog</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePrint(selectedProduct)}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-colors cursor-pointer shadow-xs"
                 >
                   <Printer className="h-4 w-4" />
@@ -1074,6 +1143,126 @@ export function BarcodesPage() {
           </div>
         </div>
       )}
+
+      {printProduct &&
+        createPortal(
+          <>
+            <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-xs">
+              <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-start justify-between border-b border-slate-100 p-5 dark:border-zinc-800">
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                      Print Thermal Labels
+                    </h2>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
+                      Choose a label size and copy count, then select your thermal printer in the print dialog.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPrintProduct(null)}
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800"
+                    aria-label="Close label printing"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="space-y-4 p-5">
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="space-y-1.5 text-xs font-medium text-slate-700 dark:text-zinc-300">
+                      Label size
+                      <select
+                        value={labelSize}
+                        onChange={(e) => setLabelSize(e.target.value)}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                      >
+                        {Object.entries(THERMAL_LABEL_SIZES).map(([key, size]) => (
+                          <option key={key} value={key}>{size.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="space-y-1.5 text-xs font-medium text-slate-700 dark:text-zinc-300">
+                      Number of copies
+                      <input
+                        type="number"
+                        min="1"
+                        max="500"
+                        step="1"
+                        value={labelCopies}
+                        onChange={(e) => setLabelCopies(e.target.value)}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-zinc-800 dark:bg-zinc-800/40">
+                    <div className="mb-3 text-xs font-semibold text-slate-600 dark:text-zinc-300">
+                      Label preview · {THERMAL_LABEL_SIZES[labelSize].label}
+                    </div>
+                    <div className="flex justify-center overflow-hidden">
+                      <ThermalLabel
+                        product={printProduct}
+                        size={THERMAL_LABEL_SIZES[labelSize]}
+                        preview
+                      />
+                    </div>
+                  </div>
+
+                  {printError && (
+                    <p role="alert" className="text-xs font-medium text-rose-600">
+                      {printError}
+                    </p>
+                  )}
+                  {!printProduct.barcode && (
+                    <p className="text-xs text-amber-600">
+                      This product has no barcode, so a scannable label cannot be printed.
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
+                  <button
+                    type="button"
+                    onClick={() => setPrintProduct(null)}
+                    className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 dark:border-zinc-700 dark:text-zinc-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePrintLabels}
+                    disabled={!printProduct.barcode}
+                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Printer className="h-4 w-4" />
+                    Print Labels
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div id="thermal-label-print-root" aria-hidden="true">
+              {Array.from({
+                length: Math.min(
+                  Math.max(Number.parseInt(labelCopies, 10) || 1, 1),
+                  500
+                ),
+              }).map((_, index, copies) => (
+                <article
+                  key={index}
+                  className={`thermal-label-page size-${labelSize}${index === copies.length - 1 ? " last-label" : ""}`}
+                >
+                  <ThermalLabel
+                    product={printProduct}
+                    size={THERMAL_LABEL_SIZES[labelSize]}
+                  />
+                </article>
+              ))}
+            </div>
+          </>,
+          document.body
+        )}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   Tag,
   Plus,
@@ -534,12 +535,12 @@ export function BrandsPage() {
                   {b.skus_count ?? (idx % 2 === 0 ? 34 : 28)}
                 </span> SKUs in catalog
               </span>
-              <a
-                href="/products"
+              <Link
+                to={`/inventory/products?brand=${encodeURIComponent(b.name)}`}
                 className="text-blue-600 dark:text-blue-400 font-bold hover:underline text-[11px] flex items-center gap-0.5"
               >
                 View Items <ArrowUpRight className="h-3 w-3" />
-              </a>
+              </Link>
             </div>
           </div>
         ))}

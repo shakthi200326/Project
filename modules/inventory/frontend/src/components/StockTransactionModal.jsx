@@ -146,9 +146,9 @@ export function StockTransactionModal({ isOpen, initialType = "RECEIPT", onClose
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="w-full max-w-xl bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white shadow-2xl dark:bg-zinc-900 animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/50">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-slate-50/50 p-6 dark:border-zinc-800 dark:bg-zinc-900/50">
           <div className="flex items-center gap-3">
             <div
               className={`flex h-11 w-11 items-center justify-center rounded-xl text-white font-bold shadow-md ${
@@ -190,7 +190,7 @@ export function StockTransactionModal({ isOpen, initialType = "RECEIPT", onClose
         </div>
 
         {/* Transaction Type Selector */}
-        <div className="grid grid-cols-4 p-2 gap-1.5 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-800/30 text-xs">
+        <div className="grid shrink-0 grid-cols-4 gap-1.5 border-b border-slate-100 bg-slate-50/70 p-2 text-xs dark:border-zinc-800 dark:bg-zinc-800/30">
           {[
             { key: "RECEIPT", label: "Goods Receipt", icon: ArrowDownLeft, activeColor: "text-emerald-600 dark:text-emerald-400" },
             { key: "ISSUE", label: "Stock Issue", icon: ArrowUpRight, activeColor: "text-rose-600 dark:text-rose-400" },
@@ -218,14 +218,14 @@ export function StockTransactionModal({ isOpen, initialType = "RECEIPT", onClose
         </div>
 
         {error && (
-          <div className="m-6 mb-0 p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 flex items-center gap-2.5 text-xs text-rose-700 dark:text-rose-400">
+          <div className="mx-6 mt-4 shrink-0 rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-400 flex items-center gap-2.5">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span className="font-medium">{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <div className="p-6 space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-6 text-xs space-y-4">
             {/* Barcode Scanner Input */}
             <div className="p-3.5 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/80 dark:border-blue-900/60 space-y-2">
               <div className="flex items-center justify-between">
@@ -453,7 +453,7 @@ export function StockTransactionModal({ isOpen, initialType = "RECEIPT", onClose
           </div>
 
           {/* Footer */}
-          <div className="p-4 px-6 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 flex items-center justify-between text-xs">
+          <div className="flex shrink-0 items-center justify-between border-t border-slate-100 bg-slate-50/50 p-4 px-6 text-xs dark:border-zinc-800 dark:bg-zinc-900/50">
             <button
               type="button"
               onClick={onClose}

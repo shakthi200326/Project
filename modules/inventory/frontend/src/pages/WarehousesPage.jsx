@@ -661,7 +661,7 @@ export function WarehousesPage() {
               </span>
 
               <button
-                onClick={() => navigate(`/locations?warehouse=${wh.code}`)}
+                onClick={() => navigate(`/inventory/locations?warehouse=${wh.code}`)}
                 className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 flex items-center gap-0.5 cursor-pointer"
               >
                 Inspect Bins <ChevronRight className="h-3.5 w-3.5" />

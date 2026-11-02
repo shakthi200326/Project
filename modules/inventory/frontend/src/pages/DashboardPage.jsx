@@ -238,7 +238,7 @@ export function DashboardPage() {
   const handleDraftOrder = (itemName) => {
     showToast(`Opening draft procurement requisition for ${itemName}...`);
     setTimeout(() => {
-      navigate("/replenishment");
+      navigate("/inventory/planning/replenishment");
     }, 600);
   };
 
@@ -742,7 +742,7 @@ export function DashboardPage() {
             </p>
           </div>
           <Link
-            to="/warehouses"
+            to="/inventory/warehouses"
             className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 self-start sm:self-auto cursor-pointer"
           >
             Manage Facilities <ChevronRight className="h-3.5 w-3.5" />
@@ -829,7 +829,7 @@ export function DashboardPage() {
               </p>
             </div>
             <Link
-              to="/products"
+              to="/inventory/products"
               className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 cursor-pointer"
             >
               Full Catalog <ChevronRight className="h-3.5 w-3.5" />
@@ -924,7 +924,7 @@ export function DashboardPage() {
           </div>
 
           <Link
-            to="/control/batches"
+            to="/inventory/control/batches"
             className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-xs font-semibold text-slate-700 dark:text-zinc-300 transition-colors cursor-pointer"
           >
             <span>View All Monitored Batches</span>
@@ -947,7 +947,7 @@ export function DashboardPage() {
               </p>
             </div>
             <Link
-              to="/ledger"
+              to="/inventory/control/ledger"
               className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
             >
               View Full Ledger <ChevronRight className="h-3.5 w-3.5" />

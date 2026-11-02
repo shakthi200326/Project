@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Package,
@@ -38,6 +38,7 @@ import {
   ShieldCheck,
   Database,
   Radio,
+  Home,
 } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 import { useWorkspace } from "./ContextSelector";
@@ -46,6 +47,7 @@ import { getApiStatus, subscribeApiStatus } from "../../../modules/inventory/fro
 
 export function AppShell({ children }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { mode, toggleMode } = useTheme();
   const { activeFacility, facilities, setActiveFacility } = useWorkspace();
   const [collapsed, setCollapsed] = useState(false);
@@ -60,6 +62,7 @@ export function AppShell({ children }) {
       time: "10m ago",
       unread: true,
       type: "warning",
+      path: "/inventory/planning/replenishment",
     },
     {
       id: "notif-2",
@@ -68,6 +71,7 @@ export function AppShell({ children }) {
       time: "1h ago",
       unread: true,
       type: "success",
+      path: "/inventory/operations/reconciliation",
     },
     {
       id: "notif-3",
@@ -76,6 +80,7 @@ export function AppShell({ children }) {
       time: "3h ago",
       unread: false,
       type: "info",
+      path: "/inventory/operations/stock-in",
     },
   ]);
   const [isApiLive, setIsApiLive] = useState(getApiStatus());
@@ -87,26 +92,6 @@ export function AppShell({ children }) {
     planning: false,
     analytics: false,
   });
-
-  useEffect(() => {
-    const unsub = subscribeApiStatus(setIsApiLive);
-    return unsub;
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-        e.preventDefault();
-        setIsCommandOpen((prev) => !prev);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  const toggleGroup = (key) => {
-    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
 
   const navGroups = [
     {
@@ -175,6 +160,55 @@ export function AppShell({ children }) {
     },
   ];
 
+  useEffect(() => {
+    const unsub = subscribeApiStatus(setIsApiLive);
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setIsCommandOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Auto-expand group corresponding to active pathname
+  useEffect(() => {
+    for (const group of navGroups) {
+      if (group.key && group.items?.some((item) => location.pathname === item.path || location.pathname.startsWith(item.path + "/"))) {
+        setOpenGroups((prev) => (prev[group.key] ? prev : { ...prev, [group.key]: true }));
+      }
+    }
+  }, [location.pathname]);
+
+  const toggleGroup = (key) => {
+    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  // Derive breadcrumbs for top header
+  const getBreadcrumbs = () => {
+    for (const group of navGroups) {
+      const matched = group.items?.find((item) => item.path === location.pathname);
+      if (matched) {
+        return { groupTitle: group.title, itemLabel: matched.label };
+      }
+    }
+    // Partial match fallback (e.g. subroutes or query strings)
+    for (const group of navGroups) {
+      const matched = group.items?.find((item) => location.pathname.startsWith(item.path));
+      if (matched) {
+        return { groupTitle: group.title, itemLabel: matched.label };
+      }
+    }
+    return { groupTitle: "Overview", itemLabel: "Dashboard" };
+  };
+
+  const breadcrumbs = getBreadcrumbs();
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-slate-50 text-slate-900 dark:bg-zinc-950 dark:text-zinc-100 font-sans antialiased">
       {/* Sidebar Desktop */}
@@ -185,19 +219,25 @@ export function AppShell({ children }) {
       >
         {/* Brand / Logo */}
         <div className="flex h-16 items-center justify-between px-4 border-b border-slate-200/80 dark:border-zinc-800/80 bg-white/50 dark:bg-zinc-900/50">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 text-white font-bold shadow-md shadow-blue-500/20 ring-1 ring-white/20">
+          <Link
+            to="/inventory"
+            className="flex items-center gap-3 overflow-hidden group cursor-pointer focus:outline-none"
+            title="Return to Dashboard"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 text-white font-bold shadow-md shadow-blue-500/20 ring-1 ring-white/20 group-hover:scale-105 transition-transform">
               <Boxes className="h-5 w-5" />
             </div>
             {!collapsed && (
               <div className="flex flex-col min-w-0">
-                
+                <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
+                  Business Ecosystem
+                </span>
                 <span className="text-[11px] text-slate-500 dark:text-zinc-400 font-medium truncate">
                   Inventory Management
                 </span>
               </div>
             )}
-          </div>
+          </Link>
           <button
             onClick={() => setCollapsed(!collapsed)}
             className="hidden lg:flex p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
@@ -283,21 +323,28 @@ export function AppShell({ children }) {
             </div>
           )}
 
-          <div className="flex items-center gap-3 p-1 rounded-xl hover:bg-slate-100/60 dark:hover:bg-zinc-800/40 transition-colors">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-xs font-bold text-white shadow-xs">
+          <Link
+            to="/inventory/settings"
+            className="flex items-center gap-3 p-1.5 rounded-xl hover:bg-slate-200/60 dark:hover:bg-zinc-800/60 transition-colors group cursor-pointer"
+            title="Account & System Settings"
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-xs font-bold text-white shadow-xs group-hover:scale-105 transition-transform">
               AD
             </div>
             {!collapsed && (
-              <div className="flex flex-col min-w-0">
-                <span className="truncate text-xs font-semibold text-slate-900 dark:text-zinc-100">
-                  Operations Admin
-                </span>
+              <div className="flex flex-col min-w-0 flex-1">
+                <div className="flex items-center justify-between">
+                  <span className="truncate text-xs font-semibold text-slate-900 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    Operations Admin
+                  </span>
+                  <Settings className="h-3 w-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
                 <span className="truncate text-[10px] text-slate-500 dark:text-zinc-400">
                   Universal Modules Host
                 </span>
               </div>
             )}
-          </div>
+          </Link>
         </div>
       </aside>
 
@@ -314,7 +361,12 @@ export function AppShell({ children }) {
             aria-label="Inventory navigation"
           >
             <div className="flex h-15 items-center justify-between border-b border-slate-200 px-4 dark:border-zinc-800">
-              <div className="flex items-center gap-3">
+              <Link
+                to="/inventory"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-3"
+                title="Return to Dashboard"
+              >
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 font-bold text-white shadow-sm">
                   <Boxes className="h-5 w-5" />
                 </div>
@@ -326,7 +378,7 @@ export function AppShell({ children }) {
                     Inventory Management v3.1
                   </span>
                 </div>
-              </div>
+              </Link>
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
@@ -404,25 +456,25 @@ export function AppShell({ children }) {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Navigation */}
         <header className="h-15 flex items-center justify-between px-4 lg:px-6 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-1.5 rounded-md text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800"
-          >
-            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
-
-          {/* Context Selector: Facility / Warehouse & Live API Status */}
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="md:hidden p-1.5 rounded-md text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800"
+            >
+              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+
+            {/* Context Selector: Facility / Warehouse */}
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-xs">
               <Warehouse className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-              <span className="text-slate-500 dark:text-zinc-400">Warehouse:</span>
+              <span className="text-slate-500 dark:text-zinc-400 hidden sm:inline">Warehouse:</span>
               <select
                 value={activeFacility.id}
                 onChange={(e) => {
                   const sel = facilities.find((f) => f.id === e.target.value);
                   if (sel) setActiveFacility(sel);
                 }}
-                className="bg-transparent font-medium text-slate-800 dark:text-zinc-200 focus:outline-none cursor-pointer"
+                className="bg-transparent font-medium text-slate-800 dark:text-zinc-200 focus:outline-none cursor-pointer max-w-[130px] sm:max-w-none"
               >
                 {facilities.map((fac) => (
                   <option key={fac.id} value={fac.id} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100">
@@ -432,9 +484,25 @@ export function AppShell({ children }) {
               </select>
             </div>
 
+            {/* Dynamic Breadcrumbs */}
+            <div className="hidden lg:flex items-center gap-1.5 text-xs text-slate-400 dark:text-zinc-500 pl-2">
+              <Link
+                to="/inventory"
+                className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1"
+                title="Home Dashboard"
+              >
+                <Home className="h-3.5 w-3.5" />
+                <span className="font-medium text-slate-600 dark:text-zinc-300">Home</span>
+              </Link>
+              <ChevronRight className="h-3 w-3 text-slate-300 dark:text-zinc-600" />
+              <span>{breadcrumbs.groupTitle}</span>
+              <ChevronRight className="h-3 w-3 text-slate-300 dark:text-zinc-600" />
+              <span className="font-semibold text-slate-900 dark:text-zinc-100">{breadcrumbs.itemLabel}</span>
+            </div>
+
             {/* Connectivity status indicator */}
             <div
-              className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold border ${
+              className={`hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold border ${
                 isApiLive
                   ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/40"
                   : "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900/40"
@@ -457,9 +525,9 @@ export function AppShell({ children }) {
               className="relative hidden sm:flex items-center cursor-pointer select-none"
             >
               <Search className="absolute left-3 h-3.5 w-3.5 text-slate-400 dark:text-zinc-500" />
-              <div className="w-60 pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-400 dark:text-zinc-500 flex items-center justify-between">
+              <div className="w-56 lg:w-64 pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-400 dark:text-zinc-500 flex items-center justify-between hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
                 <span>Quick search (Ctrl+K)...</span>
-                <kbd className="px-1.5 py-0.2 text-[9px] font-mono bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded">
+                <kbd className="px-1.5 py-0.2 text-[9px] font-mono bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded text-slate-600 dark:text-zinc-400">
                   ⌘K
                 </kbd>
               </div>
@@ -525,7 +593,16 @@ export function AppShell({ children }) {
                         notifications.map((n) => (
                           <div
                             key={n.id}
-                            className={`p-3 flex items-start gap-3 hover:bg-slate-50/80 dark:hover:bg-zinc-800/50 transition-colors ${
+                            onClick={() => {
+                              setNotifications((prev) =>
+                                prev.map((item) => (item.id === n.id ? { ...item, unread: false } : item))
+                              );
+                              if (n.path) {
+                                navigate(n.path);
+                                setIsNotificationsOpen(false);
+                              }
+                            }}
+                            className={`p-3 flex items-start gap-3 hover:bg-slate-50/80 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer ${
                               n.unread ? "bg-blue-50/30 dark:bg-blue-950/20" : ""
                             }`}
                           >
@@ -552,9 +629,10 @@ export function AppShell({ children }) {
                               </p>
                             </div>
                             <button
-                              onClick={() =>
-                                setNotifications((prev) => prev.filter((item) => item.id !== n.id))
-                              }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setNotifications((prev) => prev.filter((item) => item.id !== n.id));
+                              }}
                               className="p-1 rounded text-slate-300 hover:text-rose-500 dark:text-zinc-600 dark:hover:text-rose-400 shrink-0 cursor-pointer"
                               title="Dismiss"
                             >

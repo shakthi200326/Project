@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Boxes,
   Search,
@@ -43,6 +44,7 @@ import {
 } from "../services/api";
 
 export function StockBalancesPage() {
+  const navigate = useNavigate();
   const [balances, setBalances] = useState([]);
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState("");
@@ -1074,13 +1076,25 @@ export function StockBalancesPage() {
               <span className="text-[11px] text-slate-500 dark:text-zinc-400 font-mono">
                 System Status: Active Registered Catalog
               </span>
-              <button
-                type="button"
-                onClick={() => setSelectedDetail(null)}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer shadow-xs transition-colors"
-              >
-                Done
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedDetail(null);
+                    navigate(`/inventory/products?sku=${encodeURIComponent(selectedDetail.sku)}`);
+                  }}
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-semibold cursor-pointer transition-colors"
+                >
+                  View Catalog
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDetail(null)}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer shadow-xs transition-colors"
+                >
+                  Done
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -56,6 +57,7 @@ const operationalFluxData = [
 ];
 
 export function StockMovementsPage({ initialType = "ALL" }) {
+  const navigate = useNavigate();
   const [movements, setMovements] = useState([]);
   const [activeTab, setActiveTab] = useState(initialType);
   const [search, setSearch] = useState("");
@@ -482,7 +484,13 @@ export function StockMovementsPage({ initialType = "ALL" }) {
         ].map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => {
+              setActiveTab(tab.key);
+              if (tab.key === "RECEIPT") navigate("/inventory/operations/stock-in");
+              else if (tab.key === "ISSUE") navigate("/inventory/operations/stock-out");
+              else if (tab.key === "TRANSFER") navigate("/inventory/operations/transfers");
+              else if (tab.key === "ADJUSTMENT") navigate("/inventory/operations/adjustments");
+            }}
             className={`px-3.5 py-2.5 font-medium border-b-2 transition-all cursor-pointer ${
               activeTab === tab.key
                 ? "border-blue-600 text-blue-600 dark:text-blue-400 font-bold"

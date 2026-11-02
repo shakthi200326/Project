@@ -205,14 +205,14 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
 
                   <div>
                     <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
-                      Barcode (EAN/UPC)
+                      Barcode Number
                     </label>
                     <input
                       type="text"
                       name="barcode"
                       value={formData.barcode}
                       onChange={handleChange}
-                      placeholder="e.g. 890123984210"
+                      placeholder="e.g. 890123984210 (encoded as Code 128)"
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono transition-all"
                     />
                   </div>

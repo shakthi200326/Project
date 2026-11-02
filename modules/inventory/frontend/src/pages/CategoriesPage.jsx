@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   Layers,
   Plus,
@@ -517,10 +518,13 @@ export function CategoriesPage() {
                 <FolderTree className="h-3.5 w-3.5 text-slate-400" />
                 {cat.parent ? `Subcategory of ${cat.parent}` : "Root Category"}
               </span>
-              <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Active
-              </span>
+              <Link
+                to={`/inventory/products?category=${encodeURIComponent(cat.name)}`}
+                className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+              >
+                <span>View Products</span>
+                <ChevronRight className="h-3 w-3" />
+              </Link>
             </div>
           </div>
         ))}
