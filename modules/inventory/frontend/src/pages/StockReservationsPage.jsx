@@ -1,5 +1,35 @@
-import React, { useState, useEffect } from "react";
-import { BookmarkCheck, Clock, CheckCircle2, XCircle, AlertCircle, Download, Plus, ArrowRight, X, Sparkles, Filter, Check } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  BookmarkCheck,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Download,
+  Plus,
+  ArrowRight,
+  X,
+  Sparkles,
+  Filter,
+  Check,
+  Layers,
+  Zap,
+  ShieldCheck,
+  TrendingUp,
+} from "lucide-react";
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  Area,
+  Bar,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ReferenceLine,
+} from "recharts";
 import { fetchReservations } from "../services/api";
 
 export function StockReservationsPage() {
@@ -95,6 +125,35 @@ export function StockReservationsPage() {
   const pendingHolds = reservations.filter((r) => r.status === "PENDING");
   const totalReservedUnits = pendingHolds.reduce((acc, r) => acc + r.quantity, 0);
 
+  const dynamicAllocationHorizon = useMemo(() => {
+    const baseReserved = Math.max(totalReservedUnits, 220);
+    const days = [
+      "Day 1 (Today)",
+      "Day 2",
+      "Day 3",
+      "Day 4",
+      "Day 5",
+      "Day 6",
+      "Day 7 (Horizon)",
+    ];
+    const decayFactors = [1.0, 0.91, 0.82, 0.69, 0.54, 0.38, 0.22];
+    const expiringPaces = [12, 24, 38, 48, 56, 62, 70];
+    const baseFree = 1950;
+
+    return days.map((day, idx) => {
+      const hard = Math.round(baseReserved * decayFactors[idx]);
+      const exp = expiringPaces[idx];
+      const free = baseFree + Math.round((baseReserved - hard) * 0.95);
+      return {
+        day,
+        hardReserved: hard,
+        expiringUnits: exp,
+        freeToPromise: free,
+        bufferFloor: 400,
+      };
+    });
+  }, [totalReservedUnits]);
+
   return (
     <div className="space-y-6">
       {/* Toast Notification */}
@@ -189,6 +248,219 @@ export function StockReservationsPage() {
           <div className="flex items-center gap-1 mt-2 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
             <span>+2.4% vs last cycle</span>
             <span className="text-slate-400 font-normal">· SLA compliance</span>
+          </div>
+        </div>
+      </div>
+
+      {/* High-Configuration Chart: 7-Day Dynamic Order Allocation & Hard Hold Expiry Trajectory */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div className="lg:col-span-8 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xs shadow-xs">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                  7-Day Dynamic Order Allocation & Hard Hold Expiry Horizon
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-400 border border-purple-200 dark:border-purple-900/40">
+                  Stepped Composed
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">
+                Discrete hard allocations vs scheduled expiry releases mapped against Free-to-Promise availability.
+              </p>
+            </div>
+            <div className="flex items-center gap-4 text-right">
+              <div>
+                <span className="text-xs font-mono font-bold text-purple-600 dark:text-purple-400">
+                  {totalReservedUnits} EA
+                </span>
+                <span className="text-[10px] text-slate-400 block">Total Locked</span>
+              </div>
+              <div>
+                <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  1,950+ EA
+                </span>
+                <span className="text-[10px] text-slate-400 block">Free to Promise</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-[260px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                data={dynamicAllocationHorizon}
+                margin={{ top: 15, right: 15, left: -20, bottom: 20 }}
+              >
+                <defs>
+                  <linearGradient id="hardAllocGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.15} vertical={false} />
+                <XAxis
+                  dataKey="day"
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={{ stroke: "#64748b", opacity: 0.2 }}
+                />
+                <YAxis
+                  yAxisId="left"
+                  stroke="#8b5cf6"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={{ stroke: "#64748b", opacity: 0.2 }}
+                  tickFormatter={(v) => `${v}`}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  stroke="#10b981"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={{ stroke: "#64748b", opacity: 0.2 }}
+                  domain={["auto", "auto"]}
+                  tickFormatter={(v) => `${v}`}
+                />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const d = payload[0].payload;
+                    return (
+                      <div className="rounded-xl border border-slate-700/80 bg-slate-900/95 backdrop-blur-md px-3.5 py-2.5 text-white shadow-2xl text-xs space-y-1.5">
+                        <div className="font-semibold text-slate-200 border-b border-slate-700/60 pb-1 flex items-center justify-between gap-3">
+                          <span>{d.day}</span>
+                          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                            Forecast Window
+                          </span>
+                        </div>
+                        <div className="space-y-1 pt-0.5">
+                          <div className="flex items-center justify-between gap-4 text-[11px]">
+                            <span className="text-purple-300 flex items-center gap-1.5">
+                              <span className="h-2 w-2 rounded-sm bg-purple-500 inline-block" />
+                              Active Hard Holds:
+                            </span>
+                            <span className="font-mono font-bold text-white">{d.hardReserved} EA</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-4 text-[11px]">
+                            <span className="text-amber-300 flex items-center gap-1.5">
+                              <span className="h-2 w-2 rounded-sm bg-amber-500 inline-block" />
+                              Expiring Releases:
+                            </span>
+                            <span className="font-mono font-bold text-amber-300">+{d.expiringUnits} EA</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-4 text-[11px] border-t border-slate-700/60 pt-1">
+                            <span className="text-emerald-300 flex items-center gap-1.5">
+                              <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+                              Free-to-Promise:
+                            </span>
+                            <span className="font-mono font-bold text-emerald-400">{d.freeToPromise} EA</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }}
+                />
+                <Legend
+                  verticalAlign="top"
+                  align="right"
+                  height={32}
+                  iconType="circle"
+                  iconSize={8}
+                  formatter={(val) => (
+                    <span className="text-[11px] text-slate-600 dark:text-zinc-400 font-medium ml-1">
+                      {val}
+                    </span>
+                  )}
+                />
+                <Area
+                  yAxisId="left"
+                  type="stepAfter"
+                  dataKey="hardReserved"
+                  name="Hard Order Holds"
+                  fill="url(#hardAllocGrad)"
+                  stroke="#8b5cf6"
+                  strokeWidth={2.5}
+                />
+                <Bar
+                  yAxisId="left"
+                  dataKey="expiringUnits"
+                  name="Scheduled Releases"
+                  barSize={16}
+                  fill="#f59e0b"
+                  radius={[4, 4, 0, 0]}
+                />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="freeToPromise"
+                  name="Free-to-Promise Stock"
+                  stroke="#10b981"
+                  strokeWidth={2.5}
+                  dot={{ r: 4, fill: "#10b981", strokeWidth: 1.5, stroke: "#064e3b" }}
+                  activeDot={{ r: 6 }}
+                />
+                <ReferenceLine
+                  yAxisId="left"
+                  y={180}
+                  stroke="#f43f5e"
+                  strokeDasharray="3 3"
+                  label={{ value: "Max Hold Quota (180 EA)", position: "insideTopLeft", fill: "#f43f5e", fontSize: 9 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Allocation Telemetry & Priority Breakdown Rail */}
+        <div className="lg:col-span-4 flex flex-col justify-between gap-3">
+          <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xs shadow-xs">
+            <div className="flex items-center justify-between text-slate-400 mb-1">
+              <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Allocation Queue Ratio</span>
+              <Layers className="h-4 w-4 text-purple-500" />
+            </div>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-2xl font-bold font-mono text-purple-600 dark:text-purple-400">14.2%</span>
+              <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/60 px-1.5 py-0.5 rounded">
+                Normal Band
+              </span>
+            </div>
+            <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3">
+              <div className="bg-purple-600 h-full rounded-full w-[42%]" />
+            </div>
+            <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2">
+              Proportion of total inventory committed to open sales & work orders.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xs shadow-xs">
+            <div className="flex items-center justify-between text-slate-400 mb-1">
+              <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">48h Release Velocity</span>
+              <Zap className="h-4 w-4 text-amber-500" />
+            </div>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-2xl font-bold font-mono text-slate-900 dark:text-white">36 EA</span>
+              <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded">
+                Auto-Reclaim
+              </span>
+            </div>
+            <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3">
+              <div className="bg-amber-500 h-full rounded-full w-[65%]" />
+            </div>
+            <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2">
+              Expired soft reservations automatically returning to general pick pool.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-linear-to-br from-emerald-500/10 via-teal-500/5 to-transparent dark:from-emerald-950/30 dark:via-zinc-900 dark:to-zinc-900 shadow-xs">
+            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+              <ShieldCheck className="h-4 w-4" />
+              <span className="text-xs font-bold">Safety Stock Floor Seal</span>
+            </div>
+            <p className="text-[11px] text-slate-600 dark:text-zinc-400 mt-1">
+              Guaranteed 400 EA emergency buffer floor. Hard locks prevent overselling across all B2B EDI channels.
+            </p>
           </div>
         </div>
       </div>

@@ -15,7 +15,21 @@ import {
   FileSpreadsheet,
   X,
   SlidersHorizontal,
+  TrendingDown,
+  TrendingUp,
+  Scale,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ReferenceLine,
+  Tooltip,
+} from "recharts";
 import {
   fetchReconciliationCounts,
   createStockCount,
@@ -192,11 +206,42 @@ export function ReconciliationPage() {
   );
 
   const totalVarianceValue = activeCountLines.reduce((acc, l) => {
-    return acc + (l.counted_qty - l.snapshot_qty) * l.unit_cost;
+    return acc + (Number(l.counted_qty) - Number(l.snapshot_qty)) * l.unit_cost;
   }, 0);
 
   const totalLinesWithVariance = activeCountLines.filter(
-    (l) => l.counted_qty !== l.snapshot_qty
+    (l) => Number(l.counted_qty) !== Number(l.snapshot_qty)
+  ).length;
+
+  const varianceChartData = activeCountLines.map((line) => {
+    const varianceQty = Number(line.counted_qty) - Number(line.snapshot_qty);
+    const valueImpact = varianceQty * line.unit_cost;
+    return {
+      id: line.id,
+      sku: line.sku,
+      item: line.item,
+      location: line.location,
+      snapshot_qty: Number(line.snapshot_qty),
+      counted_qty: Number(line.counted_qty),
+      varianceQty,
+      valueImpact,
+      unit: line.unit,
+      unit_cost: line.unit_cost,
+    };
+  });
+
+  const totalShrinkageVal = activeCountLines.reduce((acc, l) => {
+    const delta = Number(l.counted_qty) - Number(l.snapshot_qty);
+    return delta < 0 ? acc + Math.abs(delta) * l.unit_cost : acc;
+  }, 0);
+
+  const totalSurplusVal = activeCountLines.reduce((acc, l) => {
+    const delta = Number(l.counted_qty) - Number(l.snapshot_qty);
+    return delta > 0 ? acc + delta * l.unit_cost : acc;
+  }, 0);
+
+  const toleranceBreachCount = activeCountLines.filter(
+    (l) => Math.abs(Number(l.counted_qty) - Number(l.snapshot_qty)) > 2
   ).length;
 
   return (
@@ -334,6 +379,226 @@ export function ReconciliationPage() {
             <div className="text-base font-bold text-blue-600 dark:text-blue-400 mt-0.5 truncate">
               Cycle Count (ABC)
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* High-Configuration Chart: Cycle Count Discrepancy & Shrinkage / Surplus Waterfall */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div className="lg:col-span-8 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                  Physical Inventory Discrepancy & Shrinkage / Surplus Waterfall
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40">
+                  Diverging Variance
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">
+                Unit discrepancies (Counted Qty − Snapshot Qty) with ±2 unit audit tolerance corridor.
+              </p>
+            </div>
+            <div className="flex items-center gap-4 text-right">
+              <div>
+                <span className="text-xs font-mono font-bold text-slate-900 dark:text-white">
+                  {activeCountLines.length - totalLinesWithVariance}/{activeCountLines.length}
+                </span>
+                <span className="text-[10px] text-slate-400 block">Exact Matches</span>
+              </div>
+              <div>
+                <span
+                  className={`text-xs font-mono font-bold ${
+                    toleranceBreachCount === 0 ? "text-emerald-500" : "text-amber-500"
+                  }`}
+                >
+                  {toleranceBreachCount} Outliers
+                </span>
+                <span className="text-[10px] text-slate-400 block">&gt; ±2 Units</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={varianceChartData}
+                margin={{ top: 20, right: 15, left: -20, bottom: 25 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.15} vertical={false} />
+                <XAxis
+                  dataKey="sku"
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={{ stroke: "#64748b", opacity: 0.2 }}
+                  angle={-15}
+                  textAnchor="end"
+                  height={40}
+                />
+                <YAxis
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={{ stroke: "#64748b", opacity: 0.2 }}
+                  tickFormatter={(v) => (v > 0 ? `+${v}` : `${v}`)}
+                />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const d = payload[0].payload;
+                    const isSurplus = d.varianceQty > 0;
+                    const isShrink = d.varianceQty < 0;
+                    return (
+                      <div className="rounded-xl border border-slate-700/80 bg-slate-900/95 backdrop-blur-md px-3.5 py-2.5 text-white shadow-2xl text-xs space-y-1.5">
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-700/60 pb-1">
+                          <span className="font-mono text-xs font-bold text-blue-400">{d.sku}</span>
+                          <span
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                              isSurplus
+                                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                                : isShrink
+                                ? "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                                : "bg-slate-700 text-slate-300"
+                            }`}
+                          >
+                            {isSurplus ? "PHYSICAL SURPLUS" : isShrink ? "SHRINKAGE DEFICIT" : "VERIFIED BALANCED"}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-300 font-medium">{d.item}</div>
+                        <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Snapshot:</span>
+                            <span className="font-mono text-slate-200">{d.snapshot_qty} {d.unit}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Physical Count:</span>
+                            <span className="font-mono text-slate-200">{d.counted_qty} {d.unit}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-slate-700/60 pt-1 text-[11px]">
+                          <span className="text-slate-400">Variance Delta:</span>
+                          <span
+                            className={`font-mono font-bold ${
+                              isSurplus ? "text-emerald-400" : isShrink ? "text-rose-400" : "text-slate-300"
+                            }`}
+                          >
+                            {isSurplus ? `+${d.varianceQty}` : d.varianceQty} {d.unit}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-slate-400">Valuation Impact:</span>
+                          <span
+                            className={`font-mono font-bold ${
+                              d.valueImpact > 0 ? "text-emerald-400" : d.valueImpact < 0 ? "text-rose-400" : "text-slate-300"
+                            }`}
+                          >
+                            {d.valueImpact > 0 ? `+$${d.valueImpact.toFixed(2)}` : d.valueImpact < 0 ? `-$${Math.abs(d.valueImpact).toFixed(2)}` : "$0.00"}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }}
+                />
+                <ReferenceLine y={0} stroke="#64748b" strokeWidth={1.5} />
+                <ReferenceLine
+                  y={2}
+                  stroke="#f59e0b"
+                  strokeDasharray="3 3"
+                  label={{ value: "+2 Max Tol", position: "right", fill: "#f59e0b", fontSize: 9 }}
+                />
+                <ReferenceLine
+                  y={-2}
+                  stroke="#f59e0b"
+                  strokeDasharray="3 3"
+                  label={{ value: "-2 Min Tol", position: "right", fill: "#f59e0b", fontSize: 9 }}
+                />
+                <Bar dataKey="varianceQty" radius={[4, 4, 4, 4]}>
+                  {varianceChartData.map((entry) => (
+                    <Cell
+                      key={`cell-${entry.id}`}
+                      fill={
+                        entry.varianceQty > 0
+                          ? "#10b981"
+                          : entry.varianceQty < 0
+                          ? "#f43f5e"
+                          : "#64748b"
+                      }
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Audit Discrepancy Severity & Net Valuation Telemetry Rail */}
+        <div className="lg:col-span-4 flex flex-col justify-between gap-3">
+          <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+            <div className="flex items-center justify-between text-slate-400 mb-1">
+              <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Shrinkage Loss Exposure</span>
+              <div className="p-1 rounded-md bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400">
+                <TrendingDown className="h-3.5 w-3.5" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-2xl font-bold font-mono text-rose-600 dark:text-rose-400">
+                -${totalShrinkageVal.toFixed(2)}
+              </span>
+              <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-1.5 py-0.5 rounded">
+                Physical Shortfall
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2">
+              Cumulative unrecorded stock depletion or damage requiring book write-off.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+            <div className="flex items-center justify-between text-slate-400 mb-1">
+              <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Surplus Discovery Value</span>
+              <div className="p-1 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
+                <TrendingUp className="h-3.5 w-3.5" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                +${totalSurplusVal.toFixed(2)}
+              </span>
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded">
+                Recovered Stock
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2">
+              Unregistered items discovered during scan and staged for book recovery.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-linear-to-br from-blue-500/10 via-indigo-500/5 to-transparent dark:from-blue-950/30 dark:via-zinc-900 dark:to-zinc-900 shadow-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                <Scale className="h-4 w-4" />
+                <span className="text-xs font-bold">Net Financial Variance</span>
+              </div>
+              <span
+                className={`text-xs font-mono font-bold ${
+                  totalVarianceValue >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                }`}
+              >
+                {totalVarianceValue >= 0 ? `+$${totalVarianceValue.toFixed(2)}` : `-$${Math.abs(totalVarianceValue).toFixed(2)}`}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-600 dark:text-zinc-400 mt-1.5">
+              Audit tolerance rate:{" "}
+              <span className="font-semibold text-slate-900 dark:text-white">
+                {activeCountLines.length > 0
+                  ? (((activeCountLines.length - toleranceBreachCount) / activeCountLines.length) * 100).toFixed(0)
+                  : 100}
+                %
+              </span>{" "}
+              within threshold. Double-entry journal voucher generated on post.
+            </p>
           </div>
         </div>
       </div>
