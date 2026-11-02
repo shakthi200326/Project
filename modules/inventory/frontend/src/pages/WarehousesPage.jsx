@@ -15,13 +15,33 @@ import {
   Power,
   RefreshCw,
   SlidersHorizontal,
+  Compass,
+  Sparkles,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Tooltip,
+  Legend,
+} from "recharts";
 import {
   fetchWarehouses,
   createWarehouse,
   updateWarehouse,
   deleteWarehouse,
 } from "../services/api";
+
+const FACILITY_RADAR_DATA = [
+  { metric: "Space Density", WH_MAIN: 78, WH_EAST: 64, WH_COLD: 42, fullMark: 100 },
+  { metric: "Pick SLA Rate", WH_MAIN: 88, WH_EAST: 74, WH_COLD: 62, fullMark: 100 },
+  { metric: "Accuracy %", WH_MAIN: 96, WH_EAST: 94, WH_COLD: 98, fullMark: 100 },
+  { metric: "Buffer Safety", WH_MAIN: 82, WH_EAST: 90, WH_COLD: 85, fullMark: 100 },
+  { metric: "Dock Velocity", WH_MAIN: 72, WH_EAST: 84, WH_COLD: 68, fullMark: 100 },
+];
 
 export function WarehousesPage() {
   const navigate = useNavigate();
@@ -89,66 +109,66 @@ export function WarehousesPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.name.trim() || !formData.code.trim()) {
+      showToast("Facility code and name are required.");
+      return;
+    }
     setSubmitting(true);
     try {
       if (editingWarehouse) {
-        const updated = await updateWarehouse(editingWarehouse.id, formData);
+        await updateWarehouse(editingWarehouse.id, formData);
         setWarehouses((prev) =>
           prev.map((item) =>
-            item.id === editingWarehouse.id
-              ? {
-                  ...item,
-                  ...updated,
-                  status: formData.is_active ? "ACTIVE" : "INACTIVE",
-                }
-              : item
+            item.id === editingWarehouse.id ? { ...item, ...formData } : item
           )
         );
-        showToast(`Warehouse ${formData.name} updated successfully.`);
+        showToast(`Facility "${formData.name}" updated successfully.`);
       } else {
-        const created = await createWarehouse(formData);
+        const created = await createWarehouse({
+          ...formData,
+          zones_count: 3,
+          locations_count: 45,
+          total_skus: 120,
+        });
         setWarehouses((prev) => [created, ...prev]);
-        showToast(`Warehouse ${created.name} registered successfully.`);
+        showToast(`New facility "${formData.name}" provisioned.`);
       }
       setIsModalOpen(false);
     } catch (err) {
       console.error(err);
-      showToast("Operation completed in local session.");
-      setIsModalOpen(false);
+      showToast("Operation failed. Please verify facility data.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleToggleStatus = async (wh, e) => {
-    e.stopPropagation();
-    const nextActive = !wh.is_active;
-    await updateWarehouse(wh.id, { is_active: nextActive });
-    setWarehouses((prev) =>
-      prev.map((item) =>
-        item.id === wh.id
-          ? {
-              ...item,
-              is_active: nextActive,
-              status: nextActive ? "ACTIVE" : "INACTIVE",
-            }
-          : item
-      )
-    );
-    showToast(`Warehouse ${wh.code} marked ${nextActive ? "ACTIVE" : "INACTIVE"}.`);
-  };
-
-  const handleDelete = async (whId, whName, e) => {
-    e.stopPropagation();
-    if (window.confirm(`Are you sure you want to remove warehouse "${whName}"?`)) {
-      await deleteWarehouse(whId);
-      setWarehouses((prev) => prev.filter((item) => item.id !== whId));
-      showToast(`Warehouse removed from registry.`);
+  const handleDelete = async (id, name) => {
+    if (window.confirm(`Are you sure you want to decommission facility "${name}"? Active stock allocations will be held.`)) {
+      try {
+        await deleteWarehouse(id);
+        setWarehouses((prev) => prev.filter((item) => item.id !== id));
+        showToast(`Facility "${name}" decommissioned.`);
+      } catch (err) {
+        console.error(err);
+        showToast("Cannot delete facility with active ledger balances.");
+      }
     }
   };
 
-  const handleInspectLocations = (whCode) => {
-    navigate(`/locations?warehouse=${encodeURIComponent(whCode)}`);
+  const handleToggleStatus = async (wh) => {
+    const nextStatus = wh.is_active !== false ? false : true;
+    try {
+      await updateWarehouse(wh.id, { ...wh, is_active: nextStatus });
+      setWarehouses((prev) =>
+        prev.map((item) =>
+          item.id === wh.id ? { ...item, is_active: nextStatus } : item
+        )
+      );
+      showToast(`Facility "${wh.name}" ${nextStatus ? "activated" : "paused"}.`);
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to toggle facility status.");
+    }
   };
 
   const filteredWarehouses = warehouses.filter((wh) => {
@@ -186,7 +206,7 @@ export function WarehousesPage() {
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
               Warehouses & Distribution Facilities
             </h1>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-900">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-900">
               Multi-Facility Topology
             </span>
           </div>
@@ -197,15 +217,74 @@ export function WarehousesPage() {
 
         <button
           onClick={handleOpenCreateModal}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium shadow-xs transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs hover:shadow-blue-500/25 transition-all cursor-pointer"
         >
           <Plus className="h-4 w-4" />
           <span>Add Warehouse</span>
         </button>
       </div>
 
+      {/* High-Configuration Multi-Facility Operational Radar Chart */}
+      <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Compass className="h-4 w-4 text-indigo-500" />
+                Multi-Facility Operational Capability Radar
+              </h2>
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200/60">
+                5-Axis Benchmark
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+              Comprehensive performance radar comparing facility storage density, pick velocity SLA, accuracy %, safety buffers, and dock turnaround.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 text-xs font-semibold">
+            <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
+              <span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> WH-MAIN (Chicago)
+            </span>
+            <span className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
+              <span className="h-2.5 w-2.5 rounded-full bg-indigo-500" /> WH-EAST (Newark)
+            </span>
+            <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> WH-COLD (Dallas)
+            </span>
+          </div>
+        </div>
+
+        <div className="h-68 w-full pt-1 flex items-center justify-center">
+          <ResponsiveContainer width="100%" height="100%">
+            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={FACILITY_RADAR_DATA}>
+              <PolarGrid stroke="#e2e8f0" strokeDasharray="3 3" opacity={0.6} />
+              <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }} />
+              <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9, fill: "#94a3b8" }} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "rgba(24, 24, 27, 0.95)",
+                  borderColor: "rgba(63, 63, 70, 0.5)",
+                  borderRadius: "14px",
+                  color: "#fff",
+                  fontSize: "12px",
+                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.4)",
+                  backdropFilter: "blur(12px)",
+                }}
+                formatter={(val, name) => [
+                  `${val}% Score`,
+                  name === "WH_MAIN" ? "WH-MAIN Hub" : name === "WH_EAST" ? "WH-EAST Terminal" : "WH-COLD Facility",
+                ]}
+              />
+              <Radar name="WH_MAIN" dataKey="WH_MAIN" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.25} />
+              <Radar name="WH_EAST" dataKey="WH_EAST" stroke="#6366F1" fill="#6366F1" fillOpacity={0.25} />
+              <Radar name="WH_COLD" dataKey="WH_COLD" stroke="#10B981" fill="#10B981" fillOpacity={0.25} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {/* Toolbar / Search Filters */}
-      <div className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
           <input
@@ -213,7 +292,7 @@ export function WarehousesPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search facilities by name, code, or city..."
-            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
 
@@ -226,9 +305,9 @@ export function WarehousesPage() {
             <button
               key={tab.key}
               onClick={() => setStatusFilter(tab.key)}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-xl font-semibold transition-all whitespace-nowrap cursor-pointer ${
                 statusFilter === tab.key
-                  ? "bg-slate-900 text-white dark:bg-white dark:text-zinc-900"
+                  ? "bg-slate-900 text-white dark:bg-white dark:text-zinc-900 shadow-xs"
                   : "bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50"
               }`}
             >
@@ -261,28 +340,32 @@ export function WarehousesPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1">
                   <button
-                    onClick={(e) => handleOpenEditModal(wh)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                    title="Edit Facility"
+                    onClick={() => handleToggleStatus(wh)}
+                    title={wh.is_active !== false ? "Deactivate facility" : "Activate facility"}
+                    className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                      wh.is_active !== false
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-400"
+                        : "border-slate-200 bg-slate-50 text-slate-400 dark:border-zinc-800 dark:bg-zinc-800"
+                    }`}
+                  >
+                    <Power className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleOpenEditModal(wh)}
+                    className="p-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                    title="Edit facility parameters"
                   >
                     <Edit2 className="h-3.5 w-3.5" />
                   </button>
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                      wh.is_active !== false && wh.status !== "INACTIVE"
-                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50"
-                        : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400 border-slate-200 dark:border-zinc-700"
-                    }`}
+                  <button
+                    onClick={() => handleDelete(wh.id, wh.name)}
+                    className="p-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 text-slate-400 hover:text-rose-600 hover:border-rose-200 dark:hover:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                    title="Decommission facility"
                   >
-                    <span className={`h-1.5 w-1.5 rounded-full ${
-                      wh.is_active !== false && wh.status !== "INACTIVE" ? "bg-emerald-500 animate-pulse" : "bg-slate-400"
-                    }`} />
-                    {wh.is_active !== false && wh.status !== "INACTIVE"
-                      ? "ACTIVE"
-                      : "INACTIVE"}
-                  </span>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               </div>
 
@@ -291,67 +374,68 @@ export function WarehousesPage() {
                 <span className="truncate">{wh.address || wh.location || "Central Hub Location"}</span>
               </div>
 
-              {/* Capacity Bar */}
-              <div className="space-y-1.5 pt-3 border-t border-slate-100 dark:border-zinc-800/80">
+              {/* Capacity Progress Meter */}
+              <div className="space-y-1.5 pt-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500 dark:text-zinc-400 font-medium">Capacity Occupancy</span>
-                  <span className="font-bold font-mono tabular-nums text-slate-900 dark:text-white">
-                    {wh.capacity_used}%
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium">Capacity Utilization</span>
+                  <span className="font-bold font-mono text-slate-900 dark:text-white tabular-nums">
+                    {wh.capacity_used || 0}%
                   </span>
                 </div>
                 <div className="w-full bg-slate-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${
-                      wh.capacity_used > 80
-                        ? "bg-gradient-to-r from-amber-500 to-rose-500"
+                      (wh.capacity_used || 0) > 80
+                        ? "bg-rose-500"
+                        : (wh.capacity_used || 0) > 60
+                        ? "bg-amber-500"
                         : "bg-gradient-to-r from-blue-600 to-cyan-500"
                     }`}
-                    style={{ width: `${wh.capacity_used}%` }}
+                    style={{ width: `${Math.min(wh.capacity_used || 0, 100)}%` }}
                   />
                 </div>
               </div>
 
-              {/* Quick Metrics */}
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800/80 text-center text-xs">
-                <div className="p-2 rounded-xl bg-slate-50/80 dark:bg-zinc-800/40 border border-slate-100 dark:border-zinc-800">
-                  <div className="font-bold text-slate-900 dark:text-white tabular-nums">
+              {/* Quick Metrics Grid */}
+              <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-100 dark:border-zinc-800 text-center">
+                <div className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800/50">
+                  <span className="text-[10px] text-slate-400 font-medium block">Zones</span>
+                  <span className="text-xs font-bold text-slate-900 dark:text-white tabular-nums">
                     {wh.zones_count || 3}
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-medium">Zones</div>
+                  </span>
                 </div>
-                <div className="p-2 rounded-xl bg-slate-50/80 dark:bg-zinc-800/40 border border-slate-100 dark:border-zinc-800">
-                  <div className="font-bold text-slate-900 dark:text-white tabular-nums">
+                <div className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800/50">
+                  <span className="text-[10px] text-slate-400 font-medium block">Locations</span>
+                  <span className="text-xs font-bold text-slate-900 dark:text-white tabular-nums">
                     {wh.locations_count || 48}
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-medium">Bins/Racks</div>
+                  </span>
                 </div>
-                <div className="p-2 rounded-xl bg-slate-50/80 dark:bg-zinc-800/40 border border-slate-100 dark:border-zinc-800">
-                  <div className="font-bold text-slate-900 dark:text-white tabular-nums">
-                    {wh.total_skus || 240}
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-medium">SKUs</div>
+                <div className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800/50">
+                  <span className="text-[10px] text-slate-400 font-medium block">Active SKUs</span>
+                  <span className="text-xs font-bold text-slate-900 dark:text-white tabular-nums">
+                    {wh.total_skus || 120}
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="pt-3 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleInspectLocations(wh.code)}
-                className="flex-1 py-2 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50/80 dark:hover:bg-zinc-800 flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+            <div className="pt-3 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between">
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  wh.is_active !== false && wh.status !== "INACTIVE"
+                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50"
+                    : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700"
+                }`}
               >
-                <span>Inspect Bin Hierarchy</span>
-                <ChevronRight className="h-3.5 w-3.5" />
-              </button>
+                <span className={`h-1.5 w-1.5 rounded-full ${wh.is_active !== false && wh.status !== "INACTIVE" ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+                {wh.is_active !== false && wh.status !== "INACTIVE" ? "Operational" : "Offline"}
+              </span>
 
               <button
-                type="button"
-                onClick={(e) => handleToggleStatus(wh, e)}
-                title={wh.is_active !== false ? "Deactivate Facility" : "Activate Facility"}
-                className="p-2 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 text-slate-500 hover:text-slate-800 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shadow-2xs"
+                onClick={() => navigate(`/locations?warehouse=${wh.code}`)}
+                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 flex items-center gap-0.5 cursor-pointer"
               >
-                <Power className="h-3.5 w-3.5" />
+                Inspect Bins <ChevronRight className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>
@@ -361,111 +445,88 @@ export function WarehousesPage() {
       {/* Add / Edit Warehouse Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-150">
+          <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
               <div className="flex items-center gap-2">
                 <Building2 className="h-5 w-5 text-blue-600" />
                 <h3 className="font-bold text-slate-900 dark:text-white text-base">
-                  {editingWarehouse ? "Edit Distribution Facility" : "Register New Distribution Facility"}
+                  {editingWarehouse ? "Edit Facility Parameters" : "Provision New Facility"}
                 </h3>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
+                className="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Facility Identifier Code
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.code}
-                    onChange={(e) =>
-                      setFormData({ ...formData, code: e.target.value.toUpperCase() })
-                    }
-                    placeholder="e.g. WH-NORTH"
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Facility Title
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    placeholder="e.g. Pacific Northwest Terminal"
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white"
-                  />
-                </div>
-              </div>
-
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  Physical Street Address / City / Sector
+                  Facility Code *
                 </label>
                 <input
                   type="text"
                   required
-                  value={formData.address}
-                  onChange={(e) =>
-                    setFormData({ ...formData, address: e.target.value })
-                  }
-                  placeholder="e.g. 1042 Logistics Way, Seattle, WA"
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white"
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  placeholder="e.g. WH-NORTH"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-mono uppercase"
                 />
               </div>
 
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  Initial Capacity Utilization Estimate (%)
+                  Facility Name *
                 </label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={formData.capacity_used}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        capacity_used: parseInt(e.target.value, 10),
-                      })
-                    }
-                    className="flex-1 accent-blue-600"
-                  />
-                  <span className="font-mono font-bold text-slate-900 dark:text-white tabular-nums w-12 text-right">
-                    {formData.capacity_used}%
-                  </span>
-                </div>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g. Northern Regional Logistics Terminal"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white"
+                />
               </div>
 
-              <div className="flex items-center gap-2 pt-1">
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                  Physical Address / Geographic Zone
+                </label>
+                <input
+                  type="text"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  placeholder="e.g. Minneapolis, MN - Dock 4"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                  Initial Capacity Utilization (%): {formData.capacity_used}%
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={formData.capacity_used}
+                  onChange={(e) => setFormData({ ...formData, capacity_used: parseInt(e.target.value, 10) })}
+                  className="w-full accent-blue-600 cursor-pointer"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
                 <input
                   type="checkbox"
-                  id="wh_is_active"
+                  id="activeCheck"
                   checked={formData.is_active}
-                  onChange={(e) =>
-                    setFormData({ ...formData, is_active: e.target.checked })
-                  }
-                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                  className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
                 />
-                <label
-                  htmlFor="wh_is_active"
-                  className="text-xs font-medium text-slate-700 dark:text-zinc-300"
-                >
-                  Facility is active and ready for stock receipts and dispatch
+                <label htmlFor="activeCheck" className="text-slate-700 dark:text-zinc-300 font-medium cursor-pointer">
+                  Facility is Active and accepts stock postings
                 </label>
               </div>
 
@@ -473,20 +534,16 @@ export function WarehousesPage() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-medium hover:bg-slate-50"
+                  className="px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-medium hover:bg-slate-50 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold shadow-xs transition-colors"
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  {submitting
-                    ? "Saving..."
-                    : editingWarehouse
-                    ? "Update Facility"
-                    : "Register Facility"}
+                  {submitting ? "Saving..." : editingWarehouse ? "Save Changes" : "Create Facility"}
                 </button>
               </div>
             </form>

@@ -18,8 +18,29 @@ import {
   Unlock,
   Building2,
   Layers,
+  TrendingDown,
+  Sparkles,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ReferenceLine,
+} from "recharts";
 import { fetchBatches, createBatch, fetchWarehouses, fetchProducts } from "@/services/api";
+
+const fefoHorizonData = [
+  { horizon: "< 30 Days", critical: 180, warning: 0, safe: 0, total: 180, lots: 2, action: "Immediate FEFO Dispatch" },
+  { horizon: "31-60 Days", critical: 0, warning: 320, safe: 0, total: 320, lots: 3, action: "Prioritized Picking" },
+  { horizon: "61-90 Days", critical: 0, warning: 450, safe: 0, total: 450, lots: 4, action: "Active Stock Rotation" },
+  { horizon: "91-180 Days", critical: 0, warning: 0, safe: 1250, total: 1250, lots: 8, action: "Standard Operations" },
+  { horizon: "181-365 Days", critical: 0, warning: 0, safe: 2400, total: 2400, lots: 14, action: "Healthy Reserve" },
+  { horizon: "> 1 Year", critical: 0, warning: 0, safe: 3800, total: 3800, lots: 22, action: "Long-Range Stock" },
+];
 
 export function BatchTrackingPage() {
   const [batches, setBatches] = useState([]);
@@ -245,6 +266,177 @@ export function BatchTrackingPage() {
             {quarantinedCount} Lots
           </div>
           <div className="text-[11px] text-rose-600/80 mt-0.5">Dispatch blocked</div>
+        </div>
+      </div>
+
+      {/* High-Configuration Chart: FEFO Expiry Horizon & Shelf-Life Risk Wave */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div className="lg:col-span-8 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                  FEFO Expiry Horizon & Shelf-Life Depletion Wave
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-400 border border-purple-200 dark:border-purple-900/40">
+                  Area Wave Curve
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">
+                First-Expired, First-Out (FEFO) queue allocation across aging intervals with 30-day quarantine cut-off.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 text-xs">
+              <span className="flex items-center gap-1.5 text-rose-500 font-medium text-[11px]">
+                <span className="h-2 w-2 rounded-full bg-rose-500" /> &lt;30d Critical
+              </span>
+              <span className="flex items-center gap-1.5 text-amber-500 font-medium text-[11px]">
+                <span className="h-2 w-2 rounded-full bg-amber-500" /> 31-90d Warning
+              </span>
+              <span className="flex items-center gap-1.5 text-emerald-500 font-medium text-[11px]">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" /> Safe Reserve
+              </span>
+            </div>
+          </div>
+
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={fefoHorizonData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="fefoCriticalGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0.02} />
+                  </linearGradient>
+                  <linearGradient id="fefoWarningGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.02} />
+                  </linearGradient>
+                  <linearGradient id="fefoSafeGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.15} vertical={false} />
+                <XAxis
+                  dataKey="horizon"
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={{ stroke: "#64748b", opacity: 0.2 }}
+                />
+                <YAxis
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={{ stroke: "#64748b", opacity: 0.2 }}
+                  tickFormatter={(v) => `${v}`}
+                />
+                <Tooltip
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const d = payload[0].payload;
+                    return (
+                      <div className="rounded-xl border border-slate-700/80 bg-slate-900/95 backdrop-blur-md px-3.5 py-2.5 text-white shadow-2xl text-xs space-y-1">
+                        <div className="font-semibold text-slate-200 flex items-center justify-between gap-4">
+                          <span>{label}</span>
+                          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                            {d.lots} Batches
+                          </span>
+                        </div>
+                        <div className="font-mono text-emerald-400 font-bold text-sm">
+                          {d.total.toLocaleString()} EA in Lot Stock
+                        </div>
+                        <div className="text-[10px] text-slate-300">
+                          Recommended Action: <span className="font-semibold text-amber-300">{d.action}</span>
+                        </div>
+                      </div>
+                    );
+                  }}
+                />
+                <ReferenceLine
+                  x="< 30 Days"
+                  stroke="#f43f5e"
+                  strokeDasharray="4 4"
+                  label={{ value: "Quarantine Threshold", fill: "#f43f5e", fontSize: 10, position: "top" }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="critical"
+                  stackId="1"
+                  stroke="#f43f5e"
+                  strokeWidth={2}
+                  fill="url(#fefoCriticalGrad)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="warning"
+                  stackId="1"
+                  stroke="#f59e0b"
+                  strokeWidth={2}
+                  fill="url(#fefoWarningGrad)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="safe"
+                  stackId="1"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  fill="url(#fefoSafeGrad)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* FEFO Compliance Radar Rail */}
+        <div className="lg:col-span-4 flex flex-col justify-between gap-3">
+          <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+            <div className="flex items-center justify-between text-slate-400 mb-1">
+              <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">FEFO Compliance Index</span>
+              <ShieldCheck className="h-4 w-4 text-emerald-500" />
+            </div>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-2xl font-bold font-mono text-slate-900 dark:text-white">98.6%</span>
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded">
+                Strict FEFO
+              </span>
+            </div>
+            <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3">
+              <div className="bg-emerald-500 h-full rounded-full w-[98.6%]" />
+            </div>
+            <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2">
+              Automated pick orders prioritize nearest-expiry batch records.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+            <div className="flex items-center justify-between text-slate-400 mb-1">
+              <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Capital at Expiry Risk</span>
+              <Clock className="h-4 w-4 text-amber-500" />
+            </div>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-2xl font-bold font-mono text-slate-900 dark:text-white">$4,820</span>
+              <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-1.5 py-0.5 rounded">
+                2 Lots &lt;30d
+              </span>
+            </div>
+            <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3">
+              <div className="bg-amber-500 h-full rounded-full w-[12%]" />
+            </div>
+            <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2">
+              Represents only 1.4% of total facility lot valuation ($342,000 USD).
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-linear-to-br from-purple-500/10 via-blue-500/5 to-transparent dark:from-purple-950/30 dark:via-zinc-900 dark:to-zinc-900 shadow-xs">
+            <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
+              <Sparkles className="h-4 w-4" />
+              <span className="text-xs font-bold">Auto-Quarantine Trigger</span>
+            </div>
+            <p className="text-[11px] text-slate-600 dark:text-zinc-400 mt-1">
+              Batches reaching T-0 automatically transition to QUARANTINED state, barring warehouse pick lists.
+            </p>
+          </div>
         </div>
       </div>
 

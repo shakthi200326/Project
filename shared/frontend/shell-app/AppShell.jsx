@@ -191,12 +191,7 @@ export function AppShell({ children }) {
             </div>
             {!collapsed && (
               <div className="flex flex-col min-w-0">
-                <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
-                  Business Ecosystem
-                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-950/80 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-900">
-                    v3.1
-                  </span>
-                </span>
+                
                 <span className="text-[11px] text-slate-500 dark:text-zinc-400 font-medium truncate">
                   Inventory Management
                 </span>

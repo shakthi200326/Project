@@ -21,10 +21,34 @@ import {
   CheckCircle2,
   X,
   FileSpreadsheet,
+  Target,
+  ShieldCheck,
+  Sparkles,
+  Layers,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  ScatterChart,
+  Scatter,
+  XAxis,
+  YAxis,
+  ZAxis,
+  CartesianGrid,
+  Tooltip,
+  ReferenceLine,
+  RadialBarChart,
+  RadialBar,
+} from "recharts";
 import { fetchProducts } from "../services/api";
 import { CreateProductModal } from "../components/CreateProductModal.jsx";
 import { ProductDetailDrawer } from "../components/ProductDetailDrawer.jsx";
+
+const RADIAL_HEALTH_DATA = [
+  { name: "In-Stock Availability", value: 94, fill: "#10B981" },
+  { name: "Reorder Compliance", value: 88, fill: "#3B82F6" },
+  { name: "Batch Traceability", value: 78, fill: "#8B5CF6" },
+  { name: "Serialized Registry", value: 65, fill: "#F59E0B" },
+];
 
 export function ProductsPage() {
   const navigate = useNavigate();
@@ -203,10 +227,10 @@ export function ProductsPage() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-900 dark:bg-zinc-800 text-white text-xs font-medium shadow-xl border border-slate-700 animate-in slide-in-from-top-2">
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-900 dark:bg-zinc-800 text-white text-xs font-semibold shadow-2xl border border-slate-700 animate-in slide-in-from-top-2">
           <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>
@@ -215,10 +239,16 @@ export function ProductsPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Products & Catalog
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-zinc-400">
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+              Products & Catalog
+            </h1>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/60">
+              <Sparkles className="h-2.5 w-2.5" />
+              Master Ledger Item Registry
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
             Manage stock items, variant matrices, barcodes, UOM conversions & reorder parameters.
           </p>
         </div>
@@ -226,21 +256,21 @@ export function ProductsPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsImportOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors shadow-2xs cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 text-xs font-semibold text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors shadow-2xs cursor-pointer"
           >
-            <Upload className="h-3.5 w-3.5" />
+            <Upload className="h-3.5 w-3.5 text-slate-400" />
             <span>Import</span>
           </button>
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors shadow-2xs cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 text-xs font-semibold text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors shadow-2xs cursor-pointer"
           >
-            <Download className="h-3.5 w-3.5" />
+            <Download className="h-3.5 w-3.5 text-slate-400" />
             <span>Export CSV</span>
           </button>
           <button
             onClick={() => setIsCreateOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-all shadow-xs shadow-blue-500/25 active:scale-[0.98] cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold transition-all shadow-xs hover:shadow-blue-500/25 cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             <span>Create Product</span>
@@ -292,8 +322,178 @@ export function ProductsPage() {
         </div>
       </div>
 
+      {/* High-Configuration Advanced Product Analytics */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Chart 1: Product Portfolio Matrix (ScatterChart with Quadrant Reference Lines & Bubble Sizing) */}
+        <div className="lg:col-span-2 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Target className="h-4 w-4 text-blue-500" />
+                  Product Portfolio Quadrant & Capital Matrix
+                </h2>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200/60">
+                  Unit Cost vs On-Hand Units
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                Strategic inventory positioning: Bubble diameter reflects total valuation; quadrants divide critical bottlenecks vs high-turnover commodities.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 text-xs font-semibold">
+              <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
+                <span className="h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-blue-500/20" /> Active SKU
+              </span>
+              <span className="text-slate-400 text-[11px]">
+                Median: $50 / 100 Units
+              </span>
+            </div>
+          </div>
+
+          <div className="h-68 w-full pt-1">
+            <ResponsiveContainer width="100%" height="100%">
+              <ScatterChart margin={{ top: 15, right: 20, bottom: 5, left: -20 }}>
+                <CartesianGrid strokeDasharray="2 4" stroke="#e2e8f0" opacity={0.5} />
+                <XAxis
+                  type="number"
+                  dataKey="cost"
+                  name="Unit Cost"
+                  unit="$"
+                  domain={[0, 200]}
+                  tick={{ fontSize: 10, fill: "#94a3b8" }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  type="number"
+                  dataKey="stock"
+                  name="On-Hand"
+                  unit=" EA"
+                  domain={[0, 1300]}
+                  tick={{ fontSize: 10, fill: "#94a3b8" }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <ZAxis type="number" dataKey="value" range={[60, 450]} name="Valuation" unit="$" />
+                <Tooltip
+                  cursor={{ strokeDasharray: "3 3", stroke: "#94a3b8" }}
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="p-3 rounded-xl bg-slate-900/95 dark:bg-zinc-800/95 text-white text-xs border border-slate-700 shadow-2xl backdrop-blur-md space-y-1.5">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="font-mono font-bold text-blue-400">{data.sku}</span>
+                            <span className="text-[10px] text-slate-400">{data.category}</span>
+                          </div>
+                          <div className="font-semibold text-slate-200">{data.name}</div>
+                          <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-slate-700/80 text-[11px] font-mono">
+                            <div>Unit Cost: <strong className="text-emerald-400">${data.cost.toFixed(2)}</strong></div>
+                            <div>Stock: <strong className="text-blue-400">{data.stock} units</strong></div>
+                            <div className="col-span-2">Total Capital: <strong className="text-white">${data.value.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong></div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <ReferenceLine x={50} stroke="#94a3b8" strokeDasharray="3 3" opacity={0.6} label={{ value: "Median Price $50", position: "insideTopRight", fill: "#94a3b8", fontSize: 9 }} />
+                <ReferenceLine y={100} stroke="#94a3b8" strokeDasharray="3 3" opacity={0.6} label={{ value: "Safety Floor 100 EA", position: "insideBottomLeft", fill: "#94a3b8", fontSize: 9 }} />
+                <Scatter
+                  name="Products"
+                  data={
+                    products.length > 0
+                      ? products.map((p) => ({
+                          sku: p.sku || p.code,
+                          name: p.name,
+                          cost: Number(p.unit_cost || 10),
+                          stock: Number(p.on_hand ?? p.available ?? 40),
+                          value: Number((p.on_hand ?? 40) * (p.unit_cost || 10)),
+                          category: p.category || "General",
+                        }))
+                      : [
+                          { sku: "BRG-6205", name: "Ball Bearing", cost: 14.85, stock: 450, value: 6682.5, category: "Mechanical" },
+                          { sku: "HYD-SV-24V", name: "Solenoid Valve", cost: 128.5, stock: 18, value: 2313, category: "Hydraulics" },
+                          { sku: "BELT-T10", name: "Timing Belt", cost: 32.4, stock: 280, value: 9072, category: "Power Trans" },
+                          { sku: "LUB-SYN", name: "Synthetic Oil", cost: 18.2, stock: 1200, value: 21840, category: "Fluids" },
+                          { sku: "ENC-1024", name: "Encoder", cost: 185, stock: 10, value: 1850, category: "Automation" },
+                        ]
+                  }
+                  fill="#3B82F6"
+                />
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Chart 2: Multi-Ring Catalog Health & Compliance Radar (RadialBarChart) */}
+        <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                Catalog Governance Radar
+              </h2>
+              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                Traceability and compliance ring meters
+              </p>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200/60">
+              92% Index
+            </span>
+          </div>
+
+          <div className="h-44 w-full flex items-center justify-center relative">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadialBarChart
+                innerRadius="25%"
+                outerRadius="100%"
+                barSize={8}
+                data={RADIAL_HEALTH_DATA}
+                startAngle={90}
+                endAngle={-270}
+              >
+                <RadialBar
+                  background={{ fill: "rgba(226, 232, 240, 0.4)" }}
+                  dataKey="value"
+                  cornerRadius={6}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "rgba(24, 24, 27, 0.95)",
+                    borderColor: "rgba(63, 63, 70, 0.4)",
+                    borderRadius: "12px",
+                    color: "#fff",
+                    fontSize: "12px",
+                  }}
+                  formatter={(val, name) => [`${val}% Compliance`, name]}
+                />
+              </RadialBarChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-lg font-bold font-mono text-slate-900 dark:text-white">92%</span>
+              <span className="text-[9px] uppercase font-bold text-slate-400">Score</span>
+            </div>
+          </div>
+
+          <div className="space-y-1.5 pt-1 border-t border-slate-100 dark:border-zinc-800 text-xs">
+            {RADIAL_HEALTH_DATA.map((item) => (
+              <div key={item.name} className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
+                <span className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: item.fill }} />
+                  <span className="text-[11px] font-medium text-slate-700 dark:text-zinc-300 truncate">{item.name}</span>
+                </span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white text-[11px] tabular-nums">{item.value}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Toolbar & Filters */}
-      <div className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         {/* Search */}
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
@@ -305,13 +505,13 @@ export function ProductsPage() {
               setCurrentPage(1);
             }}
             placeholder="Search by SKU, product name, brand or barcode..."
-            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
 
         {/* Filters */}
         <div className="flex items-center gap-2 flex-wrap text-xs">
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/40 text-slate-700 dark:text-zinc-300">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50 dark:bg-zinc-800/40 text-slate-700 dark:text-zinc-300">
             <Filter className="h-3 w-3 text-slate-400" />
             <select
               value={statusFilter}
@@ -319,7 +519,7 @@ export function ProductsPage() {
                 setStatusFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="bg-transparent focus:outline-none cursor-pointer"
+              className="bg-transparent focus:outline-none cursor-pointer font-medium"
             >
               <option value="ALL">All Stock Statuses</option>
               <option value="IN_STOCK">In Stock</option>
@@ -328,7 +528,7 @@ export function ProductsPage() {
             </select>
           </div>
 
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/40 text-slate-700 dark:text-zinc-300">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50 dark:bg-zinc-800/40 text-slate-700 dark:text-zinc-300">
             <SlidersHorizontal className="h-3 w-3 text-slate-400" />
             <select
               value={categoryFilter}
@@ -336,7 +536,7 @@ export function ProductsPage() {
                 setCategoryFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="bg-transparent focus:outline-none cursor-pointer"
+              className="bg-transparent focus:outline-none cursor-pointer font-medium"
             >
               <option value="ALL">All Categories</option>
               <option value="Mechanical Components">Mechanical Components</option>
@@ -351,24 +551,24 @@ export function ProductsPage() {
 
       {/* Bulk Action Bar (When selected) */}
       {selectedIds.length > 0 && (
-        <div className="p-2.5 px-4 rounded-lg bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-900 flex items-center justify-between text-xs text-blue-900 dark:text-blue-200 animate-in fade-in">
+        <div className="p-3 px-4 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-900 flex items-center justify-between text-xs text-blue-900 dark:text-blue-200 animate-in fade-in">
           <span className="font-semibold">{selectedIds.length} items selected</span>
           <div className="flex items-center gap-2">
             <button
               onClick={handleBulkPrintBarcodes}
-              className="px-2.5 py-1 rounded bg-white dark:bg-zinc-900 border border-blue-300 dark:border-blue-800 text-xs font-medium hover:bg-blue-100 dark:hover:bg-zinc-800 cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-blue-300 dark:border-blue-800 text-xs font-semibold hover:bg-blue-100 dark:hover:bg-zinc-800 cursor-pointer shadow-xs transition-colors"
             >
               Print Barcodes
             </button>
             <button
               onClick={handleBulkUpdateReorder}
-              className="px-2.5 py-1 rounded bg-white dark:bg-zinc-900 border border-blue-300 dark:border-blue-800 text-xs font-medium hover:bg-blue-100 dark:hover:bg-zinc-800 cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-blue-300 dark:border-blue-800 text-xs font-semibold hover:bg-blue-100 dark:hover:bg-zinc-800 cursor-pointer shadow-xs transition-colors"
             >
               Update Reorder Rules
             </button>
             <button
               onClick={handleBulkArchive}
-              className="px-2.5 py-1 rounded bg-rose-600 text-white text-xs font-medium hover:bg-rose-700 cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700 cursor-pointer shadow-xs transition-colors"
             >
               Archive Selected
             </button>
