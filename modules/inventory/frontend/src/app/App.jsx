@@ -4,6 +4,7 @@ import { ThemeProvider } from "@shared/shell-app/ThemeProvider.jsx";
 import { WorkspaceProvider } from "@shared/shell-app/ContextSelector.jsx";
 import { AppShell } from "@shared/shell-app/AppShell.jsx";
 import LoadingState from "@ui/components/LoadingState.jsx";
+import { ErrorBoundary } from "../components/ErrorBoundary.jsx";
 
 // Lazy-loaded page components for optimal production chunking and lightning-fast load times
 const DashboardPage = lazy(() => import("../pages/DashboardPage.jsx").then(m => ({ default: m.DashboardPage })));
@@ -32,13 +33,14 @@ export default function App() {
       <WorkspaceProvider>
         <BrowserRouter>
           <AppShell>
-            <Suspense
-              fallback={
-                <div className="flex h-96 items-center justify-center">
-                  <LoadingState message="Loading module view..." />
-                </div>
-              }
-            >
+            <ErrorBoundary>
+              <Suspense
+                fallback={
+                  <div className="flex h-96 items-center justify-center">
+                    <LoadingState message="Loading module view..." />
+                  </div>
+                }
+              >
               <Routes>
                 <Route path="/" element={<Navigate to="/inventory" replace />} />
                 <Route path="/inventory" element={<DashboardPage />} />
@@ -104,7 +106,8 @@ export default function App() {
                 <Route path="*" element={<Navigate to="/inventory" replace />} />
               </Routes>
             </Suspense>
-          </AppShell>
+          </ErrorBoundary>
+        </AppShell>
         </BrowserRouter>
       </WorkspaceProvider>
     </ThemeProvider>

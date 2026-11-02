@@ -24,6 +24,8 @@ import {
   Warehouse,
   RotateCcw,
   Sliders,
+  SlidersHorizontal,
+  ArrowLeftRight,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -320,7 +322,7 @@ export function DashboardPage() {
             <Boxes className="h-4 w-4 text-blue-500 group-hover:scale-110 transition-transform" />
           </div>
           <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
-            {kpis.total_products.toLocaleString()}
+            {(kpis?.total_products ?? 0).toLocaleString()}
           </div>
           <div className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 font-medium">
             <TrendingUp className="h-3 w-3" /> +12 this month
@@ -335,7 +337,7 @@ export function DashboardPage() {
             <Building2 className="h-4 w-4 text-indigo-500 group-hover:scale-110 transition-transform" />
           </div>
           <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
-            {kpis.total_warehouses}
+            {kpis?.total_warehouses ?? 0}
           </div>
           <div className="mt-1 text-[11px] text-slate-400 dark:text-zinc-500">
             Across 3 regions
@@ -350,7 +352,7 @@ export function DashboardPage() {
             <DollarSign className="h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" />
           </div>
           <div className="mt-2 text-xl font-bold tracking-tight font-mono tabular-nums text-emerald-700 dark:text-emerald-400">
-            ${kpis.total_stock_value.toLocaleString("en-US", { minimumFractionDigits: 0 })}
+            ${(kpis?.total_stock_value ?? 0).toLocaleString("en-US", { minimumFractionDigits: 0 })}
           </div>
           <div className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
             Weighted Average (WAV)
@@ -365,7 +367,7 @@ export function DashboardPage() {
             <CheckCircle className="h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" />
           </div>
           <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
-            {kpis.total_available.toLocaleString()}
+            {(kpis?.total_available ?? 0).toLocaleString()}
           </div>
           <div className="mt-1 text-[11px] text-slate-400 dark:text-zinc-500">
             Free for dispatch
@@ -380,7 +382,7 @@ export function DashboardPage() {
             <Clock className="h-4 w-4 text-purple-500 group-hover:scale-110 transition-transform" />
           </div>
           <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-purple-700 dark:text-purple-400">
-            {kpis.total_reserved.toLocaleString()}
+            {(kpis?.total_reserved ?? 0).toLocaleString()}
           </div>
           <div className="mt-1 text-[11px] text-purple-600 dark:text-purple-400 font-medium">
             Allocated to orders
@@ -395,7 +397,7 @@ export function DashboardPage() {
             <AlertTriangle className="h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" />
           </div>
           <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-amber-600 dark:text-amber-400">
-            {kpis.low_stock_items}
+            {kpis?.low_stock_items ?? 0}
           </div>
           <div className="mt-1 text-[11px] text-amber-600 dark:text-amber-400 font-medium">
             Requires reorder
@@ -410,7 +412,7 @@ export function DashboardPage() {
             <XCircle className="h-4 w-4 text-rose-500 group-hover:scale-110 transition-transform" />
           </div>
           <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-rose-600 dark:text-rose-400">
-            {kpis.out_of_stock_items}
+            {kpis?.out_of_stock_items ?? 0}
           </div>
           <div className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium">
             Critical stock-out
@@ -524,7 +526,7 @@ export function DashboardPage() {
                     color: "#fff",
                     fontSize: "12px",
                   }}
-                  formatter={(val, name, entry) => [`${val}% (${entry.payload.capital})`, name]}
+                  formatter={(val, name, entry) => [`${val}%${entry?.payload?.capital ? ` (${entry.payload.capital})` : ""}`, name]}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -585,10 +587,12 @@ export function DashboardPage() {
                     color: "#fff",
                     fontSize: "12px",
                   }}
-                  formatter={(val, name, entry) => [
-                    `${val}% (${entry.payload.occupiedSlots.toLocaleString()} / ${(entry.payload.occupiedSlots + entry.payload.freeSlots).toLocaleString()} slots)`,
-                    "Occupancy Rate",
-                  ]}
+                  formatter={(val, name, entry) => {
+                    const occ = entry?.payload?.occupiedSlots;
+                    const free = entry?.payload?.freeSlots;
+                    const slotText = (occ !== undefined && free !== undefined) ? ` (${occ.toLocaleString()} / ${(occ + free).toLocaleString()} slots)` : "";
+                    return [`${val}%${slotText}`, "Occupancy Rate"];
+                  }}
                 />
                 <ReferenceLine y={80} stroke="#F43F5E" strokeDasharray="3 3" label={{ value: "80% Max Buffer", position: "insideTopRight", fill: "#F43F5E", fontSize: 10, fontWeight: "bold" }} />
                 <Bar
