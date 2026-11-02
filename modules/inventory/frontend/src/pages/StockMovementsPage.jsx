@@ -25,6 +25,14 @@ import {
   Funnel,
   Tooltip,
   LabelList,
+  ComposedChart,
+  Area,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Legend,
+  ReferenceLine,
 } from "recharts";
 import { fetchStockMovements } from "../services/api";
 import { StockTransactionModal } from "../components/StockTransactionModal.jsx";
@@ -35,6 +43,16 @@ const movementPipelineData = [
   { value: 1480, name: "Putaway & Bin Allocation", fill: "#8b5cf6", dropoff: "-3.9%", rate: "89.7%", sla: "42m avg", subtitle: "High-Bay Racking Stored" },
   { value: 1120, name: "Facility Stock Transfers", fill: "#a855f7", dropoff: "-24.3%", rate: "67.9%", sla: "3.8h avg", subtitle: "Inter-Hub Cross-Dock" },
   { value: 980, name: "Order Dispatches & Outflow", fill: "#10b981", dropoff: "-12.5%", rate: "59.4%", sla: "1.2h avg", subtitle: "Customer Pick & Ship" },
+];
+
+const operationalFluxData = [
+  { day: "Mon", inbound: 320, outbound: 210, transfers: 65, sla: 97.4 },
+  { day: "Tue", inbound: 280, outbound: 260, transfers: 80, sla: 98.1 },
+  { day: "Wed", inbound: 350, outbound: 310, transfers: 95, sla: 96.5 },
+  { day: "Thu", inbound: 410, outbound: 340, transfers: 70, sla: 95.8 },
+  { day: "Fri", inbound: 390, outbound: 380, transfers: 110, sla: 98.8 },
+  { day: "Sat", inbound: 180, outbound: 150, transfers: 40, sla: 99.2 },
+  { day: "Sun", inbound: 120, outbound: 95, transfers: 25, sla: 99.5 },
 ];
 
 export function StockMovementsPage({ initialType = "ALL" }) {
@@ -156,9 +174,9 @@ export function StockMovementsPage({ initialType = "ALL" }) {
         </div>
       </div>
 
-      {/* High-Configuration Chart: Operational Movement Pipeline & Throughput Funnel */}
+      {/* High-Configuration Charts: Dual Operations & Flux Control Deck */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        <div className="lg:col-span-8 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+        <div className="lg:col-span-6 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="flex items-center gap-2">
@@ -222,55 +240,209 @@ export function StockMovementsPage({ initialType = "ALL" }) {
           </div>
         </div>
 
-        {/* Velocity & Operational Telemetry Rail */}
-        <div className="lg:col-span-4 flex flex-col justify-between gap-3">
-          <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-            <div className="flex items-center justify-between text-slate-400 mb-1">
-              <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Dock-to-Stock Velocity</span>
-              <Zap className="h-4 w-4 text-amber-500" />
+        {/* Chart 2: 7-Day Operational Inflow vs Outflow Velocity Flux */}
+        <div className="lg:col-span-6 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                  7-Day Operational Inflow vs Outflow Velocity Flux
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40">
+                  Dual-Stream Flux
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">
+                Inbound dock receipts vs customer dispatch outflow with carrier on-time SLA spline.
+              </p>
             </div>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-bold font-mono text-slate-900 dark:text-white">2.8 hrs</span>
-              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded">
-                -24m vs Target
-              </span>
+            <div className="text-right">
+              <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400">97.9%</span>
+              <span className="text-[10px] text-slate-400 block">Dispatch SLA</span>
             </div>
-            <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3">
-              <div className="bg-amber-500 h-full rounded-full w-[78%]" />
-            </div>
-            <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2">
-              From carrier unloading receipt to verified bin barcode scan.
-            </p>
           </div>
 
-          <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-            <div className="flex items-center justify-between text-slate-400 mb-1">
-              <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Active Pipeline Volume</span>
-              <Activity className="h-4 w-4 text-blue-500" />
-            </div>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-bold font-mono text-slate-900 dark:text-white">6,770 EA</span>
-              <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded">
-                5 Stages Active
-              </span>
-            </div>
-            <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3">
-              <div className="bg-blue-600 h-full rounded-full w-[91%]" />
-            </div>
-            <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2">
-              Zero putaway bottlenecks detected across all 4 fulfillment zones.
-            </p>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                data={operationalFluxData}
+                margin={{ top: 15, right: 10, left: -20, bottom: 20 }}
+              >
+                <defs>
+                  <linearGradient id="opInboundGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02} />
+                  </linearGradient>
+                  <linearGradient id="opOutboundGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.15} vertical={false} />
+                <XAxis
+                  dataKey="day"
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={{ stroke: "#64748b", opacity: 0.2 }}
+                />
+                <YAxis
+                  yAxisId="units"
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={{ stroke: "#64748b", opacity: 0.2 }}
+                  tickFormatter={(v) => `${v}`}
+                />
+                <YAxis
+                  yAxisId="sla"
+                  orientation="right"
+                  stroke="#f59e0b"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={{ stroke: "#64748b", opacity: 0.2 }}
+                  domain={[90, 100]}
+                  tickFormatter={(v) => `${v}%`}
+                />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const d = payload[0].payload;
+                    return (
+                      <div className="rounded-xl border border-slate-700/80 bg-slate-900/95 backdrop-blur-md px-3.5 py-2.5 text-white shadow-2xl text-xs space-y-1.5">
+                        <div className="font-semibold text-slate-200 border-b border-slate-700/60 pb-1 flex items-center justify-between gap-3">
+                          <span>{d.day} Operations Flux</span>
+                          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                            {d.sla}% SLA
+                          </span>
+                        </div>
+                        <div className="space-y-1 pt-0.5">
+                          <div className="flex items-center justify-between gap-4 text-[11px]">
+                            <span className="text-blue-300 flex items-center gap-1.5">
+                              <span className="h-2 w-2 rounded-sm bg-blue-500 inline-block" />
+                              Inbound PO Receipts:
+                            </span>
+                            <span className="font-mono font-bold text-white">{d.inbound} EA</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-4 text-[11px]">
+                            <span className="text-emerald-300 flex items-center gap-1.5">
+                              <span className="h-2 w-2 rounded-sm bg-emerald-500 inline-block" />
+                              Outbound Dispatches:
+                            </span>
+                            <span className="font-mono font-bold text-emerald-300">{d.outbound} EA</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-4 text-[11px]">
+                            <span className="text-purple-300 flex items-center gap-1.5">
+                              <span className="h-2 w-2 rounded-sm bg-purple-500 inline-block" />
+                              Inter-Hub Transfers:
+                            </span>
+                            <span className="font-mono font-bold text-purple-300">{d.transfers} EA</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }}
+                />
+                <Legend
+                  verticalAlign="top"
+                  align="right"
+                  height={32}
+                  iconType="circle"
+                  iconSize={8}
+                  formatter={(val) => (
+                    <span className="text-[11px] text-slate-600 dark:text-zinc-400 font-medium ml-1">
+                      {val}
+                    </span>
+                  )}
+                />
+                <Area
+                  yAxisId="units"
+                  type="monotone"
+                  dataKey="inbound"
+                  name="Inbound Receipts"
+                  fill="url(#opInboundGrad)"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                />
+                <Area
+                  yAxisId="units"
+                  type="monotone"
+                  dataKey="outbound"
+                  name="Outbound Dispatches"
+                  fill="url(#opOutboundGrad)"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                />
+                <Line
+                  yAxisId="sla"
+                  type="monotone"
+                  dataKey="sla"
+                  name="Carrier SLA (%)"
+                  stroke="#f59e0b"
+                  strokeWidth={2}
+                  dot={{ r: 3, fill: "#f59e0b" }}
+                />
+                <ReferenceLine
+                  yAxisId="sla"
+                  y={95}
+                  stroke="#ef4444"
+                  strokeDasharray="3 3"
+                  label={{ value: "95% Target", position: "insideTopLeft", fill: "#ef4444", fontSize: 9 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
           </div>
+        </div>
+      </div>
 
-          <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-linear-to-br from-indigo-500/10 via-blue-500/5 to-transparent dark:from-indigo-950/30 dark:via-zinc-900 dark:to-zinc-900 shadow-xs">
-            <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
-              <ShieldCheck className="h-4 w-4" />
-              <span className="text-xs font-bold">Ledger Integrity Seal</span>
-            </div>
-            <p className="text-[11px] text-slate-600 dark:text-zinc-400 mt-1">
-              Double-entry perpetual balancing verified. 0 ledger discrepancies across all document series.
-            </p>
+      {/* Operational Velocity & Integrity Telemetry Strip */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+          <div className="flex items-center justify-between text-slate-400 mb-1">
+            <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Dock-to-Stock Velocity</span>
+            <Zap className="h-4 w-4 text-amber-500" />
           </div>
+          <div className="flex items-baseline gap-2 mt-1">
+            <span className="text-2xl font-bold font-mono text-slate-900 dark:text-white">2.8 hrs</span>
+            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded">
+              -24m vs Target
+            </span>
+          </div>
+          <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3">
+            <div className="bg-amber-500 h-full rounded-full w-[78%]" />
+          </div>
+          <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2">
+            From carrier unloading receipt to verified bin barcode scan.
+          </p>
+        </div>
+
+        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+          <div className="flex items-center justify-between text-slate-400 mb-1">
+            <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Active Pipeline Volume</span>
+            <Activity className="h-4 w-4 text-blue-500" />
+          </div>
+          <div className="flex items-baseline gap-2 mt-1">
+            <span className="text-2xl font-bold font-mono text-slate-900 dark:text-white">6,770 EA</span>
+            <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded">
+              5 Stages Active
+            </span>
+          </div>
+          <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3">
+            <div className="bg-blue-600 h-full rounded-full w-[91%]" />
+          </div>
+          <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2">
+            Zero putaway bottlenecks detected across all 4 fulfillment zones.
+          </p>
+        </div>
+
+        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-linear-to-br from-indigo-500/10 via-blue-500/5 to-transparent dark:from-indigo-950/30 dark:via-zinc-900 dark:to-zinc-900 shadow-xs">
+          <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+            <ShieldCheck className="h-4 w-4" />
+            <span className="text-xs font-bold">Ledger Integrity Seal</span>
+          </div>
+          <p className="text-[11px] text-slate-600 dark:text-zinc-400 mt-1">
+            Double-entry perpetual balancing verified. 0 ledger discrepancies across all document series.
+          </p>
         </div>
       </div>
 
