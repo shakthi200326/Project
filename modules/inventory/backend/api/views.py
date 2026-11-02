@@ -156,6 +156,14 @@ class StockTransactionViewSet(viewsets.ModelViewSet):
     queryset = StockTransaction.objects.prefetch_related("lines").all()
     serializer_class = StockTransactionSerializer
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        params = getattr(self.request, "query_params", getattr(self.request, "GET", {}))
+        tx_type = params.get("type")
+        if tx_type:
+            qs = qs.filter(transaction_type=tx_type)
+        return qs
+
     @action(detail=True, methods=["post"])
     def post(self, request, pk=None):
         tx = self.get_object()
@@ -165,6 +173,47 @@ class StockTransactionViewSet(viewsets.ModelViewSet):
             return Response(StockTransactionSerializer(posted_tx).data)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=["post"])
+    def submit(self, request, pk=None):
+        tx = self.get_object()
+        tx.status = StockTransaction.Status.SUBMITTED
+        tx.save(update_fields=["status"])
+        return Response(StockTransactionSerializer(tx).data)
+
+    @action(detail=True, methods=["post"], url_path="dispatch")
+    def dispatch_transfer(self, request, pk=None):
+        tx = self.get_object()
+        actor = request.context.username if hasattr(request, "context") else "system"
+        try:
+            dispatched = InventoryPostingService.dispatch_transfer(tx, actor=actor)
+            return Response(StockTransactionSerializer(dispatched).data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=["post"])
+    def receive(self, request, pk=None):
+        tx = self.get_object()
+        actor = request.context.username if hasattr(request, "context") else "system"
+        try:
+            received = InventoryPostingService.receive_transfer(tx, actor=actor)
+            return Response(StockTransactionSerializer(received).data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        tx = self.get_object()
+        tx.status = StockTransaction.Status.APPROVED
+        tx.save(update_fields=["status"])
+        return Response(StockTransactionSerializer(tx).data)
+
+    @action(detail=True, methods=["post"])
+    def inspect(self, request, pk=None):
+        tx = self.get_object()
+        tx.status = StockTransaction.Status.INSPECTED
+        tx.save(update_fields=["status"])
+        return Response(StockTransactionSerializer(tx).data)
 
 class ValuationViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = InventoryValuation.objects.select_related("item", "warehouse").all()

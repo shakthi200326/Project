@@ -35,7 +35,13 @@ import {
   Legend,
   ReferenceLine,
 } from "recharts";
-import { fetchStockMovements, fetchProducts, lookupProductByBarcode, playScanBeep } from "../services/api";
+import {
+  fetchStockMovements,
+  fetchProducts,
+  lookupProductByBarcode,
+  playScanBeep,
+  updateStockTransactionStatus,
+} from "../services/api";
 import { StockTransactionModal } from "../components/StockTransactionModal.jsx";
 
 const movementPipelineData = [
@@ -113,7 +119,29 @@ export function StockMovementsPage({ initialType = "ALL" }) {
 
   const handleTransactionPosted = (newTx) => {
     setMovements((prev) => [newTx, ...prev]);
-    showToast(`Transaction ${newTx.document_number} posted successfully.`);
+    showToast(`Transaction ${newTx.document_number} recorded successfully.`);
+  };
+
+  const handleWorkflowAction = async (tx, action) => {
+    try {
+      const updated = await updateStockTransactionStatus(tx.id || tx.document_number, action);
+      const nextStatus = updated?.status || (
+        action === "dispatch" ? "DISPATCHED" :
+        action === "approve" ? "APPROVED" :
+        action === "inspect" ? "INSPECTED" :
+        action === "submit" ? "SUBMITTED" : "POSTED"
+      );
+      setMovements((prev) =>
+        prev.map((m) =>
+          (m.id === tx.id || m.document_number === tx.document_number)
+            ? { ...m, status: nextStatus }
+            : m
+        )
+      );
+      showToast(`Transaction ${tx.document_number} updated to ${nextStatus}.`);
+    } catch (err) {
+      showToast(`Failed to update status for ${tx.document_number}.`);
+    }
   };
 
   const handleExportRegister = () => {
@@ -480,7 +508,8 @@ export function StockMovementsPage({ initialType = "ALL" }) {
           { key: "RECEIPT", label: "Goods Receipts (In)" },
           { key: "ISSUE", label: "Stock Issues (Out)" },
           { key: "TRANSFER", label: "Warehouse Transfers" },
-          { key: "ADJUSTMENT", label: "Cycle Adjustments" },
+          { key: "ADJUSTMENT", label: "Stock Adjustments" },
+          { key: "RETURN", label: "Stock Returns" },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -490,6 +519,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
               else if (tab.key === "ISSUE") navigate("/inventory/operations/stock-out");
               else if (tab.key === "TRANSFER") navigate("/inventory/operations/transfers");
               else if (tab.key === "ADJUSTMENT") navigate("/inventory/operations/adjustments");
+              else if (tab.key === "RETURN") navigate("/inventory/operations/returns");
             }}
             className={`px-3.5 py-2.5 font-medium border-b-2 transition-all cursor-pointer ${
               activeTab === tab.key
@@ -528,18 +558,19 @@ export function StockMovementsPage({ initialType = "ALL" }) {
               <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
                 <th className="py-3.5 px-4 font-semibold">Document No.</th>
                 <th className="py-3.5 px-4 font-semibold">Type</th>
-                <th className="py-3.5 px-4 font-semibold">Timestamp</th>
-                <th className="py-3.5 px-4 font-semibold">Product Item</th>
-                <th className="py-3.5 px-4 font-semibold">Warehouse / Bin</th>
+                <th className="py-3.5 px-4 font-semibold">Date / Time</th>
+                <th className="py-3.5 px-4 font-semibold">Product & Details</th>
+                <th className="py-3.5 px-4 font-semibold">Warehouse / Location</th>
                 <th className="py-3.5 px-4 font-semibold text-right">Quantity Delta</th>
                 <th className="py-3.5 px-4 font-semibold text-right">Unit Cost</th>
                 <th className="py-3.5 px-4 font-semibold text-center">Status</th>
+                <th className="py-3.5 px-4 font-semibold text-center">Workflow Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
               {filteredMovements.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400 dark:text-zinc-500">
+                  <td colSpan={9} className="py-8 text-center text-slate-400 dark:text-zinc-500">
                     No transactions match current filters.
                   </td>
                 </tr>
@@ -547,6 +578,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
                 filteredMovements.map((m) => {
                   const txType = String(m.type || m.transaction_type || "RECEIPT").toUpperCase();
                   const itemName = m.item || m.item_name || (m.lines && m.lines[0]?.item_name) || "Industrial Ball Bearing 6205-2RS";
+                  const itemSku = m.item_code || (m.lines && m.lines[0]?.item_code) || "";
                   const whName = m.warehouse_name || (typeof m.warehouse === "string" ? m.warehouse : "Main Central Fulfillment Hub");
                   const locName = m.location || m.location_code || (m.lines && (m.lines[0]?.location_code || m.lines[0]?.location)) || "Aisle 3 - Rack B";
                   const rawQty = m.quantity !== undefined && m.quantity !== null
@@ -555,6 +587,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
                   const itemQty = txType === "ISSUE" && rawQty > 0 ? -rawQty : rawQty;
                   const itemUnit = m.unit || (m.lines && m.lines[0]?.unit) || "EA";
                   const itemCost = Number(m.unit_cost !== undefined && m.unit_cost !== null ? m.unit_cost : (m.lines && m.lines[0]?.unit_cost !== undefined ? m.lines[0].unit_cost : 14.85)) || 0;
+                  const status = m.status || "POSTED";
 
                   return (
                     <tr key={m.id || m.document_number} className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors">
@@ -572,6 +605,8 @@ export function StockMovementsPage({ initialType = "ALL" }) {
                           ? "bg-rose-50 text-rose-700 dark:bg-rose-950/70 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50"
                           : txType === "TRANSFER"
                           ? "bg-blue-50 text-blue-700 dark:bg-blue-950/70 dark:text-blue-400 border border-blue-200 dark:border-blue-900/50"
+                          : txType === "ADJUSTMENT"
+                          ? "bg-amber-50 text-amber-700 dark:bg-amber-950/70 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50"
                           : "bg-purple-50 text-purple-700 dark:bg-purple-950/70 dark:text-purple-400 border border-purple-200 dark:border-purple-900/50"
                       }`}
                     >
@@ -579,29 +614,131 @@ export function StockMovementsPage({ initialType = "ALL" }) {
                       {txType === "ISSUE" && <ArrowUpRight className="h-3 w-3" />}
                       {txType === "TRANSFER" && <ArrowLeftRight className="h-3 w-3" />}
                       {txType === "ADJUSTMENT" && <SlidersHorizontal className="h-3 w-3" />}
+                      {txType === "RETURN" && <RotateCcw className="h-3 w-3" />}
                       {txType}
                     </span>
                   </td>
                   <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px]">
-                    {new Date(m.created_at || Date.now()).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    <div>{m.transaction_date || (m.created_at ? m.created_at.split("T")[0] : "")}</div>
+                    <div className="text-[10px] text-slate-400">
+                      {new Date(m.created_at || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </div>
                   </td>
                   <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-white">
-                    {itemName}
+                    <div>{itemName}</div>
+                    <div className="text-[10px] text-slate-400 font-mono font-normal">
+                      {itemSku && <span>SKU: {itemSku} • </span>}
+                      {m.batch_number && <span>Batch: {m.batch_number} • </span>}
+                      {m.supplier && <span>Supplier: {m.supplier}</span>}
+                      {m.party_name && <span>Party: {m.party_name} ({m.return_type || "Return"})</span>}
+                      {m.reason && <span>Reason: {m.reason}</span>}
+                    </div>
                   </td>
                   <td className="py-3.5 px-4 text-slate-600 dark:text-zinc-300">
-                    <div className="font-medium">{whName}</div>
-                    <div className="text-[10px] text-slate-400 font-mono">{locName}</div>
+                    <div className="font-medium">
+                      {whName}
+                      {txType === "TRANSFER" && m.destination_warehouse_name && (
+                        <span className="text-blue-600 dark:text-blue-400"> → {m.destination_warehouse_name}</span>
+                      )}
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-mono">
+                      {locName}
+                      {txType === "TRANSFER" && m.destination_location_name && (
+                        <span> → {m.destination_location_name}</span>
+                      )}
+                    </div>
                   </td>
                   <td className={`py-3.5 px-4 text-right font-mono tabular-nums font-bold ${itemQty > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                     {itemQty > 0 ? `+${itemQty}` : itemQty} {itemUnit}
+                    {txType === "ADJUSTMENT" && m.difference_quantity !== undefined && (
+                      <div className="text-[10px] text-slate-400 font-normal">
+                        Diff: {m.difference_quantity > 0 ? `+${m.difference_quantity}` : m.difference_quantity}
+                      </div>
+                    )}
                   </td>
                   <td className="py-3.5 px-4 text-right font-mono tabular-nums text-slate-700 dark:text-zinc-300 font-medium">
                     ${itemCost.toFixed(2)}
                   </td>
                   <td className="py-3.5 px-4 text-center">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200/60 dark:border-zinc-700">
-                      {m.status || "POSTED"}
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                      status === "POSTED"
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                        : status === "DISPATCHED"
+                        ? "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                        : status === "SUBMITTED"
+                        ? "bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200 dark:border-blue-800"
+                        : status === "APPROVED" || status === "INSPECTED"
+                        ? "bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border-purple-200 dark:border-purple-800"
+                        : "bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border-slate-200 dark:border-zinc-700"
+                    }`}>
+                      {status}
                     </span>
+                  </td>
+                  <td className="py-3.5 px-4 text-center">
+                    <div className="flex items-center justify-center gap-1.5">
+                      {status === "DRAFT" && (
+                        <button
+                          onClick={() => handleWorkflowAction(m, "submit")}
+                          className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold transition-colors cursor-pointer"
+                        >
+                          Submit
+                        </button>
+                      )}
+                      {status === "SUBMITTED" && txType === "TRANSFER" && (
+                        <button
+                          onClick={() => handleWorkflowAction(m, "dispatch")}
+                          className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold transition-colors cursor-pointer"
+                        >
+                          Dispatch
+                        </button>
+                      )}
+                      {status === "SUBMITTED" && txType === "ADJUSTMENT" && (
+                        <button
+                          onClick={() => handleWorkflowAction(m, "approve")}
+                          className="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-[11px] font-bold transition-colors cursor-pointer"
+                        >
+                          Approve
+                        </button>
+                      )}
+                      {status === "SUBMITTED" && txType === "RETURN" && (
+                        <button
+                          onClick={() => handleWorkflowAction(m, "inspect")}
+                          className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold transition-colors cursor-pointer"
+                        >
+                          Inspect
+                        </button>
+                      )}
+                      {status === "SUBMITTED" && (txType === "RECEIPT" || txType === "ISSUE") && (
+                        <button
+                          onClick={() => handleWorkflowAction(m, "post")}
+                          className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-colors cursor-pointer"
+                        >
+                          Post
+                        </button>
+                      )}
+                      {status === "DISPATCHED" && txType === "TRANSFER" && (
+                        <button
+                          onClick={() => handleWorkflowAction(m, "receive")}
+                          className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold transition-colors cursor-pointer"
+                        >
+                          Receive
+                        </button>
+                      )}
+                      {(status === "APPROVED" || status === "INSPECTED") && (
+                        <button
+                          onClick={() => handleWorkflowAction(m, "post")}
+                          className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-colors cursor-pointer"
+                        >
+                          Post
+                        </button>
+                      )}
+                      {status === "POSTED" && (
+                        <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold text-[11px]">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          <span>Audited</span>
+                        </span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );

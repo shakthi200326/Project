@@ -203,3 +203,4 @@ class WarehouseManagementPhase2Tests(APITestCase):
         self.assertIn("location_code_prefix", cfg_resp.data)
         self.assertIn("rack_code_prefix", cfg_resp.data)
         self.assertIn("bin_code_prefix", cfg_resp.data)
+

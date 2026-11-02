@@ -42,6 +42,7 @@ class StockLedgerEntry(models.Model):
         TRANSFER_IN = "TRANSFER_IN", "Transfer In"
         TRANSFER_OUT = "TRANSFER_OUT", "Transfer Out"
         ADJUSTMENT = "ADJUSTMENT", "Inventory Adjustment"
+        RETURN = "RETURN", "Stock Return"
         REVERSAL = "REVERSAL", "Transaction Reversal"
 
     item = models.ForeignKey(InventoryItem, on_delete=models.PROTECT, related_name="ledger_entries")
@@ -66,4 +67,3 @@ class StockLedgerEntry(models.Model):
 
     def __str__(self):
         return f"[{self.created_at}] {self.transaction_ref}: {self.item.code} {self.quantity_delta:+f}"
-

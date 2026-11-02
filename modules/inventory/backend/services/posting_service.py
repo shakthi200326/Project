@@ -16,8 +16,8 @@ class InventoryPostingService:
     @classmethod
     @transaction.atomic
     def post_transaction(cls, transaction_obj: StockTransaction, actor: str = "system") -> StockTransaction:
-        if transaction_obj.status != StockTransaction.Status.DRAFT:
-            raise ValidationError("Only DRAFT transactions can be posted.")
+        if transaction_obj.status == StockTransaction.Status.POSTED:
+            raise ValidationError("Transaction has already been posted.")
 
         lines = list(transaction_obj.lines.select_related("item", "variant", "location").all())
         if not lines:
@@ -35,6 +35,8 @@ class InventoryPostingService:
                 cls._process_transfer(transaction_obj, line, actor)
             elif transaction_obj.transaction_type == StockTransaction.TransactionType.ADJUSTMENT:
                 cls._process_adjustment(transaction_obj, line, actor)
+            elif transaction_obj.transaction_type == StockTransaction.TransactionType.RETURN:
+                cls._process_return(transaction_obj, line, actor)
 
         transaction_obj.status = StockTransaction.Status.POSTED
         transaction_obj.posted_by = actor
@@ -45,6 +47,88 @@ class InventoryPostingService:
         cls._emit_transaction_events(transaction_obj, actor)
 
         return transaction_obj
+
+    @classmethod
+    @transaction.atomic
+    def dispatch_transfer(cls, tx: StockTransaction, actor: str = "system") -> StockTransaction:
+        """
+        Dispatch transfer: reduces source warehouse stock and moves quantity into in-transit status.
+        """
+        if tx.transaction_type != StockTransaction.TransactionType.TRANSFER:
+            raise ValidationError("Only TRANSFER transactions can be dispatched.")
+        if tx.status not in (StockTransaction.Status.DRAFT, StockTransaction.Status.SUBMITTED):
+            raise ValidationError("Transaction must be DRAFT or SUBMITTED to dispatch.")
+
+        lines = list(tx.lines.select_related("item", "variant", "location").all())
+        for line in lines:
+            qty = abs(line.quantity)
+            source_bal = cls._get_or_create_locked_balance(line.item, line.variant, tx.warehouse, line.location)
+            if source_bal.available_qty < qty:
+                raise ValidationError(f"Insufficient stock at source warehouse {tx.warehouse.code} for dispatch.")
+            source_bal.on_hand_qty -= qty
+            source_bal.save(update_fields=["on_hand_qty", "updated_at"])
+
+            StockLedgerEntry.objects.create(
+                item=line.item,
+                variant=line.variant,
+                warehouse=tx.warehouse,
+                location=line.location,
+                movement_type=StockLedgerEntry.MovementType.TRANSFER_OUT,
+                quantity_delta=-qty,
+                balance_after=source_bal.on_hand_qty,
+                unit_cost=line.unit_cost,
+                total_value_delta=-(qty * line.unit_cost),
+                transaction_ref=tx.document_number,
+                reason="Dispatch: In-Transit Stock Movement",
+                actor=actor,
+            )
+
+        tx.status = StockTransaction.Status.DISPATCHED
+        tx.save(update_fields=["status"])
+        return tx
+
+    @classmethod
+    @transaction.atomic
+    def receive_transfer(cls, tx: StockTransaction, actor: str = "system") -> StockTransaction:
+        """
+        Receive dispatched transfer into destination warehouse.
+        """
+        if tx.transaction_type != StockTransaction.TransactionType.TRANSFER:
+            raise ValidationError("Only TRANSFER transactions can be received.")
+        if tx.status != StockTransaction.Status.DISPATCHED:
+            raise ValidationError("Transaction must be DISPATCHED before receipt at destination.")
+        if not tx.destination_warehouse:
+            raise ValidationError("Transfer requires a destination warehouse.")
+
+        lines = list(tx.lines.select_related("item", "variant", "destination_location").all())
+        for line in lines:
+            qty = abs(line.quantity)
+            dest_bal = cls._get_or_create_locked_balance(
+                line.item, line.variant, tx.destination_warehouse, line.destination_location
+            )
+            dest_bal.on_hand_qty += qty
+            dest_bal.save(update_fields=["on_hand_qty", "updated_at"])
+
+            StockLedgerEntry.objects.create(
+                item=line.item,
+                variant=line.variant,
+                warehouse=tx.destination_warehouse,
+                location=line.destination_location,
+                movement_type=StockLedgerEntry.MovementType.TRANSFER_IN,
+                quantity_delta=qty,
+                balance_after=dest_bal.on_hand_qty,
+                unit_cost=line.unit_cost,
+                total_value_delta=qty * line.unit_cost,
+                transaction_ref=tx.document_number,
+                reason="Receipt: Transferred Stock Received",
+                actor=actor,
+            )
+
+        tx.status = StockTransaction.Status.POSTED
+        tx.posted_by = actor
+        tx.posted_at = timezone.now()
+        tx.save(update_fields=["status", "posted_by", "posted_at"])
+        return tx
 
     @classmethod
     def _emit_transaction_events(cls, tx: StockTransaction, actor: str):
@@ -117,6 +201,7 @@ class InventoryPostingService:
             unit_cost=line.unit_cost,
             total_value_delta=line.quantity * line.unit_cost,
             transaction_ref=tx.document_number,
+            reason=tx.reason or (f"Supplier: {tx.supplier}" if tx.supplier else "Goods Receipt"),
             actor=actor,
         )
 
@@ -155,6 +240,7 @@ class InventoryPostingService:
             unit_cost=cost,
             total_value_delta=-(qty_to_issue * cost),
             transaction_ref=tx.document_number,
+            reason=tx.reason or f"Stock Issue: {tx.issue_type}",
             actor=actor,
         )
 
@@ -190,6 +276,7 @@ class InventoryPostingService:
             unit_cost=line.unit_cost,
             total_value_delta=-(qty * line.unit_cost),
             transaction_ref=tx.document_number,
+            reason=tx.reason or "Inter-Warehouse Transfer Out",
             actor=actor,
         )
 
@@ -204,6 +291,7 @@ class InventoryPostingService:
             unit_cost=line.unit_cost,
             total_value_delta=qty * line.unit_cost,
             transaction_ref=tx.document_number,
+            reason=tx.reason or "Inter-Warehouse Transfer In",
             actor=actor,
         )
 
@@ -228,6 +316,46 @@ class InventoryPostingService:
             unit_cost=line.unit_cost,
             total_value_delta=delta * line.unit_cost,
             transaction_ref=tx.document_number,
+            reason=tx.reason or f"Stock Adjustment: {tx.adjustment_type}",
+            actor=actor,
+        )
+
+    @classmethod
+    def _process_return(cls, tx: StockTransaction, line: StockTransactionLine, actor: str):
+        qty = abs(line.quantity)
+        is_supplier_return = (tx.return_type == "Supplier Return")
+
+        balance = cls._get_or_create_locked_balance(line.item, line.variant, tx.warehouse, line.location)
+
+        if is_supplier_return:
+            if balance.available_qty < qty:
+                raise ValidationError(f"Insufficient stock for supplier return of {line.item.code}.")
+            balance.on_hand_qty -= qty
+            balance.save(update_fields=["on_hand_qty", "updated_at"])
+            delta = -qty
+        else:
+            # Customer Return
+            if tx.return_disposition == "Quarantine":
+                balance.on_hand_qty += qty
+                balance.blocked_qty += qty
+                balance.save(update_fields=["on_hand_qty", "blocked_qty", "updated_at"])
+            else:
+                balance.on_hand_qty += qty
+                balance.save(update_fields=["on_hand_qty", "updated_at"])
+            delta = qty
+
+        StockLedgerEntry.objects.create(
+            item=line.item,
+            variant=line.variant,
+            warehouse=tx.warehouse,
+            location=line.location,
+            movement_type=StockLedgerEntry.MovementType.RETURN,
+            quantity_delta=delta,
+            balance_after=balance.on_hand_qty,
+            unit_cost=line.unit_cost,
+            total_value_delta=delta * line.unit_cost,
+            transaction_ref=tx.document_number,
+            reason=tx.reason or f"Return: {tx.return_type} ({tx.product_condition})",
             actor=actor,
         )
 
@@ -246,4 +374,3 @@ class InventoryPostingService:
         val.weighted_average_cost = new_wav
         val.total_value = val.total_on_hand * val.weighted_average_cost
         val.save()
-

@@ -1471,3 +1471,4 @@ export function RackBinPage() {
     </div>
   );
 }
+

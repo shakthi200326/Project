@@ -116,6 +116,8 @@ class StockTransactionSerializer(serializers.ModelSerializer):
     lines = StockTransactionLineSerializer(many=True, read_only=True)
     warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
     warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+    destination_warehouse_name = serializers.CharField(source="destination_warehouse.name", read_only=True, default="")
+    destination_warehouse_code = serializers.CharField(source="destination_warehouse.code", read_only=True, default="")
     type = serializers.CharField(source="transaction_type", read_only=True)
 
     item = serializers.SerializerMethodField()
@@ -124,6 +126,13 @@ class StockTransactionSerializer(serializers.ModelSerializer):
     quantity = serializers.SerializerMethodField()
     unit = serializers.SerializerMethodField()
     unit_cost = serializers.SerializerMethodField()
+    batch_number = serializers.SerializerMethodField()
+    expiry_date = serializers.SerializerMethodField()
+    serial_number = serializers.SerializerMethodField()
+    system_quantity = serializers.SerializerMethodField()
+    actual_quantity = serializers.SerializerMethodField()
+    difference_quantity = serializers.SerializerMethodField()
+    destination_location_name = serializers.SerializerMethodField()
 
     class Meta:
         model = StockTransaction
@@ -142,6 +151,12 @@ class StockTransactionSerializer(serializers.ModelSerializer):
         if first_line and first_line.location:
             return f"{first_line.location.code} - {first_line.location.name}"
         return obj.warehouse.name if obj.warehouse else "Main Central Hub"
+
+    def get_destination_location_name(self, obj):
+        first_line = obj.lines.first()
+        if first_line and first_line.destination_location:
+            return f"{first_line.destination_location.code} - {first_line.destination_location.name}"
+        return ""
 
     def get_quantity(self, obj):
         first_line = obj.lines.first()
@@ -162,6 +177,32 @@ class StockTransactionSerializer(serializers.ModelSerializer):
         if first_line:
             return float(first_line.unit_cost)
         return 14.85
+
+    def get_batch_number(self, obj):
+        first_line = obj.lines.first()
+        return first_line.batch_number if first_line else ""
+
+    def get_expiry_date(self, obj):
+        first_line = obj.lines.first()
+        return str(first_line.expiry_date) if first_line and first_line.expiry_date else ""
+
+    def get_serial_number(self, obj):
+        first_line = obj.lines.first()
+        if first_line and first_line.serial_numbers:
+            return ", ".join(first_line.serial_numbers)
+        return ""
+
+    def get_system_quantity(self, obj):
+        first_line = obj.lines.first()
+        return float(first_line.system_quantity) if first_line else 0.0
+
+    def get_actual_quantity(self, obj):
+        first_line = obj.lines.first()
+        return float(first_line.actual_quantity) if first_line else 0.0
+
+    def get_difference_quantity(self, obj):
+        first_line = obj.lines.first()
+        return float(first_line.difference_quantity) if first_line else 0.0
 
     def create(self, validated_data):
         lines_data = self.initial_data.get("lines", [])
@@ -187,7 +228,18 @@ class StockTransactionSerializer(serializers.ModelSerializer):
             if isinstance(loc_val, int):
                 loc_obj = StorageLocation.objects.filter(id=loc_val).first()
             elif isinstance(loc_val, str):
-                loc_obj = StorageLocation.objects.filter(code=loc_val).first()
+                loc_obj = StorageLocation.objects.filter(code=loc_val).first() or StorageLocation.objects.filter(name=loc_val).first()
+
+            dest_loc_val = line.get("destination_location")
+            dest_loc_obj = None
+            if isinstance(dest_loc_val, int):
+                dest_loc_obj = StorageLocation.objects.filter(id=dest_loc_val).first()
+            elif isinstance(dest_loc_val, str):
+                dest_loc_obj = StorageLocation.objects.filter(code=dest_loc_val).first() or StorageLocation.objects.filter(name=dest_loc_val).first()
+
+            serials = line.get("serial_numbers") or []
+            if not serials and line.get("serial_number"):
+                serials = [str(line.get("serial_number"))]
 
             if item_obj:
                 StockTransactionLine.objects.create(
@@ -196,7 +248,13 @@ class StockTransactionSerializer(serializers.ModelSerializer):
                     quantity=Decimal(str(qty)),
                     unit_cost=Decimal(str(cost)),
                     location=loc_obj,
-                    batch_number=line.get("batch_number", ""),
+                    destination_location=dest_loc_obj,
+                    batch_number=line.get("batch_number", "") or "",
+                    expiry_date=line.get("expiry_date") or None,
+                    serial_numbers=serials,
+                    system_quantity=Decimal(str(line.get("system_quantity", 0) or 0)),
+                    actual_quantity=Decimal(str(line.get("actual_quantity", 0) or 0)),
+                    difference_quantity=Decimal(str(line.get("difference_quantity", 0) or 0)),
                 )
         return tx
 

@@ -67,6 +67,7 @@ export default function App() {
                 <Route path="/inventory/operations/stock-out" element={<StockMovementsPage initialType="ISSUE" />} />
                 <Route path="/inventory/operations/transfers" element={<StockMovementsPage initialType="TRANSFER" />} />
                 <Route path="/inventory/operations/adjustments" element={<StockMovementsPage initialType="ADJUSTMENT" />} />
+                <Route path="/inventory/operations/returns" element={<StockMovementsPage initialType="RETURN" />} />
                 <Route path="/inventory/operations/reservations" element={<StockReservationsPage />} />
                 <Route path="/inventory/operations/reconciliation" element={<ReconciliationPage />} />
 
@@ -108,6 +109,7 @@ export default function App() {
                 <Route path="/valuation" element={<Navigate to="/inventory/analytics/valuation" replace />} />
                 <Route path="/reports" element={<Navigate to="/inventory/analytics/reports" replace />} />
                 <Route path="/settings" element={<Navigate to="/inventory/settings" replace />} />
+                <Route path="/returns" element={<Navigate to="/inventory/operations/returns" replace />} />
                 <Route path="/reconciliation" element={<Navigate to="/inventory/operations/reconciliation" replace />} />
 
                 <Route path="*" element={<Navigate to="/inventory" replace />} />

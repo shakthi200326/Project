@@ -275,67 +275,115 @@ export const DEMO_PRODUCTS = [
 export const DEMO_TRANSACTIONS = [
   {
     id: "tx-1001",
-    document_number: "INV-2026-0006",
+    document_number: "GRN-2026-0001",
     type: "RECEIPT",
     transaction_type: "RECEIPT",
     created_at: "2026-10-26T08:18:46Z",
+    transaction_date: "2026-10-26",
     item: "Industrial Ball Bearing 6205-2RS",
     item_code: "BRG-6205-2RS",
-    warehouse: "Main Central Hub",
+    warehouse: "Main Central Fulfillment Hub",
     warehouse_code: "WH-MAIN",
+    warehouse_name: "Main Central Fulfillment Hub",
     location: "Aisle 3 - Rack B",
     quantity: 36.0,
     unit: "EA",
     unit_cost: 14.85,
+    supplier: "Apex Motion Bearings Ltd",
+    reference_number: "PO-2026-8812",
     status: "POSTED",
   },
   {
     id: "tx-1002",
-    document_number: "INV-2026-0005",
+    document_number: "ISS-2026-0001",
     type: "ISSUE",
     transaction_type: "ISSUE",
     created_at: "2026-10-25T14:22:10Z",
+    transaction_date: "2026-10-25",
     item: "Hydraulic Solenoid Valve 24V DC",
     item_code: "HYD-SV-24V",
-    warehouse: "Main Central Hub",
+    warehouse: "Main Central Fulfillment Hub",
     warehouse_code: "WH-MAIN",
+    warehouse_name: "Main Central Fulfillment Hub",
     location: "Aisle 1 - Bin 4",
     quantity: -2.0,
     unit: "EA",
     unit_cost: 128.50,
+    issue_type: "Production",
+    reference_number: "WO-9941",
+    issued_to: "Assembly Line 2",
+    reason: "Production run for Hydraulic Power Units",
     status: "POSTED",
   },
   {
     id: "tx-1003",
-    document_number: "INV-2026-0004",
-    type: "RECEIPT",
-    transaction_type: "RECEIPT",
+    document_number: "TRF-2026-0001",
+    type: "TRANSFER",
+    transaction_type: "TRANSFER",
     created_at: "2026-10-24T11:05:32Z",
+    transaction_date: "2026-10-24",
     item: "Polyurethane Timing Belt T10-1200",
     item_code: "BELT-T10-1200",
-    warehouse: "Main Central Hub",
+    warehouse: "Main Central Fulfillment Hub",
     warehouse_code: "WH-MAIN",
+    warehouse_name: "Main Central Fulfillment Hub",
     location: "Bay 2",
-    quantity: 50.0,
+    destination_warehouse: "East Coast Logistics Terminal",
+    destination_warehouse_name: "East Coast Logistics Terminal",
+    destination_location_name: "Storage Zone A",
+    quantity: 25.0,
     unit: "EA",
     unit_cost: 32.40,
-    status: "POSTED",
+    status: "DISPATCHED",
+    remarks: "Transfer to rebalance East Coast distribution inventory",
   },
   {
     id: "tx-1004",
-    document_number: "INV-2026-0003",
+    document_number: "ADJ-2026-0001",
     type: "ADJUSTMENT",
     transaction_type: "ADJUSTMENT",
     created_at: "2026-10-23T16:40:18Z",
+    transaction_date: "2026-10-23",
     item: "Synthetic Compressor Lubricant ISO VG 46",
     item_code: "LUB-SYN-VG46",
-    warehouse: "Main Central Hub",
+    warehouse: "Main Central Fulfillment Hub",
     warehouse_code: "WH-MAIN",
+    warehouse_name: "Main Central Fulfillment Hub",
     location: "Chemical Vault",
     quantity: -12.0,
     unit: "LTR",
     unit_cost: 18.20,
+    adjustment_type: "Decrease",
+    reason: "Damage",
+    system_quantity: 120,
+    actual_quantity: 108,
+    difference_quantity: -12,
     status: "POSTED",
+    remarks: "Container dented during forklift staging",
+  },
+  {
+    id: "tx-1005",
+    document_number: "RET-2026-0001",
+    type: "RETURN",
+    transaction_type: "RETURN",
+    created_at: "2026-10-22T09:30:00Z",
+    transaction_date: "2026-10-22",
+    item: "Industrial Ball Bearing 6205-2RS",
+    item_code: "BRG-6205-2RS",
+    warehouse: "Main Central Fulfillment Hub",
+    warehouse_code: "WH-MAIN",
+    warehouse_name: "Main Central Fulfillment Hub",
+    location: "Aisle 3 - Rack B",
+    quantity: 8.0,
+    unit: "EA",
+    unit_cost: 14.85,
+    return_type: "Customer Return",
+    reference_number: "RMA-2026-4421",
+    party_name: "Midwest Machinery Works",
+    product_condition: "Good",
+    return_disposition: "Restock",
+    status: "POSTED",
+    remarks: "Customer over-ordered for preventive maintenance schedule",
   },
 ];
 
@@ -1549,6 +1597,15 @@ export function normalizeMovement(item) {
     item.location_code ||
     (line && (line.location_code || line.location)) ||
     "Aisle 3 - Rack B";
+  const destWarehouse =
+    item.destination_warehouse_name ||
+    (typeof item.destination_warehouse === "string" ? item.destination_warehouse : null) ||
+    "";
+  const destLocation =
+    item.destination_location_name ||
+    (line && (line.destination_location_code || line.destination_location)) ||
+    "";
+
   const rawQty =
     item.quantity !== undefined && item.quantity !== null
       ? Number(item.quantity)
@@ -1573,14 +1630,37 @@ export function normalizeMovement(item) {
     type,
     transaction_type: type,
     created_at: item.created_at || new Date().toISOString(),
+    transaction_date: item.transaction_date || (item.created_at ? item.created_at.split("T")[0] : new Date().toISOString().split("T")[0]),
     item: itemName,
     item_code: itemCode,
     warehouse,
     warehouse_name: warehouse,
     location,
+    destination_warehouse: destWarehouse,
+    destination_warehouse_name: destWarehouse,
+    destination_location: destLocation,
+    destination_location_name: destLocation,
     quantity,
     unit,
     unit_cost: unitCost,
+    batch_number: item.batch_number || (line && line.batch_number) || "",
+    expiry_date: item.expiry_date || (line && line.expiry_date) || "",
+    serial_number: item.serial_number || (line && line.serial_numbers && line.serial_numbers[0]) || "",
+    supplier: item.supplier || "",
+    reference_number: item.reference_number || "",
+    issue_type: item.issue_type || "",
+    issued_to: item.issued_to || "",
+    party_name: item.party_name || "",
+    return_type: item.return_type || "",
+    product_condition: item.product_condition || "",
+    return_disposition: item.return_disposition || "",
+    adjustment_type: item.adjustment_type || "",
+    reason: item.reason || "",
+    system_quantity: item.system_quantity !== undefined ? Number(item.system_quantity) : (line ? Number(line.system_quantity) : 0),
+    actual_quantity: item.actual_quantity !== undefined ? Number(item.actual_quantity) : (line ? Number(line.actual_quantity) : 0),
+    difference_quantity: item.difference_quantity !== undefined ? Number(item.difference_quantity) : (line ? Number(line.difference_quantity) : 0),
+    remarks: item.notes || item.remarks || "",
+    notes: item.notes || item.remarks || "",
     status: item.status || "POSTED",
   };
 }
@@ -1619,10 +1699,19 @@ export async function fetchStockMovements(params = {}) {
   return { results: merged, count: merged.length };
 }
 
-export async function postStockTransaction(payload) {
+export async function postStockTransaction(payload, action = "post") {
   const docNum = payload.document_number || `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-  const qty = Number(payload.quantity || 1);
+  const qty = Number(payload.quantity !== undefined ? payload.quantity : (payload.actual_quantity !== undefined ? payload.actual_quantity : 1));
   const txType = payload.type || payload.transaction_type || "RECEIPT";
+
+  let targetStatus = "POSTED";
+  if (action === "save_draft") targetStatus = "DRAFT";
+  else if (action === "submit") targetStatus = "SUBMITTED";
+  else if (action === "dispatch") targetStatus = "DISPATCHED";
+  else if (action === "approve") targetStatus = "APPROVED";
+  else if (action === "inspect") targetStatus = "INSPECTED";
+  else if (action === "receive") targetStatus = "POSTED";
+  else if (action === "post") targetStatus = "POSTED";
 
   let created = null;
 
@@ -1633,13 +1722,34 @@ export async function postStockTransaction(payload) {
       body: JSON.stringify({
         document_number: docNum,
         transaction_type: txType,
-        warehouse: 1,
+        transaction_date: payload.transaction_date || new Date().toISOString().split("T")[0],
+        status: action === "save_draft" ? "DRAFT" : "DRAFT",
+        warehouse: payload.warehouse_id || (typeof payload.warehouse === "number" ? payload.warehouse : 1),
+        destination_warehouse: payload.destination_warehouse_id || (typeof payload.destination_warehouse === "number" ? payload.destination_warehouse : null),
+        reference_number: payload.reference_number || "",
+        supplier: payload.supplier || "",
+        issue_type: payload.issue_type || "",
+        issued_to: payload.issued_to || "",
+        party_name: payload.party_name || "",
+        return_type: payload.return_type || "",
+        product_condition: payload.product_condition || "",
+        return_disposition: payload.return_disposition || "",
+        adjustment_type: payload.adjustment_type || "",
+        reason: payload.reason || "",
+        notes: payload.remarks || payload.notes || "",
         lines: [
           {
-            item: payload.itemId || payload.item || 1,
-            quantity: qty,
-            unit_cost: payload.unitCost || payload.unit_cost || 14.85,
-            location: 1,
+            item: payload.item_id || payload.itemId || payload.product_id || payload.item || 1,
+            location: payload.location_id || (typeof payload.location === "number" ? payload.location : null),
+            destination_location: payload.destination_location_id || (typeof payload.destination_location === "number" ? payload.destination_location : null),
+            quantity: txType === "ADJUSTMENT" ? Math.abs(Number(payload.difference_quantity || qty)) : Math.abs(qty),
+            unit_cost: Number(payload.unitCost || payload.unit_cost || 0),
+            batch_number: payload.batchNumber || payload.batch_number || "",
+            expiry_date: payload.expiryDate || payload.expiry_date || null,
+            serial_numbers: payload.serialNumber || payload.serial_number ? [String(payload.serialNumber || payload.serial_number)] : (payload.serial_numbers || []),
+            system_quantity: Number(payload.system_quantity || 0),
+            actual_quantity: Number(payload.actual_quantity || 0),
+            difference_quantity: Number(payload.difference_quantity || 0),
           },
         ],
       }),
@@ -1647,12 +1757,19 @@ export async function postStockTransaction(payload) {
     if (res.ok) {
       updateApiStatus(true);
       created = await res.json();
-      // Auto-post
-      try {
-        await fetch(`${API_BASE}/inventory/movements/${created.id}/post/`, { method: "POST" });
-      } catch (e) {}
+      if (action !== "save_draft" && created && created.id) {
+        try {
+          const actionEndpoint = action === "post" ? "post" : action;
+          const actRes = await fetch(`${API_BASE}/inventory/movements/${created.id}/${actionEndpoint}/`, { method: "POST" });
+          if (actRes.ok) {
+            created = await actRes.json();
+          }
+        } catch (e) {}
+      }
     }
-  } catch (e) {}
+  } catch (e) {
+    updateApiStatus(false);
+  }
 
   const mergedTx = normalizeMovement({
     ...(created || {}),
@@ -1660,40 +1777,108 @@ export async function postStockTransaction(payload) {
     document_number: docNum,
     type: txType,
     transaction_type: txType,
+    transaction_date: payload.transaction_date || new Date().toISOString().split("T")[0],
     item: payload.itemName || payload.itemSku || payload.item || "Industrial Ball Bearing 6205-2RS",
     item_code: payload.itemSku || payload.item_code || "BRG-6205-2RS",
-    warehouse: payload.warehouse || "Main Central Fulfillment Hub",
-    location: payload.location || "Aisle 3 - Rack B",
+    warehouse: payload.warehouse_name || payload.warehouse || "Main Central Fulfillment Hub",
+    location: payload.location_name || payload.location || "Aisle 3 - Rack B",
+    destination_warehouse: payload.destination_warehouse_name || payload.destination_warehouse || "",
+    destination_location: payload.destination_location_name || payload.destination_location || "",
     quantity: txType === "ISSUE" ? -Math.abs(qty) : Math.abs(qty),
     unit: payload.unit || "EA",
     unit_cost: Number(payload.unitCost || payload.unit_cost) || 14.85,
-    status: "POSTED",
+    supplier: payload.supplier || "",
+    reference_number: payload.reference_number || "",
+    issue_type: payload.issue_type || "",
+    issued_to: payload.issued_to || "",
+    party_name: payload.party_name || "",
+    return_type: payload.return_type || "",
+    product_condition: payload.product_condition || "",
+    return_disposition: payload.return_disposition || "",
+    adjustment_type: payload.adjustment_type || "",
+    reason: payload.reason || "",
+    system_quantity: Number(payload.system_quantity || 0),
+    actual_quantity: Number(payload.actual_quantity || 0),
+    difference_quantity: Number(payload.difference_quantity || 0),
+    batch_number: payload.batchNumber || payload.batch_number || "",
+    expiry_date: payload.expiryDate || payload.expiry_date || "",
+    serial_number: payload.serialNumber || payload.serial_number || "",
+    remarks: payload.remarks || payload.notes || "",
+    notes: payload.remarks || payload.notes || "",
+    status: (created && created.status) || targetStatus,
   });
 
   saveLocalEntity("movements", mergedTx, "document_number");
 
-  // Also update stock level in local product storage
-  const itemCode = created.item_code || created.item;
-  if (itemCode) {
-    const localProducts = getLocalEntities("products");
-    const delta = txType === "ISSUE" ? -Math.abs(qty) : Math.abs(qty);
-    const updated = localProducts.map((p) => {
-      if (p.sku === itemCode || p.code === itemCode) {
-        const nextOnHand = Math.max(0, (p.on_hand || 0) + delta);
-        const nextAvail = Math.max(0, (p.available || 0) + delta);
-        return {
-          ...p,
-          on_hand: nextOnHand,
-          available: nextAvail,
-          stock_status: nextOnHand <= 0 ? "OUT_OF_STOCK" : nextAvail <= (p.reorder_point || 50) ? "LOW_STOCK" : "IN_STOCK",
-        };
-      }
-      return p;
-    });
-    localStorage.setItem("inv_products", JSON.stringify(updated));
+  // Also update stock level in local product storage if posted
+  if (mergedTx.status === "POSTED") {
+    const itemCode = mergedTx.item_code || mergedTx.item;
+    if (itemCode) {
+      const localProducts = getLocalEntities("products");
+      let delta = 0;
+      if (txType === "RECEIPT") delta = Math.abs(qty);
+      else if (txType === "ISSUE") delta = -Math.abs(qty);
+      else if (txType === "ADJUSTMENT") delta = Number(payload.difference_quantity || 0);
+      else if (txType === "RETURN") delta = payload.return_type === "Supplier Return" ? -Math.abs(qty) : Math.abs(qty);
+
+      const updated = localProducts.map((p) => {
+        if (p.sku === itemCode || p.code === itemCode) {
+          const nextOnHand = Math.max(0, (p.on_hand || 0) + delta);
+          const nextAvail = Math.max(0, (p.available || 0) + delta);
+          return {
+            ...p,
+            on_hand: nextOnHand,
+            available: nextAvail,
+            stock_status: nextOnHand <= 0 ? "OUT_OF_STOCK" : nextAvail <= (p.reorder_point || 50) ? "LOW_STOCK" : "IN_STOCK",
+          };
+        }
+        return p;
+      });
+      localStorage.setItem("inv_products", JSON.stringify(updated));
+    }
   }
 
-  return created;
+  return mergedTx;
+}
+
+export async function updateStockTransactionStatus(id, action = "submit") {
+  let updated = null;
+  try {
+    const res = await fetch(`${API_BASE}/inventory/movements/${id}/${action}/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (res.ok) {
+      updateApiStatus(true);
+      updated = await res.json();
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+
+  const statusMap = {
+    submit: "SUBMITTED",
+    dispatch: "DISPATCHED",
+    receive: "POSTED",
+    approve: "APPROVED",
+    inspect: "INSPECTED",
+    post: "POSTED",
+  };
+  const nextStatus = (updated && updated.status) || statusMap[action] || "POSTED";
+
+  const local = getLocalEntities("movements");
+  const updatedLocal = local.map((m) => {
+    if (String(m.id) === String(id) || m.document_number === id) {
+      return {
+        ...m,
+        status: nextStatus,
+      };
+    }
+    return m;
+  });
+  localStorage.setItem("inv_movements", JSON.stringify(updatedLocal));
+
+  return updated || { id, status: nextStatus };
 }
 
 // ---------------------------------------------------------------------------
