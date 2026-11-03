@@ -29,6 +29,9 @@ from .views import (
     ReplenishmentPlanViewSet,
     PurchaseSuggestionViewSet,
     StockForecastViewSet,
+    CycleCountViewSet,
+    FullStockCountViewSet,
+    AuditHistoryViewSet,
 )
 
 router = DefaultRouter()
@@ -59,6 +62,11 @@ router.register(r"planning/stock-levels", StockLevelViewSet, basename="stock-lev
 router.register(r"planning/replenishment-plans", ReplenishmentPlanViewSet, basename="replenishment-plans")
 router.register(r"planning/purchase-suggestions", PurchaseSuggestionViewSet, basename="purchase-suggestions")
 router.register(r"planning/stock-forecast", StockForecastViewSet, basename="stock-forecast")
+router.register(r"audit/stock-counts", StockCountViewSet, basename="audit-stock-counts")
+router.register(r"audit/cycle-counts", CycleCountViewSet, basename="audit-cycle-counts")
+router.register(r"audit/full-counts", FullStockCountViewSet, basename="audit-full-counts")
+router.register(r"audit/variances", StockCountViewSet, basename="audit-variances")
+router.register(r"audit/history", AuditHistoryViewSet, basename="audit-history")
 
 urlpatterns = [
     path("dashboard/kpis/", DashboardKPIView.as_view(), name="inventory-dashboard-kpis"),

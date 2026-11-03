@@ -175,3 +175,4 @@ class PurchaseSuggestion(models.Model):
     @property
     def warehouse_name(self):
         return self.warehouse.name
+

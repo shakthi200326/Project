@@ -30,6 +30,11 @@ import {
   Settings,
   ShoppingCart,
   BarChart3,
+  ClipboardCheck,
+  Boxes,
+  Scale,
+  History,
+  RefreshCw,
 } from "lucide-react";
 import { useTheme } from "@shared/shell-app/ThemeProvider.jsx";
 import { useWorkspace } from "@shared/shell-app/ContextSelector.jsx";
@@ -86,6 +91,11 @@ export function CommandPaletteModal({ isOpen, onClose }) {
     { label: "Replenishment Planning", path: "/inventory/planning/replenishment", icon: TrendingUp, category: "Planning & Replenishment" },
     { label: "Purchase Suggestions", path: "/inventory/planning/purchase-suggestions", icon: ShoppingCart, category: "Planning & Replenishment" },
     { label: "Stock Forecast", path: "/inventory/planning/stock-forecast", icon: BarChart3, category: "Planning & Replenishment" },
+    { label: "Physical Stock Count", path: "/inventory/audit/stock-count", icon: ClipboardCheck, category: "Physical Inventory & Audit" },
+    { label: "Cycle Count", path: "/inventory/audit/cycle-count", icon: RefreshCw, category: "Physical Inventory & Audit" },
+    { label: "Full Stock Count", path: "/inventory/audit/full-count", icon: Boxes, category: "Physical Inventory & Audit" },
+    { label: "Stock Variance Review", path: "/inventory/audit/variance", icon: Scale, category: "Physical Inventory & Audit" },
+    { label: "Audit History", path: "/inventory/audit/history", icon: History, category: "Physical Inventory & Audit" },
     { label: "Valuation Reports (WAV)", path: "/inventory/analytics/valuation", icon: DollarSign, category: "Analytics" },
     { label: "Analytics & KPI Reports", path: "/inventory/analytics/reports", icon: PieChart, category: "Analytics" },
     { label: "Inventory Settings", path: "/inventory/settings", icon: Settings, category: "Configuration" },

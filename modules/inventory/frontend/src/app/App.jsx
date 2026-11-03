@@ -43,6 +43,11 @@ const MinMaxStockPage = lazy(() => import("../pages/MinMaxStockPage.jsx").then(m
 const ReplenishmentPlanningPage = lazy(() => import("../pages/ReplenishmentPlanningPage.jsx").then(m => ({ default: m.ReplenishmentPlanningPage || m.default })));
 const PurchaseSuggestionsPage = lazy(() => import("../pages/PurchaseSuggestionsPage.jsx").then(m => ({ default: m.PurchaseSuggestionsPage || m.default })));
 const StockForecastPage = lazy(() => import("../pages/StockForecastPage.jsx").then(m => ({ default: m.StockForecastPage || m.default })));
+const PhysicalStockCountPage = lazy(() => import("../pages/PhysicalStockCountPage.jsx").then(m => ({ default: m.PhysicalStockCountPage || m.default })));
+const CycleCountPage = lazy(() => import("../pages/CycleCountPage.jsx").then(m => ({ default: m.CycleCountPage || m.default })));
+const FullStockCountPage = lazy(() => import("../pages/FullStockCountPage.jsx").then(m => ({ default: m.FullStockCountPage || m.default })));
+const StockVariancePage = lazy(() => import("../pages/StockVariancePage.jsx").then(m => ({ default: m.StockVariancePage || m.default })));
+const AuditHistoryPage = lazy(() => import("../pages/AuditHistoryPage.jsx").then(m => ({ default: m.AuditHistoryPage || m.default })));
 const ReplenishmentPage = lazy(() => import("../pages/ReplenishmentPage.jsx").then(m => ({ default: m.ReplenishmentPage })));
 const ReportsPage = lazy(() => import("../pages/ReportsPage.jsx").then(m => ({ default: m.ReportsPage })));
 
@@ -119,6 +124,13 @@ export default function App() {
                 <Route path="/inventory/planning/purchase-suggestions" element={<PurchaseSuggestionsPage />} />
                 <Route path="/inventory/planning/stock-forecast" element={<StockForecastPage />} />
                 <Route path="/inventory/planning/low-stock" element={<ReplenishmentPlanningPage />} />
+
+                {/* Physical Inventory & Audit — Exact 5 Modules */}
+                <Route path="/inventory/audit/stock-count" element={<PhysicalStockCountPage />} />
+                <Route path="/inventory/audit/cycle-count" element={<CycleCountPage />} />
+                <Route path="/inventory/audit/full-count" element={<FullStockCountPage />} />
+                <Route path="/inventory/audit/variance" element={<StockVariancePage />} />
+                <Route path="/inventory/audit/history" element={<AuditHistoryPage />} />
                 <Route path="/inventory/analytics/reports" element={<ReportsPage />} />
                 <Route path="/inventory/analytics/valuation" element={<ValuationPage />} />
                 <Route path="/inventory/analytics/movement" element={<DashboardPage />} />
@@ -158,6 +170,11 @@ export default function App() {
                 <Route path="/min-max-levels" element={<Navigate to="/inventory/planning/min-max-levels" replace />} />
                 <Route path="/purchase-suggestions" element={<Navigate to="/inventory/planning/purchase-suggestions" replace />} />
                 <Route path="/stock-forecast" element={<Navigate to="/inventory/planning/stock-forecast" replace />} />
+                <Route path="/stock-count" element={<Navigate to="/inventory/audit/stock-count" replace />} />
+                <Route path="/cycle-count" element={<Navigate to="/inventory/audit/cycle-count" replace />} />
+                <Route path="/full-count" element={<Navigate to="/inventory/audit/full-count" replace />} />
+                <Route path="/variance" element={<Navigate to="/inventory/audit/variance" replace />} />
+                <Route path="/audit-history" element={<Navigate to="/inventory/audit/history" replace />} />
                 <Route path="/valuation" element={<Navigate to="/inventory/analytics/valuation" replace />} />
                 <Route path="/reports" element={<Navigate to="/inventory/analytics/reports" replace />} />
                 <Route path="/settings" element={<Navigate to="/inventory/settings" replace />} />

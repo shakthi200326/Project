@@ -577,3 +577,4 @@ export function MinMaxStockPage() {
   );
 }
 export default MinMaxStockPage;
+

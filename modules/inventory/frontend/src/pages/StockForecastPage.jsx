@@ -395,3 +395,4 @@ export function StockForecastPage() {
   );
 }
 export default StockForecastPage;
+

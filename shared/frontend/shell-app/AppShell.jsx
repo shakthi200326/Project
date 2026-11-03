@@ -46,6 +46,8 @@ import {
   Calendar,
   ShoppingCart,
   BarChart3,
+  ClipboardCheck,
+  RefreshCw,
 } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 import { useWorkspace } from "./ContextSelector";
@@ -98,6 +100,7 @@ export function AppShell({ children }) {
     control: false,
     tracking: true,
     planning: false,
+    audit: false,
     analytics: false,
   });
 
@@ -130,6 +133,8 @@ export function AppShell({ children }) {
       setOpenGroups((p) => ({ ...p, tracking: true }));
     } else if (path.startsWith("/inventory/planning")) {
       setOpenGroups((p) => ({ ...p, planning: true }));
+    } else if (path.startsWith("/inventory/audit")) {
+      setOpenGroups((p) => ({ ...p, audit: true }));
     } else if (path.startsWith("/inventory/analytics")) {
       setOpenGroups((p) => ({ ...p, analytics: true }));
     }
@@ -171,6 +176,11 @@ export function AppShell({ children }) {
       "/inventory/planning/replenishment": [{ label: "Inventory", path: "/inventory" }, { label: "Planning & Replenishment", path: "/inventory/planning/reorder-rules" }, { label: "Replenishment Planning" }],
       "/inventory/planning/purchase-suggestions": [{ label: "Inventory", path: "/inventory" }, { label: "Planning & Replenishment", path: "/inventory/planning/reorder-rules" }, { label: "Purchase Suggestions" }],
       "/inventory/planning/stock-forecast": [{ label: "Inventory", path: "/inventory" }, { label: "Planning & Replenishment", path: "/inventory/planning/reorder-rules" }, { label: "Stock Forecast" }],
+      "/inventory/audit/stock-count": [{ label: "Inventory", path: "/inventory" }, { label: "Physical Inventory & Audit", path: "/inventory/audit/stock-count" }, { label: "Physical Stock Count" }],
+      "/inventory/audit/cycle-count": [{ label: "Inventory", path: "/inventory" }, { label: "Physical Inventory & Audit", path: "/inventory/audit/stock-count" }, { label: "Cycle Count" }],
+      "/inventory/audit/full-count": [{ label: "Inventory", path: "/inventory" }, { label: "Physical Inventory & Audit", path: "/inventory/audit/stock-count" }, { label: "Full Stock Count" }],
+      "/inventory/audit/variance": [{ label: "Inventory", path: "/inventory" }, { label: "Physical Inventory & Audit", path: "/inventory/audit/stock-count" }, { label: "Stock Variance" }],
+      "/inventory/audit/history": [{ label: "Inventory", path: "/inventory" }, { label: "Physical Inventory & Audit", path: "/inventory/audit/stock-count" }, { label: "Audit History" }],
       "/inventory/analytics/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Valuation Reports" }],
       "/inventory/analytics/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Analytics Reports" }],
       "/inventory/settings": [{ label: "Inventory", path: "/inventory" }, { label: "Configuration" }, { label: "Inventory Settings" }],
@@ -260,6 +270,17 @@ export function AppShell({ children }) {
       ],
     },
     {
+      key: "audit",
+      title: "Physical Inventory & Audit",
+      items: [
+        { label: "Physical Stock Count", path: "/inventory/audit/stock-count", icon: ClipboardCheck },
+        { label: "Cycle Count", path: "/inventory/audit/cycle-count", icon: RefreshCw },
+        { label: "Full Stock Count", path: "/inventory/audit/full-count", icon: Boxes },
+        { label: "Stock Variance", path: "/inventory/audit/variance", icon: Scale },
+        { label: "Audit History", path: "/inventory/audit/history", icon: History },
+      ],
+    },
+    {
       key: "analytics",
       title: "Analytics",
       items: [
@@ -315,6 +336,11 @@ export function AppShell({ children }) {
       "/inventory/planning/replenishment": [{ label: "Inventory", path: "/inventory" }, { label: "Planning & Replenishment", path: "/inventory/planning/reorder-rules" }, { label: "Replenishment Planning" }],
       "/inventory/planning/purchase-suggestions": [{ label: "Inventory", path: "/inventory" }, { label: "Planning & Replenishment", path: "/inventory/planning/reorder-rules" }, { label: "Purchase Suggestions" }],
       "/inventory/planning/stock-forecast": [{ label: "Inventory", path: "/inventory" }, { label: "Planning & Replenishment", path: "/inventory/planning/reorder-rules" }, { label: "Stock Forecast" }],
+      "/inventory/audit/stock-count": [{ label: "Inventory", path: "/inventory" }, { label: "Physical Inventory & Audit", path: "/inventory/audit/stock-count" }, { label: "Physical Stock Count" }],
+      "/inventory/audit/cycle-count": [{ label: "Inventory", path: "/inventory" }, { label: "Physical Inventory & Audit", path: "/inventory/audit/stock-count" }, { label: "Cycle Count" }],
+      "/inventory/audit/full-count": [{ label: "Inventory", path: "/inventory" }, { label: "Physical Inventory & Audit", path: "/inventory/audit/stock-count" }, { label: "Full Stock Count" }],
+      "/inventory/audit/variance": [{ label: "Inventory", path: "/inventory" }, { label: "Physical Inventory & Audit", path: "/inventory/audit/stock-count" }, { label: "Stock Variance" }],
+      "/inventory/audit/history": [{ label: "Inventory", path: "/inventory" }, { label: "Physical Inventory & Audit", path: "/inventory/audit/stock-count" }, { label: "Audit History" }],
       "/inventory/analytics/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Valuation Reports" }],
       "/inventory/analytics/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Analytics Reports" }],
       "/inventory/settings": [{ label: "Inventory", path: "/inventory" }, { label: "Configuration" }, { label: "Inventory Settings" }],

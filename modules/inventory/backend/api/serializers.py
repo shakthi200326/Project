@@ -9,7 +9,7 @@ from apps.stock.models import StockBalance, StockLedgerEntry, DamagedStock
 from apps.movements.models import StockTransaction, StockTransactionLine
 from apps.valuation.models import InventoryValuation
 from apps.reservations.models import StockReservation
-from apps.reconciliation.models import StockCount, StockCountLine
+from apps.reconciliation.models import StockCount, StockCountLine, CycleCount, FullStockCount, AuditHistory
 from apps.batches.models import Batch, BatchQuarantineRecord
 from apps.serial_numbers.models import SerialNumber
 from apps.planning.models import ReorderRule, StockLevel, ReplenishmentPlan, PurchaseSuggestion
@@ -396,6 +396,9 @@ class StockCountLineSerializer(serializers.ModelSerializer):
 
 class StockCountSerializer(serializers.ModelSerializer):
     lines = StockCountLineSerializer(many=True, read_only=True)
+    count_number = serializers.CharField(required=False, allow_blank=True)
+    product = serializers.PrimaryKeyRelatedField(queryset=InventoryItem.objects.all(), source="item", required=False, allow_null=True)
+    storage_location = serializers.PrimaryKeyRelatedField(queryset=StorageLocation.objects.all(), source="location", required=False, allow_null=True)
     warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
     warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
     location_name = serializers.SerializerMethodField()
@@ -410,7 +413,64 @@ class StockCountSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
     def get_location_name(self, obj):
-        return f"{obj.location.code} - {obj.location.name}" if obj.location else ""
+        return f"{obj.location.code} - {obj.location.name}" if obj.location else "All Locations / Main Area"
+
+    def create(self, validated_data):
+        import random
+        from django.utils import timezone
+        if not validated_data.get("count_number"):
+            validated_data["count_number"] = f"CNT-{timezone.now().year}-{random.randint(1000, 9999)}"
+
+        wh = validated_data.get("warehouse")
+        item = validated_data.get("item")
+        sys_qty = validated_data.get("system_quantity")
+
+        if (sys_qty is None or sys_qty == 0) and wh and item:
+            sb = StockBalance.objects.filter(warehouse=wh, item=item).first()
+            if sb:
+                validated_data["system_quantity"] = sb.on_hand_qty
+                validated_data["snapshot_taken_at"] = timezone.now()
+
+        phys_qty = validated_data.get("physical_quantity", Decimal("0.0000"))
+        final_sys = validated_data.get("system_quantity", Decimal("0.0000"))
+        validated_data["difference_quantity"] = phys_qty - final_sys
+        return super().create(validated_data)
+
+
+class CycleCountSerializer(serializers.ModelSerializer):
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+    location_name = serializers.CharField(read_only=True)
+    product_name = serializers.CharField(read_only=True)
+    sku = serializers.CharField(read_only=True)
+    count_entries_count = serializers.IntegerField(source="count_entries.count", read_only=True)
+
+    class Meta:
+        model = CycleCount
+        fields = "__all__"
+
+
+class FullStockCountSerializer(serializers.ModelSerializer):
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+    storage_locations_details = serializers.SerializerMethodField()
+    count_entries_count = serializers.IntegerField(source="count_entries.count", read_only=True)
+
+    class Meta:
+        model = FullStockCount
+        fields = "__all__"
+
+    def get_storage_locations_details(self, obj):
+        return [{"id": loc.id, "name": loc.name, "code": loc.code} for loc in obj.storage_locations.all()]
+
+
+class AuditHistorySerializer(serializers.ModelSerializer):
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+
+    class Meta:
+        model = AuditHistory
+        fields = "__all__"
 
 class DamagedStockSerializer(serializers.ModelSerializer):
     item_code = serializers.CharField(source="item.code", read_only=True)

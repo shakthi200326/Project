@@ -16,7 +16,7 @@ from apps.stock.models import StockBalance, StockLedgerEntry, DamagedStock
 from apps.movements.models import StockTransaction, StockTransactionLine
 from apps.valuation.models import InventoryValuation
 from apps.reservations.models import StockReservation
-from apps.reconciliation.models import StockCount, StockCountLine
+from apps.reconciliation.models import StockCount, StockCountLine, CycleCount, FullStockCount, AuditHistory
 from apps.batches.models import Batch, BatchQuarantineRecord
 from apps.serial_numbers.models import SerialNumber
 from apps.planning.models import ReorderRule, StockLevel, ReplenishmentPlan, PurchaseSuggestion
@@ -38,6 +38,9 @@ from .serializers import (
     ValuationSerializer,
     StockReservationSerializer,
     StockCountSerializer,
+    CycleCountSerializer,
+    FullStockCountSerializer,
+    AuditHistorySerializer,
     DamagedStockSerializer,
     StockInTransitSerializer,
     BatchSerializer,
@@ -297,6 +300,30 @@ class StockCountViewSet(viewsets.ModelViewSet):
     queryset = StockCount.objects.select_related("warehouse", "location", "item", "adjustment_transaction").prefetch_related("lines__item").all().order_by("-created_at")
     serializer_class = StockCountSerializer
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        count_type = self.request.query_params.get("count_type")
+        if count_type:
+            qs = qs.filter(count_type=count_type)
+        status_param = self.request.query_params.get("status")
+        if status_param and status_param != "ALL":
+            qs = qs.filter(status=status_param)
+        wh = self.request.query_params.get("warehouse")
+        if wh and wh != "ALL":
+            qs = qs.filter(models.Q(warehouse_id=wh) | models.Q(warehouse__name=wh) | models.Q(warehouse__code=wh))
+        search = self.request.query_params.get("search")
+        if search:
+            qs = qs.filter(
+                models.Q(count_number__icontains=search)
+                | models.Q(item__name__icontains=search)
+                | models.Q(item__code__icontains=search)
+                | models.Q(warehouse__name__icontains=search)
+            )
+        variance_only = self.request.query_params.get("variance_only")
+        if variance_only in ("true", "1", "True"):
+            qs = qs.exclude(difference_quantity=0)
+        return qs
+
     @action(detail=True, methods=["post"])
     def submit(self, request, pk=None):
         count = self.get_object()
@@ -312,6 +339,20 @@ class StockCountViewSet(viewsets.ModelViewSet):
         return Response(StockCountSerializer(count).data)
 
     @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        count = self.get_object()
+        count.status = StockCount.Status.REJECTED
+        count.save()
+        return Response(StockCountSerializer(count).data)
+
+    @action(detail=True, methods=["post"])
+    def review(self, request, pk=None):
+        count = self.get_object()
+        count.status = StockCount.Status.PENDING
+        count.save()
+        return Response(StockCountSerializer(count).data)
+
+    @action(detail=True, methods=["post"])
     def generate_adjustment(self, request, pk=None):
         count = self.get_object()
         actor = request.context.username if hasattr(request, "context") else "system"
@@ -322,19 +363,20 @@ class StockCountViewSet(viewsets.ModelViewSet):
             adj_tx = StockTransaction.objects.create(
                 document_number=f"ADJ-{count.reconciliation_number or count.count_number}-{random.randint(100, 999)}",
                 transaction_type=StockTransaction.TransactionType.ADJUSTMENT,
-                status=StockTransaction.Status.POSTED,
+                status=StockTransaction.Status.DRAFT,
                 warehouse=count.warehouse,
-                notes=f"Generated from Reconciliation {count.reconciliation_number or count.count_number}: {count.reason or 'Physical Count Variance'}",
+                notes=f"Generated from Physical Count {count.count_number}: {count.variance_reason or count.reason or 'Physical Count Variance'}",
                 adjustment_type=adj_type,
-                reason=count.reason or "Physical Count Difference",
+                reason=count.variance_reason or count.reason or "Physical Count Difference",
             )
             item_obj = count.item or (count.lines.first().item if count.lines.exists() else None)
             if item_obj:
+                delta = -abs(diff_qty) if diff_qty < 0 else abs(diff_qty)
                 StockTransactionLine.objects.create(
                     transaction=adj_tx,
                     item=item_obj,
                     location=count.location,
-                    quantity=abs(diff_qty),
+                    quantity=delta,
                     system_quantity=count.system_quantity,
                     actual_quantity=count.physical_quantity,
                     difference_quantity=diff_qty,
@@ -342,14 +384,34 @@ class StockCountViewSet(viewsets.ModelViewSet):
                 )
                 try:
                     InventoryPostingService.post_transaction(adj_tx, actor=actor)
-                except Exception:
-                    pass
+                except Exception as ex:
+                    print(f"Adjustment post error: {ex}")
             count.adjustment_transaction = adj_tx
+
         count.status = StockCount.Status.ADJUSTED
         import django.utils.timezone as tz
         count.reconciled_at = tz.now()
         count.reconciled_by = actor
         count.save()
+
+        # Generate or record AuditHistory entry
+        try:
+            import random
+            AuditHistory.objects.create(
+                audit_number=f"AUD-{tz.now().year}-{random.randint(1000, 9999)}",
+                count_number=count.count_number,
+                warehouse=count.warehouse,
+                count_date=count.count_date or tz.localdate(),
+                counted_by=count.counted_by or count.assigned_to or "Staff Counter",
+                verified_by=count.verified_by or actor or "Inventory Lead",
+                total_products_counted=1,
+                variance_count=1 if count.difference_quantity != 0 else 0,
+                status=AuditHistory.Status.COMPLETED,
+                notes=f"Audit adjustment posted for {count.count_number} ({count.variance_reason or 'Physical Count Variance'})",
+            )
+        except Exception:
+            pass
+
         return Response(StockCountSerializer(count).data)
 
     @action(detail=True, methods=["post"])
@@ -933,3 +995,162 @@ class StockForecastViewSet(viewsets.ViewSet):
                 })
 
         return Response({"results": results, "count": len(results)})
+
+class CycleCountViewSet(viewsets.ModelViewSet):
+    queryset = CycleCount.objects.select_related("warehouse", "storage_location", "product").all().order_by("-created_at")
+    serializer_class = CycleCountSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        wh = self.request.query_params.get("warehouse")
+        if wh and wh != "ALL":
+            qs = qs.filter(models.Q(warehouse_id=wh) | models.Q(warehouse__name=wh) | models.Q(warehouse__code=wh))
+        st = self.request.query_params.get("status")
+        if st and st != "ALL":
+            qs = qs.filter(status=st)
+        search = self.request.query_params.get("search")
+        if search:
+            qs = qs.filter(
+                models.Q(count_number__icontains=search)
+                | models.Q(product__name__icontains=search)
+                | models.Q(product__code__icontains=search)
+                | models.Q(assigned_to__icontains=search)
+            )
+        return qs
+
+    @action(detail=True, methods=["post"])
+    def generate_count_entries(self, request, pk=None):
+        cycle = self.get_object()
+        from apps.stock.models import StockBalance
+        balances_qs = StockBalance.objects.filter(warehouse=cycle.warehouse)
+        if cycle.product:
+            balances_qs = balances_qs.filter(item=cycle.product)
+        if cycle.storage_location:
+            balances_qs = balances_qs.filter(location=cycle.storage_location)
+
+        created_count = 0
+        import django.utils.timezone as tz
+        for sb in balances_qs:
+            # Check if count entry already exists
+            if not StockCount.objects.filter(cycle_count=cycle, item=sb.item).exists():
+                StockCount.objects.create(
+                    count_type=StockCount.CountType.CYCLE,
+                    cycle_count=cycle,
+                    warehouse=cycle.warehouse,
+                    location=sb.location,
+                    item=sb.item,
+                    system_quantity=sb.on_hand_qty,
+                    physical_quantity=sb.on_hand_qty,
+                    difference_quantity=Decimal("0.0000"),
+                    count_date=cycle.count_date,
+                    assigned_to=cycle.assigned_to,
+                    status=StockCount.Status.DRAFT,
+                    snapshot_taken_at=tz.now(),
+                    remarks=f"Generated from Cycle Count {cycle.count_number}",
+                )
+                created_count += 1
+
+        cycle.status = CycleCount.Status.IN_PROGRESS
+        cycle.save()
+        return Response({
+            "message": f"Generated {created_count} count entries for cycle count {cycle.count_number}.",
+            "entries_generated": created_count,
+            "cycle_count": CycleCountSerializer(cycle).data,
+        })
+
+    @action(detail=True, methods=["post"])
+    def complete(self, request, pk=None):
+        cycle = self.get_object()
+        cycle.status = CycleCount.Status.COMPLETED
+        cycle.save()
+        return Response(CycleCountSerializer(cycle).data)
+
+
+class FullStockCountViewSet(viewsets.ModelViewSet):
+    queryset = FullStockCount.objects.select_related("warehouse").prefetch_related("storage_locations").all().order_by("-created_at")
+    serializer_class = FullStockCountSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        wh = self.request.query_params.get("warehouse")
+        if wh and wh != "ALL":
+            qs = qs.filter(models.Q(warehouse_id=wh) | models.Q(warehouse__name=wh) | models.Q(warehouse__code=wh))
+        st = self.request.query_params.get("status")
+        if st and st != "ALL":
+            qs = qs.filter(status=st)
+        search = self.request.query_params.get("search")
+        if search:
+            qs = qs.filter(
+                models.Q(count_number__icontains=search)
+                | models.Q(warehouse__name__icontains=search)
+                | models.Q(assigned_to__icontains=search)
+            )
+        return qs
+
+    @action(detail=True, methods=["post"])
+    def generate_count_entries(self, request, pk=None):
+        full = self.get_object()
+        from apps.stock.models import StockBalance
+        balances_qs = StockBalance.objects.filter(warehouse=full.warehouse)
+        if not full.include_all_locations and full.storage_locations.exists():
+            loc_ids = full.storage_locations.values_list("id", flat=True)
+            balances_qs = balances_qs.filter(location_id__in=loc_ids)
+
+        created_count = 0
+        import django.utils.timezone as tz
+        for sb in balances_qs:
+            if not StockCount.objects.filter(full_count=full, item=sb.item).exists():
+                StockCount.objects.create(
+                    count_type=StockCount.CountType.FULL,
+                    full_count=full,
+                    warehouse=full.warehouse,
+                    location=sb.location,
+                    item=sb.item,
+                    system_quantity=sb.on_hand_qty,
+                    physical_quantity=sb.on_hand_qty,
+                    difference_quantity=Decimal("0.0000"),
+                    count_date=full.count_date,
+                    assigned_to=full.assigned_to,
+                    status=StockCount.Status.DRAFT,
+                    snapshot_taken_at=tz.now(),
+                    remarks=f"Generated from Full Stock Count {full.count_number}",
+                )
+                created_count += 1
+
+        full.status = FullStockCount.Status.COUNTING
+        full.save()
+        return Response({
+            "message": f"Generated {created_count} count entries across warehouse.",
+            "entries_generated": created_count,
+            "full_stock_count": FullStockCountSerializer(full).data,
+        })
+
+    @action(detail=True, methods=["post"])
+    def complete(self, request, pk=None):
+        full = self.get_object()
+        full.status = FullStockCount.Status.COMPLETED
+        full.save()
+        return Response(FullStockCountSerializer(full).data)
+
+
+class AuditHistoryViewSet(viewsets.ModelViewSet):
+    queryset = AuditHistory.objects.select_related("warehouse").all().order_by("-created_at")
+    serializer_class = AuditHistorySerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        wh = self.request.query_params.get("warehouse")
+        if wh and wh != "ALL":
+            qs = qs.filter(models.Q(warehouse_id=wh) | models.Q(warehouse__name=wh) | models.Q(warehouse__code=wh))
+        st = self.request.query_params.get("status")
+        if st and st != "ALL":
+            qs = qs.filter(status=st)
+        search = self.request.query_params.get("search")
+        if search:
+            qs = qs.filter(
+                models.Q(audit_number__icontains=search)
+                | models.Q(count_number__icontains=search)
+                | models.Q(counted_by__icontains=search)
+                | models.Q(verified_by__icontains=search)
+            )
+        return qs

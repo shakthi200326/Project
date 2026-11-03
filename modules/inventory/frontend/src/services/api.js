@@ -1158,6 +1158,8 @@ export async function deleteWarehouse(id) {
 // ---------------------------------------------------------------------------
 // Storage Locations API with Live Persistence
 // ---------------------------------------------------------------------------
+export const fetchStorageLocations = fetchLocations;
+
 export async function fetchLocations() {
   let fetchedList = [];
   try {
@@ -2240,7 +2242,7 @@ export async function createReconciliation(payload) {
   return created;
 }
 
-export const createStockCount = createReconciliation;
+// export const createStockCount = createReconciliation; // Superseded by Phase 7 createStockCount
 
 export async function submitReconciliation(countId) {
   try {
@@ -3572,4 +3574,497 @@ export async function fetchStockForecast(params = {}) {
     ],
     count: 4,
   };
+}
+
+
+// ==========================================
+// PHASE 7: PHYSICAL INVENTORY & AUDIT SERVICES
+// ==========================================
+
+const DEMO_STOCK_COUNTS = [
+  {
+    id: 1,
+    count_number: "CNT-2026-1042",
+    count_date: "2026-11-03",
+    warehouse: 1,
+    warehouse_name: "Main Central Hub",
+    warehouse_code: "WH-MAIN",
+    location: 1,
+    location_name: "Aisle 1 - High Bay Storage",
+    product: 1,
+    item: 1,
+    product_name: "Deep Groove Ball Bearing 6205-2RS",
+    sku: "BRG-6205-2RS",
+    system_quantity: 100,
+    physical_quantity: 105,
+    difference_quantity: 5,
+    variance_reason: "Excess Stock",
+    remarks: "Found extra box during aisle count",
+    status: "APPROVED",
+    assigned_to: "Sarah Jenkins",
+    counted_by: "Sarah Jenkins",
+    verified_by: "David Chen",
+  },
+  {
+    id: 2,
+    count_number: "CNT-2026-1043",
+    count_date: "2026-11-03",
+    warehouse: 1,
+    warehouse_name: "Main Central Hub",
+    warehouse_code: "WH-MAIN",
+    location: 2,
+    location_name: "Aisle 2 - Picking Zone",
+    product: 2,
+    item: 2,
+    product_name: "Hydraulic Solenoid Valve 24V DC",
+    sku: "HYD-SV-24V",
+    system_quantity: 25,
+    physical_quantity: 22,
+    difference_quantity: -3,
+    variance_reason: "Missing Stock",
+    remarks: "Discrepancy observed on bin shelf B-04",
+    status: "SUBMITTED",
+    assigned_to: "Marcus Vance",
+    counted_by: "Marcus Vance",
+    verified_by: "David Chen",
+  },
+  {
+    id: 3,
+    count_number: "CNT-2026-1044",
+    count_date: "2026-11-02",
+    warehouse: 2,
+    warehouse_name: "Regional Distribution Hub",
+    warehouse_code: "WH-REG",
+    location: 3,
+    location_name: "Bin C-12 - Bulk Rack",
+    product: 3,
+    item: 3,
+    product_name: "Polyurethane Timing Belt T10-1200",
+    sku: "BELT-T10-1200",
+    system_quantity: 50,
+    physical_quantity: 48,
+    difference_quantity: -2,
+    variance_reason: "Damage",
+    remarks: "Damaged belts quarantined from count",
+    status: "ADJUSTED",
+    assigned_to: "Elena Rostova",
+    counted_by: "Elena Rostova",
+    verified_by: "Alex Thompson",
+    adjustment_document_number: "ADJ-CNT-2026-1044-884",
+  },
+];
+
+const DEMO_CYCLE_COUNTS = [
+  {
+    id: 1,
+    count_number: "CYC-2026-001",
+    count_date: "2026-11-03",
+    warehouse: 1,
+    warehouse_name: "Main Central Hub",
+    storage_location: 1,
+    location_name: "Aisle 1 - High Bay Storage",
+    product: 1,
+    product_name: "Deep Groove Ball Bearing 6205-2RS",
+    sku: "BRG-6205-2RS",
+    count_frequency: "Weekly",
+    assigned_to: "Sarah Jenkins",
+    status: "In Progress",
+    notes: "High velocity critical bearings cycle inspection",
+  },
+  {
+    id: 2,
+    count_number: "CYC-2026-002",
+    count_date: "2026-11-01",
+    warehouse: 1,
+    warehouse_name: "Main Central Hub",
+    storage_location: null,
+    location_name: "All Locations",
+    product: 2,
+    product_name: "Hydraulic Solenoid Valve 24V DC",
+    sku: "HYD-SV-24V",
+    count_frequency: "Monthly",
+    assigned_to: "Marcus Vance",
+    status: "Completed",
+    notes: "Monthly precision valve cycle audit",
+  },
+];
+
+const DEMO_FULL_COUNTS = [
+  {
+    id: 1,
+    count_number: "FSC-2026-001",
+    count_date: "2026-11-01",
+    warehouse: 1,
+    warehouse_name: "Main Central Hub",
+    include_all_locations: true,
+    storage_locations: [],
+    assigned_to: "David Chen (Audit Lead)",
+    status: "Counting",
+    notes: "Q4 Comprehensive Warehouse Physical Audit",
+  },
+];
+
+const DEMO_AUDIT_HISTORY = [
+  {
+    id: 1,
+    audit_number: "AUD-2026-0091",
+    count_number: "CNT-2026-1044",
+    warehouse: 2,
+    warehouse_name: "Regional Distribution Hub",
+    count_date: "2026-11-02",
+    counted_by: "Elena Rostova",
+    verified_by: "Alex Thompson",
+    total_products_counted: 15,
+    variance_count: 2,
+    status: "Approved",
+    notes: "Timing belt variance reconciled and adjusted to ledger.",
+  },
+  {
+    id: 2,
+    audit_number: "AUD-2026-0090",
+    count_number: "CYC-2026-002",
+    warehouse: 1,
+    warehouse_name: "Main Central Hub",
+    count_date: "2026-11-01",
+    counted_by: "Marcus Vance",
+    verified_by: "David Chen",
+    total_products_counted: 8,
+    variance_count: 0,
+    status: "Closed",
+    notes: "Zero variance recorded across all hydraulic valve bins.",
+  },
+];
+
+export async function fetchStockCounts(params = {}) {
+  let list = [];
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/audit/stock-counts/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      list = data.results || data || [];
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  if (!list.length) {
+    list = getStored("inv_physical_counts", DEMO_STOCK_COUNTS);
+  }
+  return list;
+}
+
+export async function createStockCount(payload) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/audit/stock-counts/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      const current = getStored("inv_physical_counts", DEMO_STOCK_COUNTS);
+      setStored("inv_physical_counts", [data, ...current]);
+      return data;
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  // Local fallback
+  const diff = Number(payload.physical_quantity || 0) - Number(payload.system_quantity || 0);
+  const newCount = {
+    id: `cnt-${Date.now()}`,
+    count_number: `CNT-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+    count_date: payload.count_date || new Date().toISOString().split("T")[0],
+    warehouse: payload.warehouse,
+    warehouse_name: payload.warehouse_name || "Main Central Hub",
+    location: payload.storage_location || null,
+    location_name: payload.location_name || "Main Area",
+    product: payload.product,
+    item: payload.product,
+    product_name: payload.product_name || "Selected Product",
+    sku: payload.sku || "PROD-SKU",
+    system_quantity: Number(payload.system_quantity || 0),
+    physical_quantity: Number(payload.physical_quantity || 0),
+    difference_quantity: diff,
+    variance_reason: payload.variance_reason || (diff < 0 ? "Missing Stock" : (diff > 0 ? "Excess Stock" : "")),
+    remarks: payload.remarks || "",
+    status: payload.status || "DRAFT",
+    assigned_to: "Staff Counter",
+    counted_by: "Staff Counter",
+    verified_by: "Inventory Lead",
+  };
+  const current = getStored("inv_physical_counts", DEMO_STOCK_COUNTS);
+  setStored("inv_physical_counts", [newCount, ...current]);
+  return newCount;
+}
+
+export async function submitStockCount(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/audit/stock-counts/${id}/submit/`, { method: "POST" });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {}
+  const current = getStored("inv_physical_counts", DEMO_STOCK_COUNTS);
+  const updated = current.map((c) => (c.id === id ? { ...c, status: "SUBMITTED" } : c));
+  setStored("inv_physical_counts", updated);
+  return { id, status: "SUBMITTED" };
+}
+
+export async function approveStockCount(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/audit/stock-counts/${id}/approve/`, { method: "POST" });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {}
+  const current = getStored("inv_physical_counts", DEMO_STOCK_COUNTS);
+  const updated = current.map((c) => (c.id === id ? { ...c, status: "APPROVED" } : c));
+  setStored("inv_physical_counts", updated);
+  return { id, status: "APPROVED" };
+}
+
+export async function rejectStockCount(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/audit/stock-counts/${id}/reject/`, { method: "POST" });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {}
+  const current = getStored("inv_physical_counts", DEMO_STOCK_COUNTS);
+  const updated = current.map((c) => (c.id === id ? { ...c, status: "REJECTED" } : c));
+  setStored("inv_physical_counts", updated);
+  return { id, status: "REJECTED" };
+}
+
+export async function reviewStockCount(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/audit/stock-counts/${id}/review/`, { method: "POST" });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {}
+  const current = getStored("inv_physical_counts", DEMO_STOCK_COUNTS);
+  const updated = current.map((c) => (c.id === id ? { ...c, status: "PENDING" } : c));
+  setStored("inv_physical_counts", updated);
+  return { id, status: "PENDING" };
+}
+
+export async function generateStockCountAdjustment(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/audit/stock-counts/${id}/generate_adjustment/`, { method: "POST" });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {}
+  const current = getStored("inv_physical_counts", DEMO_STOCK_COUNTS);
+  const docNum = `ADJ-CNT-${Math.floor(1000 + Math.random() * 9000)}`;
+  const updated = current.map((c) => (c.id === id ? { ...c, status: "ADJUSTED", adjustment_document_number: docNum } : c));
+  setStored("inv_physical_counts", updated);
+  return { id, status: "ADJUSTED", adjustment_document_number: docNum };
+}
+
+export async function fetchCycleCounts(params = {}) {
+  let list = [];
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/audit/cycle-counts/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      list = data.results || data || [];
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  if (!list.length) {
+    list = getStored("inv_cycle_counts", DEMO_CYCLE_COUNTS);
+  }
+  return list;
+}
+
+export async function createCycleCount(payload) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/audit/cycle-counts/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      const current = getStored("inv_cycle_counts", DEMO_CYCLE_COUNTS);
+      setStored("inv_cycle_counts", [data, ...current]);
+      return data;
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  const newCycle = {
+    id: `cyc-${Date.now()}`,
+    count_number: `CYC-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+    count_date: payload.count_date || new Date().toISOString().split("T")[0],
+    warehouse: payload.warehouse,
+    warehouse_name: payload.warehouse_name || "Main Central Hub",
+    storage_location: payload.storage_location || null,
+    location_name: payload.location_name || "All Locations",
+    product: payload.product || null,
+    product_name: payload.product_name || "All Products",
+    sku: payload.sku || "",
+    count_frequency: payload.count_frequency || "Monthly",
+    assigned_to: payload.assigned_to || "Staff Auditor",
+    status: payload.status || "Scheduled",
+    notes: payload.notes || "",
+  };
+  const current = getStored("inv_cycle_counts", DEMO_CYCLE_COUNTS);
+  setStored("inv_cycle_counts", [newCycle, ...current]);
+  return newCycle;
+}
+
+export async function generateCycleCountEntries(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/audit/cycle-counts/${id}/generate_count_entries/`, { method: "POST" });
+    if (res.ok) return await res.json();
+  } catch (e) {}
+  return { message: "Generated count entries for cycle count scope." };
+}
+
+export async function completeCycleCount(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/audit/cycle-counts/${id}/complete/`, { method: "POST" });
+    if (res.ok) return await res.json();
+  } catch (e) {}
+  const current = getStored("inv_cycle_counts", DEMO_CYCLE_COUNTS);
+  const updated = current.map((c) => (c.id === id ? { ...c, status: "Completed" } : c));
+  setStored("inv_cycle_counts", updated);
+  return { id, status: "Completed" };
+}
+
+export async function fetchFullStockCounts(params = {}) {
+  let list = [];
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/audit/full-counts/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      list = data.results || data || [];
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  if (!list.length) {
+    list = getStored("inv_full_counts", DEMO_FULL_COUNTS);
+  }
+  return list;
+}
+
+export async function createFullStockCount(payload) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/audit/full-counts/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      const current = getStored("inv_full_counts", DEMO_FULL_COUNTS);
+      setStored("inv_full_counts", [data, ...current]);
+      return data;
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  const newFull = {
+    id: `fsc-${Date.now()}`,
+    count_number: `FSC-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+    count_date: payload.count_date || new Date().toISOString().split("T")[0],
+    warehouse: payload.warehouse,
+    warehouse_name: payload.warehouse_name || "Main Central Hub",
+    include_all_locations: payload.include_all_locations !== false,
+    storage_locations: payload.storage_locations || [],
+    assigned_to: payload.assigned_to || "Lead Auditor",
+    status: "Initiated",
+    notes: payload.notes || "",
+  };
+  const current = getStored("inv_full_counts", DEMO_FULL_COUNTS);
+  setStored("inv_full_counts", [newFull, ...current]);
+  return newFull;
+}
+
+export async function generateFullStockCountEntries(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/audit/full-counts/${id}/generate_count_entries/`, { method: "POST" });
+    if (res.ok) return await res.json();
+  } catch (e) {}
+  return { message: "Count entries generated across warehouse inventory scope." };
+}
+
+export async function completeFullStockCount(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/audit/full-counts/${id}/complete/`, { method: "POST" });
+    if (res.ok) return await res.json();
+  } catch (e) {}
+  const current = getStored("inv_full_counts", DEMO_FULL_COUNTS);
+  const updated = current.map((c) => (c.id === id ? { ...c, status: "Completed" } : c));
+  setStored("inv_full_counts", updated);
+  return { id, status: "Completed" };
+}
+
+export async function fetchAuditHistory(params = {}) {
+  let list = [];
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/audit/history/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      list = data.results || data || [];
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  if (!list.length) {
+    list = getStored("inv_audit_history", DEMO_AUDIT_HISTORY);
+  }
+  return list;
+}
+
+export async function createAuditHistory(payload) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/audit/history/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {}
+  const newAudit = {
+    id: `aud-${Date.now()}`,
+    audit_number: `AUD-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+    count_number: payload.count_number,
+    warehouse: payload.warehouse,
+    warehouse_name: payload.warehouse_name || "Main Central Hub",
+    count_date: payload.count_date || new Date().toISOString().split("T")[0],
+    counted_by: payload.counted_by || "Staff Counter",
+    verified_by: payload.verified_by || "Lead Auditor",
+    total_products_counted: Number(payload.total_products_counted || 1),
+    variance_count: Number(payload.variance_count || 0),
+    status: payload.status || "Completed",
+    notes: payload.notes || "",
+  };
+  const current = getStored("inv_audit_history", DEMO_AUDIT_HISTORY);
+  setStored("inv_audit_history", [newAudit, ...current]);
+  return newAudit;
 }

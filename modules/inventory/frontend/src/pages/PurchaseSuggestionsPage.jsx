@@ -486,3 +486,4 @@ export function PurchaseSuggestionsPage() {
   );
 }
 export default PurchaseSuggestionsPage;
+
