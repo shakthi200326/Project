@@ -3235,3 +3235,341 @@ export async function deleteAttachment(fileId) {
     return true;
   }
 }
+
+
+// ==========================================
+// PHASE 6: PLANNING & REPLENISHMENT SERVICES
+// ==========================================
+
+const DEMO_REORDER_RULES = [
+  { id: "rr-1", product: 1, product_name: "Deep Groove Ball Bearing 6205-2RS", sku: "BRG-6205-2RS", warehouse: 1, warehouse_name: "Main Central Hub", reorder_point: 20, reorder_quantity: 100, lead_time_days: 7, status: "Active" },
+  { id: "rr-2", product: 2, product_name: "Hydraulic Solenoid Valve 24V DC", sku: "HYD-SV-24V", warehouse: 1, warehouse_name: "Main Central Hub", reorder_point: 10, reorder_quantity: 50, lead_time_days: 14, status: "Active" },
+  { id: "rr-3", product: 3, product_name: "Polyurethane Timing Belt T10-1200", sku: "BELT-T10-1200", warehouse: 2, warehouse_name: "Regional Distribution Hub", reorder_point: 15, reorder_quantity: 60, lead_time_days: 5, status: "Active" },
+  { id: "rr-4", product: 4, product_name: "Industrial Optical Proximity Sensor", sku: "SNR-OPT-PROX", warehouse: 1, warehouse_name: "Main Central Hub", reorder_point: 8, reorder_quantity: 40, lead_time_days: 10, status: "Inactive" },
+];
+
+export async function fetchReorderRules(params = {}) {
+  let list = [];
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/planning/reorder-rules/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      list = data.results || data || [];
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  const local = getLocalEntities("reorder_rules");
+  const merged = [...local, ...list];
+  if (merged.length === 0) {
+    return { results: DEMO_REORDER_RULES, count: DEMO_REORDER_RULES.length };
+  }
+  return { results: merged, count: merged.length };
+}
+
+export async function createReorderRule(payload) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/reorder-rules/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  const item = {
+    id: `rr-${Date.now()}`,
+    ...payload,
+    created_at: new Date().toISOString(),
+  };
+  saveLocalEntity("reorder_rules", item);
+  return item;
+}
+
+export async function updateReorderRule(id, payload) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/reorder-rules/${id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {}
+  return { id, ...payload };
+}
+
+export async function deleteReorderRule(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/reorder-rules/${id}/`, {
+      method: "DELETE",
+    });
+    return res.ok;
+  } catch (e) {
+    return true;
+  }
+}
+
+const DEMO_STOCK_LEVELS = [
+  { id: "sl-1", product: 1, product_name: "Deep Groove Ball Bearing 6205-2RS", sku: "BRG-6205-2RS", warehouse: 1, warehouse_name: "Main Central Hub", min_stock: 15, max_stock: 150, safety_stock: 10 },
+  { id: "sl-2", product: 2, product_name: "Hydraulic Solenoid Valve 24V DC", sku: "HYD-SV-24V", warehouse: 1, warehouse_name: "Main Central Hub", min_stock: 10, max_stock: 80, safety_stock: 5 },
+  { id: "sl-3", product: 3, product_name: "Polyurethane Timing Belt T10-1200", sku: "BELT-T10-1200", warehouse: 2, warehouse_name: "Regional Distribution Hub", min_stock: 20, max_stock: 120, safety_stock: 8 },
+  { id: "sl-4", product: 4, product_name: "Industrial Optical Proximity Sensor", sku: "SNR-OPT-PROX", warehouse: 1, warehouse_name: "Main Central Hub", min_stock: 5, max_stock: 50, safety_stock: 2 },
+];
+
+export async function fetchStockLevels(params = {}) {
+  let list = [];
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/planning/stock-levels/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      list = data.results || data || [];
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  const local = getLocalEntities("stock_levels");
+  const merged = [...local, ...list];
+  if (merged.length === 0) {
+    return { results: DEMO_STOCK_LEVELS, count: DEMO_STOCK_LEVELS.length };
+  }
+  return { results: merged, count: merged.length };
+}
+
+export async function createStockLevel(payload) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/stock-levels/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  const item = {
+    id: `sl-${Date.now()}`,
+    ...payload,
+    created_at: new Date().toISOString(),
+  };
+  saveLocalEntity("stock_levels", item);
+  return item;
+}
+
+export async function updateStockLevel(id, payload) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/stock-levels/${id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) return await res.json();
+  } catch (e) {}
+  return { id, ...payload };
+}
+
+export async function deleteStockLevel(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/stock-levels/${id}/`, {
+      method: "DELETE",
+    });
+    return res.ok;
+  } catch (e) {
+    return true;
+  }
+}
+
+const DEMO_REPLENISHMENT_PLANS = [
+  { id: "pln-1", plan_number: "PLN-2026-1041", product: 1, product_name: "Deep Groove Ball Bearing 6205-2RS", sku: "BRG-6205-2RS", warehouse: 1, warehouse_name: "Main Central Hub", current_stock: 12, reserved_stock: 4, available_stock: 8, minimum_stock: 15, required_quantity: 142, status: "Pending" },
+  { id: "pln-2", plan_number: "PLN-2026-1042", product: 2, product_name: "Hydraulic Solenoid Valve 24V DC", sku: "HYD-SV-24V", warehouse: 1, warehouse_name: "Main Central Hub", current_stock: 8, reserved_stock: 2, available_stock: 6, minimum_stock: 10, required_quantity: 74, status: "Planned" },
+  { id: "pln-3", plan_number: "PLN-2026-1043", product: 3, product_name: "Polyurethane Timing Belt T10-1200", sku: "BELT-T10-1200", warehouse: 2, warehouse_name: "Regional Distribution Hub", current_stock: 14, reserved_stock: 0, available_stock: 14, minimum_stock: 20, required_quantity: 106, status: "Completed" },
+];
+
+export async function fetchReplenishmentPlans(params = {}) {
+  let list = [];
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/planning/replenishment-plans/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      list = data.results || data || [];
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  const local = getLocalEntities("replenishment_plans");
+  const merged = [...local, ...list];
+  if (merged.length === 0) {
+    return { results: DEMO_REPLENISHMENT_PLANS, count: DEMO_REPLENISHMENT_PLANS.length };
+  }
+  return { results: merged, count: merged.length };
+}
+
+export async function createReplenishmentPlan(payload) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/replenishment-plans/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  const item = {
+    id: `pln-${Date.now()}`,
+    plan_number: `PLN-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+    ...payload,
+    status: payload.status || "Pending",
+    created_at: new Date().toISOString(),
+  };
+  saveLocalEntity("replenishment_plans", item);
+  return item;
+}
+
+export async function updateReplenishmentPlan(id, payload) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/replenishment-plans/${id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) return await res.json();
+  } catch (e) {}
+  return { id, ...payload };
+}
+
+export async function approveReplenishmentPlan(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/replenishment-plans/${id}/approve/`, {
+      method: "POST",
+    });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {}
+  return { message: "Plan approved", status: "Planned" };
+}
+
+export async function generateReplenishmentPlans() {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/replenishment-plans/generate/`, {
+      method: "POST",
+    });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {}
+  return { message: "Scanned stock balances and generated replenishment plans." };
+}
+
+const DEMO_PURCHASE_SUGGESTIONS = [
+  { id: "sug-1", suggestion_number: "SUG-2026-3011", suggestion_date: "2026-11-03", product: 1, product_name: "Deep Groove Ball Bearing 6205-2RS", sku: "BRG-6205-2RS", warehouse: 1, warehouse_name: "Main Central Hub", available_stock: 8, reorder_point: 20, suggested_quantity: 100, supplier: "SKF Precision Supplies", status: "Pending" },
+  { id: "sug-2", suggestion_number: "SUG-2026-3012", suggestion_date: "2026-11-02", product: 2, product_name: "Hydraulic Solenoid Valve 24V DC", sku: "HYD-SV-24V", warehouse: 1, warehouse_name: "Main Central Hub", available_stock: 6, reorder_point: 10, suggested_quantity: 50, supplier: "Bosch Fluid Control", status: "Approved" },
+  { id: "sug-3", suggestion_number: "SUG-2026-3013", suggestion_date: "2026-11-01", product: 3, product_name: "Polyurethane Timing Belt T10-1200", sku: "BELT-T10-1200", warehouse: 2, warehouse_name: "Regional Distribution Hub", available_stock: 14, reorder_point: 15, suggested_quantity: 60, supplier: "Continental Drive Components", status: "Converted" },
+];
+
+export async function fetchPurchaseSuggestions(params = {}) {
+  let list = [];
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/planning/purchase-suggestions/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      list = data.results || data || [];
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  const local = getLocalEntities("purchase_suggestions");
+  const merged = [...local, ...list];
+  if (merged.length === 0) {
+    return { results: DEMO_PURCHASE_SUGGESTIONS, count: DEMO_PURCHASE_SUGGESTIONS.length };
+  }
+  return { results: merged, count: merged.length };
+}
+
+export async function approvePurchaseSuggestion(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/purchase-suggestions/${id}/approve/`, {
+      method: "POST",
+    });
+    if (res.ok) return await res.json();
+  } catch (e) {}
+  return { status: "Approved" };
+}
+
+export async function rejectPurchaseSuggestion(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/purchase-suggestions/${id}/reject/`, {
+      method: "POST",
+    });
+    if (res.ok) return await res.json();
+  } catch (e) {}
+  return { status: "Rejected" };
+}
+
+export async function convertPurchaseSuggestion(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/purchase-suggestions/${id}/convert/`, {
+      method: "POST",
+    });
+    if (res.ok) return await res.json();
+  } catch (e) {}
+  return { status: "Converted", purchase_request_id: `PR-2026-${Math.floor(1000 + Math.random() * 9000)}` };
+}
+
+export async function generatePurchaseSuggestions() {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/purchase-suggestions/generate/`, {
+      method: "POST",
+    });
+    if (res.ok) return await res.json();
+  } catch (e) {}
+  return { message: "Calculated purchase suggestions based on available stock and reorder points." };
+}
+
+export async function fetchStockForecast(params = {}) {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/planning/stock-forecast/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  // Fallback dynamic calculation for demo
+  const period = params.forecast_period || "30 Days";
+  const days = period === "7 Days" ? 7 : (period === "60 Days" ? 60 : (period === "90 Days" ? 90 : 30));
+  return {
+    results: [
+      { product: 1, product_name: "Deep Groove Ball Bearing 6205-2RS", sku: "BRG-6205-2RS", warehouse: 1, warehouse_name: "Main Central Hub", forecast_period: period, historical_demand: 120, average_daily_demand: 4.0, current_available_stock: 48, expected_demand: 4.0 * days, projected_stock: 48 - (4.0 * days), stockout_risk: (48 - (4.0 * days)) <= 0 ? "High" : "Low" },
+      { product: 2, product_name: "Hydraulic Solenoid Valve 24V DC", sku: "HYD-SV-24V", warehouse: 1, warehouse_name: "Main Central Hub", forecast_period: period, historical_demand: 45, average_daily_demand: 1.5, current_available_stock: 12, expected_demand: 1.5 * days, projected_stock: 12 - (1.5 * days), stockout_risk: (12 - (1.5 * days)) <= 0 ? "High" : "Medium" },
+      { product: 3, product_name: "Polyurethane Timing Belt T10-1200", sku: "BELT-T10-1200", warehouse: 2, warehouse_name: "Regional Distribution Hub", forecast_period: period, historical_demand: 90, average_daily_demand: 3.0, current_available_stock: 65, expected_demand: 3.0 * days, projected_stock: 65 - (3.0 * days), stockout_risk: "Low" },
+      { product: 4, product_name: "Industrial Optical Proximity Sensor", sku: "SNR-OPT-PROX", warehouse: 1, warehouse_name: "Main Central Hub", forecast_period: period, historical_demand: 30, average_daily_demand: 1.0, current_available_stock: 6, expected_demand: 1.0 * days, projected_stock: 6 - (1.0 * days), stockout_risk: (6 - (1.0 * days)) <= 0 ? "High" : "Medium" },
+    ],
+    count: 4,
+  };
+}

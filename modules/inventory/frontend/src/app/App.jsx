@@ -38,6 +38,11 @@ const SerialManagementPage = lazy(() => import("../pages/SerialManagementPage.js
 const SerialMovementHistoryPage = lazy(() => import("../pages/SerialMovementHistoryPage.jsx").then(m => ({ default: m.SerialMovementHistoryPage || m.default })));
 const StockReservationsPage = lazy(() => import("../pages/StockReservationsPage.jsx").then(m => ({ default: m.StockReservationsPage })));
 const StockReturnsPage = lazy(() => import("../pages/StockReturnsPage.jsx").then(m => ({ default: m.StockReturnsPage })));
+const ReorderRulesPage = lazy(() => import("../pages/ReorderRulesPage.jsx").then(m => ({ default: m.ReorderRulesPage || m.default })));
+const MinMaxStockPage = lazy(() => import("../pages/MinMaxStockPage.jsx").then(m => ({ default: m.MinMaxStockPage || m.default })));
+const ReplenishmentPlanningPage = lazy(() => import("../pages/ReplenishmentPlanningPage.jsx").then(m => ({ default: m.ReplenishmentPlanningPage || m.default })));
+const PurchaseSuggestionsPage = lazy(() => import("../pages/PurchaseSuggestionsPage.jsx").then(m => ({ default: m.PurchaseSuggestionsPage || m.default })));
+const StockForecastPage = lazy(() => import("../pages/StockForecastPage.jsx").then(m => ({ default: m.StockForecastPage || m.default })));
 const ReplenishmentPage = lazy(() => import("../pages/ReplenishmentPage.jsx").then(m => ({ default: m.ReplenishmentPage })));
 const ReportsPage = lazy(() => import("../pages/ReportsPage.jsx").then(m => ({ default: m.ReportsPage })));
 
@@ -107,9 +112,13 @@ export default function App() {
                 <Route path="/inventory/tracking/serials" element={<SerialManagementPage />} />
                 <Route path="/inventory/tracking/serial-movements" element={<SerialMovementHistoryPage />} />
 
-                {/* Planning & Analytics */}
-                <Route path="/inventory/planning/replenishment" element={<ReplenishmentPage />} />
-                <Route path="/inventory/planning/low-stock" element={<ReplenishmentPage />} />
+                {/* Planning & Replenishment — Exact 5 Modules */}
+                <Route path="/inventory/planning/reorder-rules" element={<ReorderRulesPage />} />
+                <Route path="/inventory/planning/min-max-levels" element={<MinMaxStockPage />} />
+                <Route path="/inventory/planning/replenishment" element={<ReplenishmentPlanningPage />} />
+                <Route path="/inventory/planning/purchase-suggestions" element={<PurchaseSuggestionsPage />} />
+                <Route path="/inventory/planning/stock-forecast" element={<StockForecastPage />} />
+                <Route path="/inventory/planning/low-stock" element={<ReplenishmentPlanningPage />} />
                 <Route path="/inventory/analytics/reports" element={<ReportsPage />} />
                 <Route path="/inventory/analytics/valuation" element={<ValuationPage />} />
                 <Route path="/inventory/analytics/movement" element={<DashboardPage />} />
@@ -145,6 +154,10 @@ export default function App() {
                 <Route path="/batch-quarantine" element={<Navigate to="/inventory/tracking/batch-quarantine" replace />} />
                 <Route path="/batch-release" element={<Navigate to="/inventory/tracking/batch-release" replace />} />
                 <Route path="/replenishment" element={<Navigate to="/inventory/planning/replenishment" replace />} />
+                <Route path="/reorder-rules" element={<Navigate to="/inventory/planning/reorder-rules" replace />} />
+                <Route path="/min-max-levels" element={<Navigate to="/inventory/planning/min-max-levels" replace />} />
+                <Route path="/purchase-suggestions" element={<Navigate to="/inventory/planning/purchase-suggestions" replace />} />
+                <Route path="/stock-forecast" element={<Navigate to="/inventory/planning/stock-forecast" replace />} />
                 <Route path="/valuation" element={<Navigate to="/inventory/analytics/valuation" replace />} />
                 <Route path="/reports" element={<Navigate to="/inventory/analytics/reports" replace />} />
                 <Route path="/settings" element={<Navigate to="/inventory/settings" replace />} />

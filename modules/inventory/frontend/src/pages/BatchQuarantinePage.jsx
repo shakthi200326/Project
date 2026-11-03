@@ -653,3 +653,4 @@ export function BatchQuarantinePage() {
   );
 }
 export default BatchQuarantinePage;
+

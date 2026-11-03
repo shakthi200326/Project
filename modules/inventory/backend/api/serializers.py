@@ -12,6 +12,7 @@ from apps.reservations.models import StockReservation
 from apps.reconciliation.models import StockCount, StockCountLine
 from apps.batches.models import Batch, BatchQuarantineRecord
 from apps.serial_numbers.models import SerialNumber
+from apps.planning.models import ReorderRule, StockLevel, ReplenishmentPlan, PurchaseSuggestion
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -562,3 +563,44 @@ class SerialNumberSerializer(serializers.ModelSerializer):
 
     def get_location_name(self, obj):
         return f"{obj.location.code} - {obj.location.name}" if obj.location else ""
+
+
+class ReorderRuleSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    sku = serializers.CharField(source="product.code", read_only=True)
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+
+    class Meta:
+        model = ReorderRule
+        fields = "__all__"
+
+class StockLevelSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    sku = serializers.CharField(source="product.code", read_only=True)
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+
+    class Meta:
+        model = StockLevel
+        fields = "__all__"
+
+class ReplenishmentPlanSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    sku = serializers.CharField(source="product.code", read_only=True)
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+
+    class Meta:
+        model = ReplenishmentPlan
+        fields = "__all__"
+
+class PurchaseSuggestionSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    sku = serializers.CharField(source="product.code", read_only=True)
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+
+    class Meta:
+        model = PurchaseSuggestion
+        fields = "__all__"

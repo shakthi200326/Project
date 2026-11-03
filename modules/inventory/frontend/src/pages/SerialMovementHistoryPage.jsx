@@ -386,3 +386,4 @@ export function SerialMovementHistoryPage() {
   );
 }
 export default SerialMovementHistoryPage;
+

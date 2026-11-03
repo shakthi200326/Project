@@ -273,3 +273,4 @@ class BatchSerialPhase5Tests(TestCase):
         self.assertTrue(len(s_results) >= 1)
         self.assertEqual(s_results[0]["serial_number"], "SN-BS-ALPHA-01")
         self.assertEqual(s_results[0]["transaction_number"], "GRN-BS-001")
+

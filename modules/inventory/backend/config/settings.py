@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "apps.batches",
     "apps.serial_numbers",
     "apps.valuation",
+    "apps.planning",
 ]
 
 MIDDLEWARE = [

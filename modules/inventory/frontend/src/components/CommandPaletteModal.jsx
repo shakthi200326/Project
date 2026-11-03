@@ -28,6 +28,8 @@ import {
   TrendingUp,
   PieChart,
   Settings,
+  ShoppingCart,
+  BarChart3,
 } from "lucide-react";
 import { useTheme } from "@shared/shell-app/ThemeProvider.jsx";
 import { useWorkspace } from "@shared/shell-app/ContextSelector.jsx";
@@ -79,7 +81,11 @@ export function CommandPaletteModal({ isOpen, onClose }) {
     { label: "Immutable Stock Ledger", path: "/inventory/control/ledger", icon: FileSpreadsheet, category: "Stock Control" },
     { label: "Batch & Lot Tracking", path: "/inventory/control/batches", icon: Hash, category: "Stock Control" },
     { label: "Serial Number Registry", path: "/inventory/control/serials", icon: Cpu, category: "Stock Control" },
-    { label: "Replenishment & Alerts", path: "/inventory/planning/replenishment", icon: TrendingUp, category: "Planning" },
+    { label: "Reorder Rules", path: "/inventory/planning/reorder-rules", icon: SlidersHorizontal, category: "Planning & Replenishment" },
+    { label: "Min / Max Stock Levels", path: "/inventory/planning/min-max-levels", icon: Layers, category: "Planning & Replenishment" },
+    { label: "Replenishment Planning", path: "/inventory/planning/replenishment", icon: TrendingUp, category: "Planning & Replenishment" },
+    { label: "Purchase Suggestions", path: "/inventory/planning/purchase-suggestions", icon: ShoppingCart, category: "Planning & Replenishment" },
+    { label: "Stock Forecast", path: "/inventory/planning/stock-forecast", icon: BarChart3, category: "Planning & Replenishment" },
     { label: "Valuation Reports (WAV)", path: "/inventory/analytics/valuation", icon: DollarSign, category: "Analytics" },
     { label: "Analytics & KPI Reports", path: "/inventory/analytics/reports", icon: PieChart, category: "Analytics" },
     { label: "Inventory Settings", path: "/inventory/settings", icon: Settings, category: "Configuration" },

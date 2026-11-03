@@ -44,6 +44,8 @@ import {
   Radio,
   History,
   Calendar,
+  ShoppingCart,
+  BarChart3,
 } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 import { useWorkspace } from "./ContextSelector";
@@ -164,7 +166,11 @@ export function AppShell({ children }) {
       "/inventory/control/ledger": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Immutable Ledger" }],
       "/inventory/control/batches": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Batch Tracking" }],
       "/inventory/control/serials": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Serial Registry" }],
-      "/inventory/planning/replenishment": [{ label: "Inventory", path: "/inventory" }, { label: "Planning", path: "/inventory/planning/replenishment" }, { label: "Replenishment & Alerts" }],
+      "/inventory/planning/reorder-rules": [{ label: "Inventory", path: "/inventory" }, { label: "Planning & Replenishment", path: "/inventory/planning/reorder-rules" }, { label: "Reorder Rules" }],
+      "/inventory/planning/min-max-levels": [{ label: "Inventory", path: "/inventory" }, { label: "Planning & Replenishment", path: "/inventory/planning/reorder-rules" }, { label: "Min / Max Stock Levels" }],
+      "/inventory/planning/replenishment": [{ label: "Inventory", path: "/inventory" }, { label: "Planning & Replenishment", path: "/inventory/planning/reorder-rules" }, { label: "Replenishment Planning" }],
+      "/inventory/planning/purchase-suggestions": [{ label: "Inventory", path: "/inventory" }, { label: "Planning & Replenishment", path: "/inventory/planning/reorder-rules" }, { label: "Purchase Suggestions" }],
+      "/inventory/planning/stock-forecast": [{ label: "Inventory", path: "/inventory" }, { label: "Planning & Replenishment", path: "/inventory/planning/reorder-rules" }, { label: "Stock Forecast" }],
       "/inventory/analytics/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Valuation Reports" }],
       "/inventory/analytics/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Analytics Reports" }],
       "/inventory/settings": [{ label: "Inventory", path: "/inventory" }, { label: "Configuration" }, { label: "Inventory Settings" }],
@@ -244,9 +250,13 @@ export function AppShell({ children }) {
     },
     {
       key: "planning",
-      title: "Planning",
+      title: "Planning & Replenishment",
       items: [
-        { label: "Replenishment & Alerts", path: "/inventory/planning/replenishment", icon: TrendingUp },
+        { label: "Reorder Rules", path: "/inventory/planning/reorder-rules", icon: SlidersHorizontal },
+        { label: "Min / Max Stock Levels", path: "/inventory/planning/min-max-levels", icon: Layers },
+        { label: "Replenishment Planning", path: "/inventory/planning/replenishment", icon: TrendingUp },
+        { label: "Purchase Suggestions", path: "/inventory/planning/purchase-suggestions", icon: ShoppingCart },
+        { label: "Stock Forecast", path: "/inventory/planning/stock-forecast", icon: BarChart3 },
       ],
     },
     {
@@ -300,7 +310,11 @@ export function AppShell({ children }) {
       "/inventory/tracking/expiry": [{ label: "Inventory", path: "/inventory" }, { label: "Batch & Serial Tracking", path: "/inventory/tracking/batches" }, { label: "Expiry Management" }],
       "/inventory/tracking/serials": [{ label: "Inventory", path: "/inventory" }, { label: "Batch & Serial Tracking", path: "/inventory/tracking/serials" }, { label: "Serial Number Management" }],
       "/inventory/tracking/serial-movements": [{ label: "Inventory", path: "/inventory" }, { label: "Batch & Serial Tracking", path: "/inventory/tracking/serials" }, { label: "Serial Movement History" }],
-      "/inventory/planning/replenishment": [{ label: "Inventory", path: "/inventory" }, { label: "Planning", path: "/inventory/planning/replenishment" }, { label: "Replenishment & Alerts" }],
+      "/inventory/planning/reorder-rules": [{ label: "Inventory", path: "/inventory" }, { label: "Planning & Replenishment", path: "/inventory/planning/reorder-rules" }, { label: "Reorder Rules" }],
+      "/inventory/planning/min-max-levels": [{ label: "Inventory", path: "/inventory" }, { label: "Planning & Replenishment", path: "/inventory/planning/reorder-rules" }, { label: "Min / Max Stock Levels" }],
+      "/inventory/planning/replenishment": [{ label: "Inventory", path: "/inventory" }, { label: "Planning & Replenishment", path: "/inventory/planning/reorder-rules" }, { label: "Replenishment Planning" }],
+      "/inventory/planning/purchase-suggestions": [{ label: "Inventory", path: "/inventory" }, { label: "Planning & Replenishment", path: "/inventory/planning/reorder-rules" }, { label: "Purchase Suggestions" }],
+      "/inventory/planning/stock-forecast": [{ label: "Inventory", path: "/inventory" }, { label: "Planning & Replenishment", path: "/inventory/planning/reorder-rules" }, { label: "Stock Forecast" }],
       "/inventory/analytics/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Valuation Reports" }],
       "/inventory/analytics/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Analytics Reports" }],
       "/inventory/settings": [{ label: "Inventory", path: "/inventory" }, { label: "Configuration" }, { label: "Inventory Settings" }],
