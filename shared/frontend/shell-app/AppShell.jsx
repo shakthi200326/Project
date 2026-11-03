@@ -192,7 +192,13 @@ export function AppShell({ children }) {
       "/inventory/reports/warehouse": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/stock-summary" }, { label: "Warehouse Report" }],
       "/inventory/analytics/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/valuation" }, { label: "Stock Valuation Report" }],
       "/inventory/analytics/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/stock-summary" }, { label: "Stock Summary Report" }],
-      "/inventory/settings": [{ label: "Inventory", path: "/inventory" }, { label: "Configuration" }, { label: "Inventory Settings" }],
+      "/inventory/configuration/general": [{ label: "Inventory", path: "/inventory" }, { label: "Inventory Configuration", path: "/inventory/configuration/general" }, { label: "General Settings" }],
+      "/inventory/configuration/stock": [{ label: "Inventory", path: "/inventory" }, { label: "Inventory Configuration", path: "/inventory/configuration/general" }, { label: "Stock Settings" }],
+      "/inventory/configuration/tracking": [{ label: "Inventory", path: "/inventory" }, { label: "Inventory Configuration", path: "/inventory/configuration/general" }, { label: "Product Tracking Settings" }],
+      "/inventory/configuration/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Inventory Configuration", path: "/inventory/configuration/general" }, { label: "Valuation Settings" }],
+      "/inventory/configuration/numbering": [{ label: "Inventory", path: "/inventory" }, { label: "Inventory Configuration", path: "/inventory/configuration/general" }, { label: "Document Numbering" }],
+      "/inventory/configuration/approvals": [{ label: "Inventory", path: "/inventory" }, { label: "Inventory Configuration", path: "/inventory/configuration/general" }, { label: "Approval Settings" }],
+      "/inventory/settings": [{ label: "Inventory", path: "/inventory" }, { label: "Inventory Configuration", path: "/inventory/configuration/general" }, { label: "General Settings" }],
     };
     return map[pathname] || [{ label: "Inventory", path: "/inventory" }, { label: "Module View" }];
   };
@@ -304,8 +310,16 @@ export function AppShell({ children }) {
       ],
     },
     {
-      title: "Configuration",
-      items: [{ label: "Inventory Settings", path: "/inventory/settings", icon: Settings }],
+      key: "configuration",
+      title: "Inventory Configuration",
+      items: [
+        { label: "General Settings", path: "/inventory/configuration/general", icon: Settings },
+        { label: "Stock Settings", path: "/inventory/configuration/stock", icon: Boxes },
+        { label: "Product Tracking Settings", path: "/inventory/configuration/tracking", icon: Cpu },
+        { label: "Valuation Settings", path: "/inventory/configuration/valuation", icon: DollarSign },
+        { label: "Document Numbering", path: "/inventory/configuration/numbering", icon: Hash },
+        { label: "Approval Settings", path: "/inventory/configuration/approvals", icon: ShieldCheck },
+      ],
     },
   ];
 

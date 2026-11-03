@@ -58,6 +58,12 @@ const LowStockReportPage = lazy(() => import("../pages/LowStockReportPage.jsx").
 const StockAgeingReportPage = lazy(() => import("../pages/StockAgeingReportPage.jsx").then(m => ({ default: m.StockAgeingReportPage || m.default })));
 const ExpiryReportPage = lazy(() => import("../pages/ExpiryReportPage.jsx").then(m => ({ default: m.ExpiryReportPage || m.default })));
 const WarehouseReportPage = lazy(() => import("../pages/WarehouseReportPage.jsx").then(m => ({ default: m.WarehouseReportPage || m.default })));
+const GeneralSettingsPage = lazy(() => import("../pages/GeneralSettingsPage.jsx").then(m => ({ default: m.GeneralSettingsPage || m.default })));
+const StockSettingsPage = lazy(() => import("../pages/StockSettingsPage.jsx").then(m => ({ default: m.StockSettingsPage || m.default })));
+const ProductTrackingSettingsPage = lazy(() => import("../pages/ProductTrackingSettingsPage.jsx").then(m => ({ default: m.ProductTrackingSettingsPage || m.default })));
+const ValuationSettingsPage = lazy(() => import("../pages/ValuationSettingsPage.jsx").then(m => ({ default: m.ValuationSettingsPage || m.default })));
+const DocumentNumberingPage = lazy(() => import("../pages/DocumentNumberingPage.jsx").then(m => ({ default: m.DocumentNumberingPage || m.default })));
+const ApprovalSettingsPage = lazy(() => import("../pages/ApprovalSettingsPage.jsx").then(m => ({ default: m.ApprovalSettingsPage || m.default })));
 
 export default function App() {
   return (
@@ -152,8 +158,15 @@ export default function App() {
                 <Route path="/inventory/analytics/valuation" element={<Navigate to="/inventory/reports/valuation" replace />} />
                 <Route path="/inventory/analytics/movement" element={<Navigate to="/inventory/reports/stock-movement" replace />} />
 
-                {/* Settings */}
-                <Route path="/inventory/settings" element={<SettingsPage />} />
+                {/* Inventory Configuration — Exact 6 Settings Modules */}
+                <Route path="/inventory/configuration/general" element={<GeneralSettingsPage />} />
+                <Route path="/inventory/configuration/stock" element={<StockSettingsPage />} />
+                <Route path="/inventory/configuration/tracking" element={<ProductTrackingSettingsPage />} />
+                <Route path="/inventory/configuration/valuation" element={<ValuationSettingsPage />} />
+                <Route path="/inventory/configuration/numbering" element={<DocumentNumberingPage />} />
+                <Route path="/inventory/configuration/approvals" element={<ApprovalSettingsPage />} />
+                <Route path="/inventory/configuration" element={<Navigate to="/inventory/configuration/general" replace />} />
+                <Route path="/inventory/settings" element={<Navigate to="/inventory/configuration/general" replace />} />
 
                 {/* Direct & Convenience Route Aliases */}
                 <Route path="/products" element={<Navigate to="/inventory/products" replace />} />
@@ -202,7 +215,14 @@ export default function App() {
                 <Route path="/reports/ageing" element={<Navigate to="/inventory/reports/ageing" replace />} />
                 <Route path="/reports/expiry" element={<Navigate to="/inventory/reports/expiry" replace />} />
                 <Route path="/reports/warehouse" element={<Navigate to="/inventory/reports/warehouse" replace />} />
-                <Route path="/settings" element={<Navigate to="/inventory/settings" replace />} />
+                <Route path="/settings" element={<Navigate to="/inventory/configuration/general" replace />} />
+                <Route path="/configuration" element={<Navigate to="/inventory/configuration/general" replace />} />
+                <Route path="/configuration/general" element={<Navigate to="/inventory/configuration/general" replace />} />
+                <Route path="/configuration/stock" element={<Navigate to="/inventory/configuration/stock" replace />} />
+                <Route path="/configuration/tracking" element={<Navigate to="/inventory/configuration/tracking" replace />} />
+                <Route path="/configuration/valuation" element={<Navigate to="/inventory/configuration/valuation" replace />} />
+                <Route path="/configuration/numbering" element={<Navigate to="/inventory/configuration/numbering" replace />} />
+                <Route path="/configuration/approvals" element={<Navigate to="/inventory/configuration/approvals" replace />} />
                 <Route path="/returns" element={<Navigate to="/inventory/operations/returns" replace />} />
                 <Route path="/inventory/returns" element={<Navigate to="/inventory/operations/returns" replace />} />
 

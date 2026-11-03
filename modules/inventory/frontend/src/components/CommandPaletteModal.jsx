@@ -104,7 +104,12 @@ export function CommandPaletteModal({ isOpen, onClose }) {
     { label: "Stock Ageing Report", path: "/inventory/reports/ageing", icon: Clock, category: "Reports & Analytics" },
     { label: "Expiry Report", path: "/inventory/reports/expiry", icon: Calendar, category: "Reports & Analytics" },
     { label: "Warehouse Report", path: "/inventory/reports/warehouse", icon: Boxes, category: "Reports & Analytics" },
-    { label: "Inventory Settings", path: "/inventory/settings", icon: Settings, category: "Configuration" },
+    { label: "General Settings", path: "/inventory/configuration/general", icon: Settings, category: "Inventory Configuration" },
+    { label: "Stock Settings", path: "/inventory/configuration/stock", icon: Boxes, category: "Inventory Configuration" },
+    { label: "Product Tracking Settings", path: "/inventory/configuration/tracking", icon: Cpu, category: "Inventory Configuration" },
+    { label: "Valuation Settings", path: "/inventory/configuration/valuation", icon: DollarSign, category: "Inventory Configuration" },
+    { label: "Document Numbering", path: "/inventory/configuration/numbering", icon: Hash, category: "Inventory Configuration" },
+    { label: "Approval Settings", path: "/inventory/configuration/approvals", icon: ShieldCheck, category: "Inventory Configuration" },
   ];
 
   const q = query.trim().toLowerCase();

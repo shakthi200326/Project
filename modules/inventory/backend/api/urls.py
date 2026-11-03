@@ -43,6 +43,11 @@ from .views import (
     FullStockCountViewSet,
     AuditHistoryViewSet,
 )
+from .configuration_views import (
+    InventoryConfigurationView,
+    DocumentNumberingViewSet,
+    ConfigurationAuditLogListView,
+)
 
 router = DefaultRouter()
 router.register(r"categories", CategoryViewSet)
@@ -77,6 +82,7 @@ router.register(r"audit/cycle-counts", CycleCountViewSet, basename="audit-cycle-
 router.register(r"audit/full-counts", FullStockCountViewSet, basename="audit-full-counts")
 router.register(r"audit/variances", StockCountViewSet, basename="audit-variances")
 router.register(r"audit/history", AuditHistoryViewSet, basename="audit-history")
+router.register(r"configuration/document-numbering", DocumentNumberingViewSet, basename="config-doc-numbering")
 
 urlpatterns = [
     path("dashboard/kpis/", DashboardKPIView.as_view(), name="inventory-dashboard-kpis"),
@@ -88,5 +94,7 @@ urlpatterns = [
     path("reports/ageing/", StockAgeingReportView.as_view(), name="report-ageing"),
     path("reports/expiry/", ExpiryReportView.as_view(), name="report-expiry"),
     path("reports/warehouse/", WarehouseReportView.as_view(), name="report-warehouse"),
+    path("configuration/global/", InventoryConfigurationView.as_view(), name="configuration-global"),
+    path("configuration/audit-log/", ConfigurationAuditLogListView.as_view(), name="configuration-audit-log"),
     path("", include(router.urls)),
 ]

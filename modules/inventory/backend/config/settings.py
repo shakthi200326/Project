@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "apps.serial_numbers",
     "apps.valuation",
     "apps.planning",
+    "apps.configuration",
 ]
 
 MIDDLEWARE = [

@@ -4252,3 +4252,154 @@ export async function fetchWarehouseReport(params = {}) {
   }
   return DEMO_WAREHOUSE_REPORT;
 }
+
+
+// ---------------------------------------------------------------------------
+// Phase 9: Inventory Configuration API
+// ---------------------------------------------------------------------------
+
+export const DEFAULT_GLOBAL_CONFIG = {
+  // 1. General Settings
+  inventory_module_name: "Enterprise Inventory Management",
+  base_currency: "USD",
+  default_warehouse: null,
+  default_uom: "EA",
+  enable_multiple_warehouses: true,
+
+  // 2. Stock Settings
+  allow_negative_stock: false,
+  enable_stock_reservation: true,
+  enable_stock_transfer: true,
+  require_warehouse_selection: true,
+  require_storage_location: true,
+  require_bin_selection: false,
+  default_low_stock_threshold: 20,
+
+  // 3. Product Tracking Settings
+  enable_batch_tracking: true,
+  enable_serial_tracking: true,
+  enable_expiry_tracking: true,
+  enable_barcode_tracking: true,
+
+  // 4. Valuation Settings
+  valuation_method: "Weighted Average",
+  cost_precision: 2,
+  include_additional_costs: false,
+
+  // 6. Approval Settings
+  goods_receipt_approval: false,
+  stock_issue_approval: true,
+  stock_transfer_approval: true,
+  stock_adjustment_approval: true,
+  stock_return_approval: true,
+  stock_reconciliation_approval: true,
+  batch_release_approval: true,
+};
+
+export const DEFAULT_NUMBERING_RULES = [
+  { id: 1, document_type: "Warehouse", prefix: "WH", starting_number: 1, current_number: 1, number_length: 4, reset_frequency: "Never", example_number: "WH-0001" },
+  { id: 2, document_type: "Storage Location", prefix: "LOC", starting_number: 1, current_number: 1, number_length: 4, reset_frequency: "Never", example_number: "LOC-0001" },
+  { id: 3, document_type: "Rack", prefix: "RACK", starting_number: 1, current_number: 1, number_length: 4, reset_frequency: "Never", example_number: "RACK-0001" },
+  { id: 4, document_type: "Bin", prefix: "BIN", starting_number: 1, current_number: 1, number_length: 4, reset_frequency: "Never", example_number: "BIN-0001" },
+  { id: 5, document_type: "Goods Receipt", prefix: "GRN", starting_number: 1, current_number: 1, number_length: 5, reset_frequency: "Never", example_number: "GRN-00001" },
+  { id: 6, document_type: "Stock Issue", prefix: "ISS", starting_number: 1, current_number: 1, number_length: 5, reset_frequency: "Never", example_number: "ISS-00001" },
+  { id: 7, document_type: "Stock Transfer", prefix: "TRF", starting_number: 1, current_number: 1, number_length: 5, reset_frequency: "Never", example_number: "TRF-00001" },
+  { id: 8, document_type: "Stock Adjustment", prefix: "ADJ", starting_number: 1, current_number: 1, number_length: 5, reset_frequency: "Never", example_number: "ADJ-00001" },
+  { id: 9, document_type: "Stock Return", prefix: "RET", starting_number: 1, current_number: 1, number_length: 5, reset_frequency: "Never", example_number: "RET-00001" },
+  { id: 10, document_type: "Stock Reservation", prefix: "RES", starting_number: 1, current_number: 1, number_length: 5, reset_frequency: "Never", example_number: "RES-00001" },
+  { id: 11, document_type: "Stock Reconciliation", prefix: "REC", starting_number: 1, current_number: 1, number_length: 5, reset_frequency: "Never", example_number: "REC-00001" },
+];
+
+export async function fetchGlobalConfig() {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/configuration/global/`);
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  return getStored("inv_global_config", DEFAULT_GLOBAL_CONFIG);
+}
+
+export async function updateGlobalConfig(payload) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/configuration/global/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  const current = getStored("inv_global_config", DEFAULT_GLOBAL_CONFIG);
+  const updated = { ...current, ...payload };
+  setStored("inv_global_config", updated);
+  return updated;
+}
+
+export async function fetchDocumentNumberingRules() {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/configuration/document-numbering/`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      return data.results || data || [];
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  return getStored("inv_numbering_rules", DEFAULT_NUMBERING_RULES);
+}
+
+export async function updateDocumentNumberingRule(id, payload) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/configuration/document-numbering/${id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  const list = getStored("inv_numbering_rules", DEFAULT_NUMBERING_RULES);
+  const updatedList = list.map((item) => (item.id === id || item.document_type === payload.document_type ? { ...item, ...payload } : item));
+  setStored("inv_numbering_rules", updatedList);
+  return payload;
+}
+
+export async function generateDocumentNumber(docType) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/configuration/document-numbering/generate-next/?document_type=${encodeURIComponent(docType)}`);
+    if (res.ok) {
+      const data = await res.json();
+      return data.generated_number;
+    }
+  } catch (e) {}
+  const list = getStored("inv_numbering_rules", DEFAULT_NUMBERING_RULES);
+  const rule = list.find((r) => r.document_type === docType) || { prefix: "DOC", current_number: 1, number_length: 5 };
+  const num = rule.current_number || 1;
+  rule.current_number = num + 1;
+  setStored("inv_numbering_rules", list);
+  return `${rule.prefix}-${String(num).padStart(rule.number_length, "0")}`;
+}
+
+export async function fetchConfigAuditLogs() {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/configuration/audit-log/`);
+    if (res.ok) {
+      const data = await res.json();
+      return data.results || data || [];
+    }
+  } catch (e) {}
+  return [];
+}
