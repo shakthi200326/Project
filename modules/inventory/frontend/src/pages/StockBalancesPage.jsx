@@ -49,6 +49,9 @@ export function StockBalancesPage() {
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState("");
   const [warehouseFilter, setWarehouseFilter] = useState("ALL");
+  const [categoryFilter, setCategoryFilter] = useState("ALL");
+  const [locationFilter, setLocationFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [toastMessage, setToastMessage] = useState(null);
 
   // Barcode Scanner & Details Modal State
@@ -75,6 +78,33 @@ export function StockBalancesPage() {
     return map;
   }, [products]);
 
+  const warehousesList = useMemo(() => {
+    const set = new Set();
+    balances.forEach((b) => {
+      const w = b.warehouse_name || b.warehouse;
+      if (w) set.add(w);
+    });
+    return Array.from(set);
+  }, [balances]);
+
+  const categoriesList = useMemo(() => {
+    const set = new Set();
+    balances.forEach((b) => {
+      const c = b.category_name || b.category;
+      if (c) set.add(c);
+    });
+    return Array.from(set);
+  }, [balances]);
+
+  const locationsList = useMemo(() => {
+    const set = new Set();
+    balances.forEach((b) => {
+      const l = b.location_name || b.location_code || b.location;
+      if (l) set.add(l);
+    });
+    return Array.from(set);
+  }, [balances]);
+
   const handleExecuteScan = (rawCode) => {
     const clean = rawCode?.trim();
     if (!clean) return;
@@ -84,29 +114,32 @@ export function StockBalancesPage() {
     // Also try finding in balances
     const matchedBalance = balances.find((b) =>
       b.item_code?.toLowerCase() === clean.toLowerCase() ||
+      b.sku?.toLowerCase() === clean.toLowerCase() ||
       b.item_name?.toLowerCase().includes(clean.toLowerCase()) ||
-      (matchedProduct && b.item_code?.toLowerCase() === matchedProduct.sku?.toLowerCase())
+      b.product_name?.toLowerCase().includes(clean.toLowerCase()) ||
+      (matchedProduct && (b.item_code?.toLowerCase() === matchedProduct.sku?.toLowerCase() || b.sku?.toLowerCase() === matchedProduct.sku?.toLowerCase()))
     );
 
     if (matchedProduct || matchedBalance) {
       playScanBeep();
-      const code = matchedProduct?.sku || matchedBalance?.item_code;
+      const code = matchedProduct?.sku || matchedBalance?.sku || matchedBalance?.item_code;
       const prod = matchedProduct || productMap[code] || {};
-      const bal = matchedBalance || balances.find((b) => b.item_code === code) || {};
+      const bal = matchedBalance || balances.find((b) => b.sku === code || b.item_code === code) || {};
 
       setSelectedDetail({
         sku: code,
-        name: prod.name || bal.item_name || "Catalog Product",
+        name: prod.name || bal.product_name || bal.item_name || "Catalog Product",
         barcode: prod.barcode || clean,
         warehouse: bal.warehouse_name || "Main Central Hub",
-        location: bal.location_code || "A3-RB",
-        on_hand: bal.on_hand_qty ?? prod.on_hand ?? 0,
-        reserved: bal.reserved_qty ?? prod.reserved ?? 0,
-        blocked: bal.blocked_qty ?? 0,
-        available: bal.available_qty ?? prod.available ?? 0,
+        location: bal.location_name || bal.location_code || "A3-RB",
+        bin: bal.bin_name || "Default Bin",
+        on_hand: bal.total_stock ?? bal.on_hand_qty ?? prod.on_hand ?? 0,
+        reserved: bal.reserved_stock ?? bal.reserved_qty ?? prod.reserved ?? 0,
+        blocked: bal.damaged_stock ?? bal.blocked_qty ?? 0,
+        available: bal.available_stock ?? bal.available_qty ?? prod.available ?? 0,
         unit: bal.unit || prod.unit || "EA",
         unit_cost: prod.unit_cost || 14.85,
-        category: prod.category || "Mechanical Components",
+        category: bal.category_name || prod.category || "Mechanical Components",
         brand: prod.brand || "OEM Standard",
         reorder_point: prod.reorder_point || 50,
       });
@@ -114,7 +147,7 @@ export function StockBalancesPage() {
       setSearch(code || clean);
       setIsScannerOpen(false);
       setScannerInput("");
-      showToast(`Scanned: ${prod.name || bal.item_name} (${code})`);
+      showToast(`Scanned: ${prod.name || bal.product_name || bal.item_name} (${code})`);
     } else {
       showToast(`No stock balance or catalog item for barcode "${clean}".`);
     }
@@ -128,23 +161,39 @@ export function StockBalancesPage() {
   };
 
   const filtered = balances.filter((b) => {
-    const matchesWh = warehouseFilter === "ALL" || b.warehouse_name === warehouseFilter;
+    const matchesWh = warehouseFilter === "ALL" || (b.warehouse_name || b.warehouse) === warehouseFilter;
+    const matchesCat = categoryFilter === "ALL" || (b.category_name || b.category) === categoryFilter;
+    const matchesLoc = locationFilter === "ALL" || (b.location_name || b.location_code || b.location) === locationFilter;
+    const currentStatus = b.stock_status || (Number(b.available_stock ?? b.available_qty ?? 0) <= 0 ? "Out of Stock" : Number(b.available_stock ?? b.available_qty ?? 0) <= 20 ? "Low Stock" : "In Stock");
+    const matchesStatus = statusFilter === "ALL" || currentStatus === statusFilter;
     const q = search.trim().toLowerCase();
-    const productForCode = productMap[b.item_code];
+    const productForCode = productMap[b.sku || b.item_code];
     const matchesSearch =
       !q ||
+      b.product_name?.toLowerCase().includes(q) ||
       b.item_name?.toLowerCase().includes(q) ||
+      b.sku?.toLowerCase().includes(q) ||
       b.item_code?.toLowerCase().includes(q) ||
-      b.location_code?.toLowerCase().includes(q) ||
+      (b.location_name && b.location_name.toLowerCase().includes(q)) ||
+      (b.bin_name && b.bin_name.toLowerCase().includes(q)) ||
       (b.barcode && String(b.barcode).toLowerCase().includes(q)) ||
       (productForCode?.barcode && String(productForCode.barcode).toLowerCase().includes(q));
-    return matchesWh && matchesSearch;
+    return matchesWh && matchesCat && matchesLoc && matchesStatus && matchesSearch;
   });
 
-  const totalOnHand = filtered.reduce((acc, b) => acc + (b.on_hand_qty || 0), 0);
-  const totalReserved = filtered.reduce((acc, b) => acc + (b.reserved_qty || 0), 0);
-  const totalBlocked = filtered.reduce((acc, b) => acc + (b.blocked_qty || 0), 0);
-  const totalAvailable = filtered.reduce((acc, b) => acc + (b.available_qty || 0), 0);
+  const totalProducts = new Set(filtered.map((b) => b.sku || b.item_code)).size;
+  const totalStockQty = filtered.reduce((acc, b) => acc + Number(b.total_stock !== undefined ? b.total_stock : (b.on_hand_qty || 0)), 0);
+  const totalReserved = filtered.reduce((acc, b) => acc + Number(b.reserved_stock !== undefined ? b.reserved_stock : (b.reserved_qty || 0)), 0);
+  const totalDamaged = filtered.reduce((acc, b) => acc + Number(b.damaged_stock !== undefined ? b.damaged_stock : (b.blocked_qty || 0)), 0);
+  const totalAvailable = filtered.reduce((acc, b) => acc + Number(b.available_stock !== undefined ? b.available_stock : (b.available_qty || 0)), 0);
+  const lowStockCount = filtered.filter((b) => {
+    const avail = Number(b.available_stock !== undefined ? b.available_stock : (b.available_qty || 0));
+    return b.stock_status === "Low Stock" || (avail > 0 && avail <= 20);
+  }).length;
+  const outOfStockCount = filtered.filter((b) => {
+    const avail = Number(b.available_stock !== undefined ? b.available_stock : (b.available_qty || 0));
+    return b.stock_status === "Out of Stock" || avail <= 0;
+  }).length;
 
   const facilityBreakdownData = useMemo(() => {
     const facilitiesMap = {};
@@ -292,48 +341,66 @@ export function StockBalancesPage() {
         </button>
       </div>
 
-      {/* Balance Matrix Strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* 6 Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
           <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-            Total Physical On-Hand
+            Total Products
           </div>
           <div className="text-xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums mt-1">
-            {totalOnHand.toLocaleString()}
+            {totalProducts.toLocaleString()}
           </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Total units in storage</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">Active catalog SKUs</div>
         </div>
 
         <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
-            Committed / Reserved
+          <div className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+            Total Stock Quantity
           </div>
-          <div className="text-xl font-bold tracking-tight text-purple-700 dark:text-purple-400 tabular-nums mt-1">
-            {totalReserved.toLocaleString()}
+          <div className="text-xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums mt-1">
+            {totalStockQty.toLocaleString()}
           </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Allocated to customer orders</div>
-        </div>
-
-        <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-            Blocked (QC / Quarantine)
-          </div>
-          <div className="text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400 tabular-nums mt-1">
-            {totalBlocked.toLocaleString()}
-          </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Held for inspection</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">Physical on-hand</div>
         </div>
 
         <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
           <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-            Net Free Available
+            Available Stock
           </div>
           <div className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums mt-1">
             {totalAvailable.toLocaleString()}
           </div>
-          <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-0.5">
-            Immediately dispatchable
+          <div className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">Usable quantity</div>
+        </div>
+
+        <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+            Reserved Stock
           </div>
+          <div className="text-xl font-bold tracking-tight text-purple-700 dark:text-purple-400 tabular-nums mt-1">
+            {totalReserved.toLocaleString()}
+          </div>
+          <div className="text-[11px] text-slate-400 mt-0.5">Allocated quantity</div>
+        </div>
+
+        <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+            Low Stock Items
+          </div>
+          <div className="text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400 tabular-nums mt-1">
+            {lowStockCount.toLocaleString()}
+          </div>
+          <div className="text-[11px] text-slate-400 mt-0.5">Below safety buffer</div>
+        </div>
+
+        <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+            Out of Stock Items
+          </div>
+          <div className="text-xl font-bold tracking-tight text-rose-600 dark:text-rose-400 tabular-nums mt-1">
+            {outOfStockCount.toLocaleString()}
+          </div>
+          <div className="text-[11px] text-slate-400 mt-0.5">Zero stock level</div>
         </div>
       </div>
 
@@ -700,9 +767,9 @@ export function StockBalancesPage() {
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="p-3 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-2 flex-1 max-w-lg">
+      {/* Filters Toolbar */}
+      <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div className="flex items-center gap-2 flex-1 max-w-md">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
             <input
@@ -710,7 +777,7 @@ export function StockBalancesPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              placeholder="Search or scan barcode/SKU (Press Enter to inspect)..."
+              placeholder="Filter by Product Name or SKU..."
               className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/80 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500 font-medium"
             />
           </div>
@@ -728,94 +795,153 @@ export function StockBalancesPage() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* 4 Dropdown Filters: Warehouse, Category, Location, Stock Status */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Warehouse Filter */}
           <select
             value={warehouseFilter}
             onChange={(e) => setWarehouseFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-300 focus:outline-hidden cursor-pointer"
+            className="px-2.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/80 dark:bg-zinc-800/60 text-xs font-medium text-slate-700 dark:text-zinc-300 focus:outline-hidden cursor-pointer"
           >
-            <option value="ALL">All Facilities</option>
-            <option value="Main Central Hub">Main Central Hub</option>
-            <option value="East Coast Logistics Terminal">East Coast Logistics Terminal</option>
+            <option value="ALL">All Warehouses</option>
+            {warehousesList.map((w) => (
+              <option key={w} value={w}>{w}</option>
+            ))}
+          </select>
+
+          {/* Category Filter */}
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="px-2.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/80 dark:bg-zinc-800/60 text-xs font-medium text-slate-700 dark:text-zinc-300 focus:outline-hidden cursor-pointer"
+          >
+            <option value="ALL">All Categories</option>
+            {categoriesList.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+
+          {/* Location Filter */}
+          <select
+            value={locationFilter}
+            onChange={(e) => setLocationFilter(e.target.value)}
+            className="px-2.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/80 dark:bg-zinc-800/60 text-xs font-medium text-slate-700 dark:text-zinc-300 focus:outline-hidden cursor-pointer"
+          >
+            <option value="ALL">All Locations</option>
+            {locationsList.map((l) => (
+              <option key={l} value={l}>{l}</option>
+            ))}
+          </select>
+
+          {/* Stock Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-2.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/80 dark:bg-zinc-800/60 text-xs font-medium text-slate-700 dark:text-zinc-300 focus:outline-hidden cursor-pointer"
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="In Stock">In Stock</option>
+            <option value="Low Stock">Low Stock</option>
+            <option value="Out of Stock">Out of Stock</option>
           </select>
         </div>
       </div>
 
-      {/* Table */}
+      {/* Stock Details Table */}
       <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
-                <th className="py-3.5 px-4 font-semibold">SKU Code</th>
-                <th className="py-3.5 px-4 font-semibold">Product Description</th>
-                <th className="py-3.5 px-4 font-semibold">Warehouse Hub</th>
-                <th className="py-3.5 px-4 font-semibold">Location</th>
-                <th className="py-3.5 px-4 font-semibold text-right">Physical On-Hand</th>
-                <th className="py-3.5 px-4 font-semibold text-right">Reserved (Hold)</th>
-                <th className="py-3.5 px-4 font-semibold text-right">Blocked (QC)</th>
-                <th className="py-3.5 px-4 font-semibold text-right">Free Available</th>
-                <th className="py-3.5 px-4 text-center">Status</th>
-                <th className="py-3.5 px-4 text-center">Actions</th>
+                <th className="py-3.5 px-4 font-semibold">Product Name</th>
+                <th className="py-3.5 px-3 font-semibold">SKU</th>
+                <th className="py-3.5 px-3 font-semibold">Warehouse</th>
+                <th className="py-3.5 px-3 font-semibold">Storage Location</th>
+                <th className="py-3.5 px-3 font-semibold">Bin</th>
+                <th className="py-3.5 px-3 font-semibold text-right">Total Stock</th>
+                <th className="py-3.5 px-3 font-semibold text-right">Reserved Stock</th>
+                <th className="py-3.5 px-3 font-semibold text-right">Available Stock</th>
+                <th className="py-3.5 px-3 font-semibold text-right">Damaged Stock</th>
+                <th className="py-3.5 px-3 text-center">Stock Status</th>
+                <th className="py-3.5 px-3 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
-              {filtered.map((b) => (
-                <tr key={b.id} className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors">
-                  <td className="py-3.5 px-4">
-                    <span className="font-mono text-[11px] font-bold text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md bg-blue-50/80 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/40">
-                      {b.item_code}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-white">
-                    {b.item_name}
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-600 dark:text-zinc-300 font-medium">
-                    {b.warehouse_name}
-                  </td>
-                  <td className="py-3.5 px-4 font-mono text-[11px] text-slate-500">
-                    {b.location_code || "A3-RB"}
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-mono tabular-nums font-semibold text-slate-900 dark:text-white">
-                    {b.on_hand_qty} {b.unit}
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-mono tabular-nums font-medium text-purple-600 dark:text-purple-400">
-                    {b.reserved_qty} {b.unit}
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-mono tabular-nums font-medium text-amber-600 dark:text-amber-400">
-                    {b.blocked_qty} {b.unit}
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-mono tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
-                    {b.available_qty} {b.unit}
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                        b.available_qty <= 0
-                          ? "bg-rose-50 text-rose-700 dark:bg-rose-950/70 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50"
-                          : b.available_qty < 25
-                          ? "bg-amber-50 text-amber-700 dark:bg-amber-950/70 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50"
-                          : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50"
-                      }`}
-                    >
-                      <span className={`h-1.5 w-1.5 rounded-full ${
-                        b.available_qty <= 0 ? "bg-rose-500" : b.available_qty < 25 ? "bg-amber-500" : "bg-emerald-500"
-                      }`} />
-                      {b.available_qty <= 0 ? "OUT OF STOCK" : b.available_qty < 25 ? "LOW STOCK" : "IN STOCK"}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    <button
-                      type="button"
-                      onClick={() => handleExecuteScan(b.item_code)}
-                      className="p-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 text-slate-500 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 transition-colors cursor-pointer"
-                      title="Inspect Product & Barcode Details"
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                    </button>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={11} className="py-10 text-center text-slate-400 dark:text-zinc-500">
+                    No stock records matching the current filters.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filtered.map((b) => {
+                  const total = Number(b.total_stock !== undefined ? b.total_stock : (b.on_hand_qty || 0));
+                  const reserved = Number(b.reserved_stock !== undefined ? b.reserved_stock : (b.reserved_qty || 0));
+                  const available = Number(b.available_stock !== undefined ? b.available_stock : (b.available_qty || 0));
+                  const damaged = Number(b.damaged_stock !== undefined ? b.damaged_stock : (b.blocked_qty || 0));
+                  const status = b.stock_status || (available <= 0 ? "Out of Stock" : available <= 20 ? "Low Stock" : "In Stock");
+
+                  return (
+                    <tr key={b.id || b.sku} className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors">
+                      <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-white">
+                        {b.product_name || b.item_name}
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <span className="font-mono text-[11px] font-bold text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md bg-blue-50/80 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/40">
+                          {b.sku || b.item_code}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">
+                        {b.warehouse_name || b.warehouse || "Main Central Hub"}
+                      </td>
+                      <td className="py-3.5 px-3 font-mono text-[11px] text-slate-500 dark:text-zinc-400">
+                        {b.location_name || b.location_code || b.location || "Aisle 1"}
+                      </td>
+                      <td className="py-3.5 px-3 font-mono text-[11px] text-slate-500 dark:text-zinc-400">
+                        {b.bin_name || b.bin_code || b.bin || "—"}
+                      </td>
+                      <td className="py-3.5 px-3 text-right font-mono tabular-nums font-semibold text-slate-900 dark:text-white">
+                        {total} {b.unit || "EA"}
+                      </td>
+                      <td className="py-3.5 px-3 text-right font-mono tabular-nums font-medium text-purple-600 dark:text-purple-400">
+                        {reserved} {b.unit || "EA"}
+                      </td>
+                      <td className="py-3.5 px-3 text-right font-mono tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
+                        {available} {b.unit || "EA"}
+                      </td>
+                      <td className="py-3.5 px-3 text-right font-mono tabular-nums font-medium text-amber-600 dark:text-amber-400">
+                        {damaged} {b.unit || "EA"}
+                      </td>
+                      <td className="py-3.5 px-3 text-center">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                            status === "Out of Stock"
+                              ? "bg-rose-50 text-rose-700 dark:bg-rose-950/70 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50"
+                              : status === "Low Stock"
+                              ? "bg-amber-50 text-amber-700 dark:bg-amber-950/70 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50"
+                              : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50"
+                          }`}
+                        >
+                          <span className={`h-1.5 w-1.5 rounded-full ${
+                            status === "Out of Stock" ? "bg-rose-500" : status === "Low Stock" ? "bg-amber-500" : "bg-emerald-500"
+                          }`} />
+                          {status.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-3 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleExecuteScan(b.sku || b.item_code)}
+                          className="p-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 text-slate-500 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                          title="Inspect Product & Barcode Details"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -1102,3 +1228,5 @@ export function StockBalancesPage() {
     </div>
   );
 }
+
+export const StockOverviewPage = StockBalancesPage;

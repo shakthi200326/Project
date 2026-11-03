@@ -1897,22 +1897,42 @@ export async function fetchStockBalances(params = {}) {
   } catch (e) {}
 
   const base = fetchedList.length > 0 ? fetchedList : [
-    { id: "bal-1", item_name: "Industrial Ball Bearing 6205-2RS", item_code: "BRG-6205-2RS", warehouse_name: "Main Central Hub", location_code: "A3-RB", on_hand_qty: 450, reserved_qty: 45, blocked_qty: 0, available_qty: 405, unit: "EA" },
-    { id: "bal-2", item_name: "Hydraulic Solenoid Valve 24V DC", item_code: "HYD-SV-24V", warehouse_name: "Main Central Hub", location_code: "A1-B4", on_hand_qty: 18, reserved_qty: 6, blocked_qty: 0, available_qty: 12, unit: "EA" },
-    { id: "bal-3", item_name: "Polyurethane Timing Belt T10-1200", item_code: "BELT-T10-1200", warehouse_name: "Main Central Hub", location_code: "B2-BAY", on_hand_qty: 280, reserved_qty: 20, blocked_qty: 0, available_qty: 260, unit: "EA" },
-    { id: "bal-4", item_name: "Optical Rotary Encoder 1024 PPR", item_code: "ENC-OPT-1024", warehouse_name: "Main Central Hub", location_code: "A1-B4", on_hand_qty: 0, reserved_qty: 0, blocked_qty: 0, available_qty: 0, unit: "EA" },
-    { id: "bal-5", item_name: "Synthetic Compressor Lubricant ISO VG 46", item_code: "LUB-SYN-VG46", warehouse_name: "Main Central Hub", location_code: "VAULT-CHEM", on_hand_qty: 1250, reserved_qty: 100, blocked_qty: 0, available_qty: 1150, unit: "LTR" },
+    { id: "bal-1", item_name: "Industrial Ball Bearing 6205-2RS", item_code: "BRG-6205-2RS", product_name: "Industrial Ball Bearing 6205-2RS", sku: "BRG-6205-2RS", warehouse_name: "Main Central Hub", location_name: "LOC-499 - Aisle 3", location_code: "A3-RB", bin_name: "BIN-A3-01", category_name: "Mechanical Components", on_hand_qty: 450, total_stock: 450, reserved_qty: 45, reserved_stock: 45, blocked_qty: 0, damaged_stock: 0, available_qty: 405, available_stock: 405, stock_status: "In Stock", unit: "EA" },
+    { id: "bal-2", item_name: "Hydraulic Solenoid Valve 24V DC", item_code: "HYD-SV-24V", product_name: "Hydraulic Solenoid Valve 24V DC", sku: "HYD-SV-24V", warehouse_name: "Main Central Hub", location_name: "LOC-499 - Aisle 1", location_code: "A1-B4", bin_name: "BIN-A1-04", category_name: "Hydraulics & Pneumatics", on_hand_qty: 18, total_stock: 18, reserved_qty: 6, reserved_stock: 6, blocked_qty: 2, damaged_stock: 2, available_qty: 10, available_stock: 10, stock_status: "Low Stock", unit: "EA" },
+    { id: "bal-3", item_name: "Polyurethane Timing Belt T10-1200", item_code: "BELT-T10-1200", product_name: "Polyurethane Timing Belt T10-1200", sku: "BELT-T10-1200", warehouse_name: "Main Central Hub", location_name: "LOC-499 - Aisle 2", location_code: "B2-BAY", bin_name: "BIN-B2-02", category_name: "Power Transmission", on_hand_qty: 280, total_stock: 280, reserved_qty: 20, reserved_stock: 20, blocked_qty: 4, damaged_stock: 4, available_qty: 256, available_stock: 256, stock_status: "In Stock", unit: "EA" },
+    { id: "bal-4", item_name: "Optical Rotary Encoder 1024 PPR", item_code: "ENC-OPT-1024", product_name: "Optical Rotary Encoder 1024 PPR", sku: "ENC-OPT-1024", warehouse_name: "Main Central Hub", location_name: "LOC-499 - Aisle 1", location_code: "A1-B4", bin_name: "BIN-A1-02", category_name: "Sensors & Automation", on_hand_qty: 0, total_stock: 0, reserved_qty: 0, reserved_stock: 0, blocked_qty: 0, damaged_stock: 0, available_qty: 0, available_stock: 0, stock_status: "Out of Stock", unit: "EA" },
+    { id: "bal-5", item_name: "Synthetic Compressor Lubricant ISO VG 46", item_code: "LUB-SYN-VG46", product_name: "Synthetic Compressor Lubricant ISO VG 46", sku: "LUB-SYN-VG46", warehouse_name: "Main Central Hub", location_name: "VAULT-CHEM", location_code: "VAULT-CHEM", bin_name: "BIN-V-01", category_name: "Chemicals & Fluids", on_hand_qty: 1250, total_stock: 1250, reserved_qty: 100, reserved_stock: 100, blocked_qty: 15, damaged_stock: 15, available_qty: 1135, available_stock: 1135, stock_status: "In Stock", unit: "LTR" },
   ];
 
   const local = getLocalEntities("balances");
   const seen = new Set();
   const merged = [];
 
-  for (const item of [...local, ...base]) {
-    const key = (item.item_code || item.item_name || item.id).toLowerCase();
+  for (const raw of [...local, ...base]) {
+    const key = (raw.item_code || raw.sku || raw.item_name || raw.id).toLowerCase();
     if (!seen.has(key)) {
       seen.add(key);
-      merged.push(item);
+      const totalStock = Number(raw.total_stock !== undefined ? raw.total_stock : (raw.on_hand_qty || 0));
+      const reservedStock = Number(raw.reserved_stock !== undefined ? raw.reserved_stock : (raw.reserved_qty || 0));
+      const damagedStock = Number(raw.damaged_stock !== undefined ? raw.damaged_stock : (raw.blocked_qty || 0));
+      const availableStock = Number(raw.available_stock !== undefined ? raw.available_stock : (raw.available_qty !== undefined ? raw.available_qty : Math.max(0, totalStock - reservedStock - damagedStock)));
+      const status = raw.stock_status || (availableStock <= 0 ? "Out of Stock" : availableStock <= 20 ? "Low Stock" : "In Stock");
+
+      merged.push({
+        ...raw,
+        product_name: raw.product_name || raw.item_name || raw.item || "Industrial Item",
+        sku: raw.sku || raw.item_code || raw.code || "SKU-000",
+        warehouse_name: raw.warehouse_name || (typeof raw.warehouse === "string" ? raw.warehouse : "Main Central Hub"),
+        location_name: raw.location_name || raw.location_code || (typeof raw.location === "string" ? raw.location : "General Storage"),
+        bin_name: raw.bin_name || raw.bin_code || (typeof raw.bin === "string" ? raw.bin : "Default Bin"),
+        category_name: raw.category_name || (typeof raw.category === "string" ? raw.category : "Mechanical Components"),
+        total_stock: totalStock,
+        reserved_stock: reservedStock,
+        damaged_stock: damagedStock,
+        available_stock: availableStock,
+        stock_status: status,
+        unit: raw.unit || "EA",
+      });
     }
   }
 
@@ -1920,7 +1940,7 @@ export async function fetchStockBalances(params = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// Stock Ledger API
+// Stock Ledger API & In/Out History
 // ---------------------------------------------------------------------------
 export async function fetchStockLedger(params = {}) {
   try {
@@ -1932,24 +1952,40 @@ export async function fetchStockLedger(params = {}) {
     }
   } catch (e) {}
 
-  return {
-    results: [
-      { id: "led-101", created_at: "2026-10-26T08:18:46Z", transaction_ref: "INV-2026-0006", movement_type: "RECEIPT", item_code: "BRG-6205-2RS", warehouse_code: "WH-MAIN", quantity_delta: 36.0, balance_after: 450.0, unit_cost: 14.85, total_value_delta: 534.60, actor: "system" },
-      { id: "led-102", created_at: "2026-10-25T14:22:10Z", transaction_ref: "INV-2026-0005", movement_type: "ISSUE", item_code: "HYD-SV-24V", warehouse_code: "WH-MAIN", quantity_delta: -2.0, balance_after: 18.0, unit_cost: 128.50, total_value_delta: -257.00, actor: "dispatch_lead" },
-      { id: "led-103", created_at: "2026-10-24T11:05:32Z", transaction_ref: "INV-2026-0004", movement_type: "RECEIPT", item_code: "BELT-T10-1200", warehouse_code: "WH-MAIN", quantity_delta: 50.0, balance_after: 280.0, unit_cost: 32.40, total_value_delta: 1620.00, actor: "receiving_clerk" },
-      { id: "led-104", created_at: "2026-10-23T16:40:18Z", transaction_ref: "INV-2026-0003", movement_type: "ADJUSTMENT", item_code: "LUB-SYN-VG46", warehouse_code: "WH-MAIN", quantity_delta: -12.0, balance_after: 1250.0, unit_cost: 18.20, total_value_delta: -218.40, actor: "qa_inspector" },
-    ],
-    count: 4,
-  };
+  const local = getLocalEntities("movements");
+  const fallback = [
+    { id: "led-101", created_at: "2026-10-26T08:18:46Z", transaction_date: "2026-10-26", transaction_number: "INV-2026-0006", transaction_ref: "INV-2026-0006", movement_type: "RECEIPT", transaction_type: "RECEIPT", product_name: "Industrial Ball Bearing 6205-2RS", item_code: "BRG-6205-2RS", sku: "BRG-6205-2RS", warehouse_name: "Main Central Hub", warehouse_code: "WH-MAIN", location_name: "LOC-499 - Aisle 3", quantity_in: 36.0, quantity_out: 0.0, quantity_delta: 36.0, balance_quantity: 450.0, balance_after: 450.0, unit_cost: 14.85, batch_number: "BATCH-2026-01", reference_number: "PO-89912", actor: "system" },
+    { id: "led-102", created_at: "2026-10-25T14:22:10Z", transaction_date: "2026-10-25", transaction_number: "INV-2026-0005", transaction_ref: "INV-2026-0005", movement_type: "ISSUE", transaction_type: "ISSUE", product_name: "Hydraulic Solenoid Valve 24V DC", item_code: "HYD-SV-24V", sku: "HYD-SV-24V", warehouse_name: "Main Central Hub", warehouse_code: "WH-MAIN", location_name: "LOC-499 - Aisle 1", quantity_in: 0.0, quantity_out: 2.0, quantity_delta: -2.0, balance_quantity: 18.0, balance_after: 18.0, unit_cost: 128.50, batch_number: "LOT-2026-11", reference_number: "SO-77412", actor: "dispatch_lead" },
+    { id: "led-103", created_at: "2026-10-24T11:05:32Z", transaction_date: "2026-10-24", transaction_number: "INV-2026-0004", transaction_ref: "INV-2026-0004", movement_type: "RECEIPT", transaction_type: "RECEIPT", product_name: "Polyurethane Timing Belt T10-1200", item_code: "BELT-T10-1200", sku: "BELT-T10-1200", warehouse_name: "Main Central Hub", warehouse_code: "WH-MAIN", location_name: "LOC-499 - Aisle 2", quantity_in: 50.0, quantity_out: 0.0, quantity_delta: 50.0, balance_quantity: 280.0, balance_after: 280.0, unit_cost: 32.40, batch_number: "LOT-2026-09", reference_number: "PO-89850", actor: "receiving_clerk" },
+    { id: "led-104", created_at: "2026-10-23T16:40:18Z", transaction_date: "2026-10-23", transaction_number: "INV-2026-0003", transaction_ref: "INV-2026-0003", movement_type: "ADJUSTMENT", transaction_type: "ADJUSTMENT", product_name: "Synthetic Compressor Lubricant ISO VG 46", item_code: "LUB-SYN-VG46", sku: "LUB-SYN-VG46", warehouse_name: "Main Central Hub", warehouse_code: "WH-MAIN", location_name: "VAULT-CHEM", quantity_in: 0.0, quantity_out: 12.0, quantity_delta: -12.0, balance_quantity: 1250.0, balance_after: 1250.0, unit_cost: 18.20, batch_number: "LOT-2025-LUB-12", reference_number: "ADJ-COUNT-401", actor: "qa_inspector" },
+  ];
+
+  let filtered = [...fallback];
+  if (params.direction === "in") {
+    filtered = filtered.filter((e) => (Number(e.quantity_delta) || Number(e.quantity_in)) > 0);
+  } else if (params.direction === "out") {
+    filtered = filtered.filter((e) => (Number(e.quantity_delta) || 0) < 0 || Number(e.quantity_out) > 0);
+  }
+
+  return { results: filtered, count: filtered.length };
+}
+
+export async function fetchStockInHistory(params = {}) {
+  return fetchStockLedger({ ...params, direction: "in" });
+}
+
+export async function fetchStockOutHistory(params = {}) {
+  return fetchStockLedger({ ...params, direction: "out" });
 }
 
 // ---------------------------------------------------------------------------
 // Stock Reservations API with Live Persistence
 // ---------------------------------------------------------------------------
-export async function fetchReservations() {
+export async function fetchReservations(params = {}) {
   let fetchedList = [];
   try {
-    const res = await fetch(`${API_BASE}/inventory/reservations/`);
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/reservations/?${query}`);
     if (res.ok) {
       updateApiStatus(true);
       const data = await res.json();
@@ -1958,10 +1994,10 @@ export async function fetchReservations() {
   } catch (e) {}
 
   const base = fetchedList.length > 0 ? fetchedList : [
-    { id: "res-001", reference_doc: "SO-2026-8812", item: "Industrial Ball Bearing 6205-2RS", item_code: "BRG-6205-2RS", warehouse: "Main Central Hub", quantity: 45, status: "PENDING", expires_at: "2026-11-05T18:00:00Z" },
-    { id: "res-002", reference_doc: "SO-2026-8815", item: "Hydraulic Solenoid Valve 24V DC", item_code: "HYD-SV-24V", warehouse: "Main Central Hub", quantity: 6, status: "PENDING", expires_at: "2026-11-04T12:00:00Z" },
-    { id: "res-003", reference_doc: "WO-2026-3041", item: "Polyurethane Timing Belt T10-1200", item_code: "BELT-T10-1200", warehouse: "Main Central Hub", quantity: 20, status: "FULFILLED", expires_at: "2026-10-30T10:00:00Z" },
-    { id: "res-004", reference_doc: "SO-2026-8799", item: "Synthetic Compressor Lubricant ISO VG 46", item_code: "LUB-SYN-VG46", warehouse: "Main Central Hub", quantity: 100, status: "PENDING", expires_at: "2026-11-06T15:00:00Z" },
+    { id: "res-001", reservation_number: "RES-2026-8812", reservation_date: "2026-10-28", reservation_type: "Sales", reference_number: "SO-2026-8812", reference_doc: "SO-2026-8812", product_name: "Industrial Ball Bearing 6205-2RS", item: "Industrial Ball Bearing 6205-2RS", item_code: "BRG-6205-2RS", sku: "BRG-6205-2RS", warehouse_name: "Main Central Hub", warehouse: "Main Central Hub", location_name: "LOC-499 - Aisle 3", available_quantity: 405, quantity: 45, reservation_quantity: 45, required_date: "2026-11-08", batch_number: "LOT-2026-BRG-01", remarks: "Hold for Assembly Line 1", status: "RESERVED" },
+    { id: "res-002", reservation_number: "RES-2026-8815", reservation_date: "2026-10-29", reservation_type: "Production", reference_number: "WO-2026-4412", reference_doc: "WO-2026-4412", product_name: "Hydraulic Solenoid Valve 24V DC", item: "Hydraulic Solenoid Valve 24V DC", item_code: "HYD-SV-24V", sku: "HYD-SV-24V", warehouse_name: "Main Central Hub", warehouse: "Main Central Hub", location_name: "LOC-499 - Aisle 1", available_quantity: 12, quantity: 6, reservation_quantity: 6, required_date: "2026-11-05", batch_number: "", remarks: "Hydraulic lift maintenance", status: "RESERVED" },
+    { id: "res-003", reservation_number: "RES-2026-3041", reservation_date: "2026-10-20", reservation_type: "Internal Use", reference_number: "WO-2026-3041", reference_doc: "WO-2026-3041", product_name: "Polyurethane Timing Belt T10-1200", item: "Polyurethane Timing Belt T10-1200", item_code: "BELT-T10-1200", sku: "BELT-T10-1200", warehouse_name: "Main Central Hub", warehouse: "Main Central Hub", location_name: "LOC-499 - Aisle 2", available_quantity: 260, quantity: 20, reservation_quantity: 20, required_date: "2026-10-30", batch_number: "", remarks: "Factory conveyor overhaul", status: "FULFILLED" },
+    { id: "res-004", reservation_number: "RES-2026-8799", reservation_date: "2026-10-25", reservation_type: "Sales", reference_number: "SO-2026-8799", reference_doc: "SO-2026-8799", product_name: "Synthetic Compressor Lubricant ISO VG 46", item: "Synthetic Compressor Lubricant ISO VG 46", item_code: "LUB-SYN-VG46", sku: "LUB-SYN-VG46", warehouse_name: "Main Central Hub", warehouse: "Main Central Hub", location_name: "VAULT-CHEM", available_quantity: 1150, quantity: 100, reservation_quantity: 100, required_date: "2026-11-12", batch_number: "LOT-2026-LUB-88", remarks: "Customer reserve", status: "RELEASED" },
   ];
 
   const local = getLocalEntities("reservations");
@@ -1969,19 +2005,24 @@ export async function fetchReservations() {
   const merged = [];
 
   for (const item of [...local, ...base]) {
-    const key = (item.reference_doc || item.id).toLowerCase();
+    const key = (item.reservation_number || item.reference_doc || item.id).toLowerCase();
     if (!seen.has(key)) {
       seen.add(key);
-      merged.push(item);
+      merged.push({
+        ...item,
+        status: item.status === "PENDING" ? "RESERVED" : item.status,
+      });
     }
   }
 
   return { results: merged, count: merged.length };
 }
 
+export const fetchStockReservations = fetchReservations;
+
 export async function createReservation(payload) {
-  const expDate = new Date();
-  expDate.setDate(expDate.getDate() + Number(payload.expires_days || 7));
+  const resNum = payload.reservation_number || `RES-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const qty = Number(payload.reservation_quantity || payload.quantity || 10);
   let created = null;
 
   try {
@@ -1989,12 +2030,19 @@ export async function createReservation(payload) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        reference_doc: payload.reference_doc,
-        item: 1,
-        warehouse: 1,
-        quantity: Number(payload.quantity || 10),
-        status: "PENDING",
-        expires_at: expDate.toISOString(),
+        reservation_number: resNum,
+        reservation_date: payload.reservation_date || new Date().toISOString().split("T")[0],
+        reservation_type: payload.reservation_type || "Sales",
+        reference_number: payload.reference_number || "",
+        reference_doc: payload.reference_number || resNum,
+        item: payload.item_id || payload.item || 1,
+        warehouse: payload.warehouse_id || payload.warehouse || 1,
+        location: payload.location_id || payload.location || null,
+        quantity: qty,
+        required_date: payload.required_date || null,
+        batch_number: payload.batch_number || "",
+        remarks: payload.remarks || "",
+        status: "RESERVED",
       }),
     });
     if (res.ok) {
@@ -2006,30 +2054,72 @@ export async function createReservation(payload) {
   if (!created) {
     created = {
       id: `res-${Date.now()}`,
-      reference_doc: payload.reference_doc,
-      item: payload.item_name || "Industrial Component",
-      item_code: payload.item_sku || payload.item_code || "BRG-6205-2RS",
-      item_sku: payload.item_sku || "BRG-6205-2RS",
-      item_name: payload.item_name || (payload.item_sku === "BRG-6205-2RS" ? "Industrial Ball Bearing 6205-2RS" : "Hydraulic Valve"),
-      warehouse: payload.warehouse || "Main Central Hub",
-      quantity: Number(payload.quantity || 10),
-      unit: "EA",
-      status: "PENDING",
-      expires_at: expDate.toISOString(),
+      reservation_number: resNum,
+      reservation_date: payload.reservation_date || new Date().toISOString().split("T")[0],
+      reservation_type: payload.reservation_type || "Sales",
+      reference_number: payload.reference_number || "",
+      reference_doc: payload.reference_number || resNum,
+      product_name: payload.product_name || payload.item_name || "Industrial Ball Bearing 6205-2RS",
+      item: payload.product_name || payload.item_name || "Industrial Ball Bearing 6205-2RS",
+      item_code: payload.sku || payload.item_sku || payload.item_code || "BRG-6205-2RS",
+      sku: payload.sku || payload.item_sku || payload.item_code || "BRG-6205-2RS",
+      warehouse_name: payload.warehouse_name || "Main Central Hub",
+      warehouse: payload.warehouse_name || "Main Central Hub",
+      location_name: payload.location_name || "LOC-499 - Aisle 3",
+      available_quantity: Number(payload.available_quantity || 100),
+      quantity: qty,
+      reservation_quantity: qty,
+      required_date: payload.required_date || "",
+      batch_number: payload.batch_number || "",
+      remarks: payload.remarks || "",
+      status: "RESERVED",
     };
   }
 
-  saveLocalEntity("reservations", created, "reference_doc");
+  saveLocalEntity("reservations", created, "reservation_number");
   return created;
 }
+
+export const createStockReservation = createReservation;
+
+export async function fulfillReservation(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/reservations/${id}/fulfill/`, { method: "POST" });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {}
+
+  updateLocalEntity("reservations", id, { status: "FULFILLED" });
+  return { id, status: "FULFILLED" };
+}
+
+export const fulfillStockReservation = fulfillReservation;
+
+export async function releaseReservation(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/reservations/${id}/release/`, { method: "POST" });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {}
+
+  updateLocalEntity("reservations", id, { status: "RELEASED" });
+  return { id, status: "RELEASED" };
+}
+
+export const releaseStockReservation = releaseReservation;
 
 // ---------------------------------------------------------------------------
 // Reconciliation / Stock Count API with Live Persistence
 // ---------------------------------------------------------------------------
-export async function fetchReconciliationCounts() {
+export async function fetchReconciliations(params = {}) {
   let fetchedList = [];
   try {
-    const res = await fetch(`${API_BASE}/inventory/reconciliation/`);
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/reconciliation/?${query}`);
     if (res.ok) {
       updateApiStatus(true);
       const data = await res.json();
@@ -2038,9 +2128,42 @@ export async function fetchReconciliationCounts() {
   } catch (e) {}
 
   const base = fetchedList.length > 0 ? fetchedList : [
-    { id: "cnt-1", count_number: "CC-2026-Q4-01", warehouse: "Main Central Hub", warehouse_code: "WH-MAIN", status: "COMPLETED", created_at: "2026-10-24T08:00:00Z", total_lines: 48, variance_detected: -2 },
-    { id: "cnt-2", count_number: "CC-2026-Q4-02", warehouse: "East Coast Logistics Terminal", warehouse_code: "WH-EAST", status: "COUNTING", created_at: "2026-10-26T09:30:00Z", total_lines: 24, variance_detected: 0 },
-    { id: "cnt-3", count_number: "CC-2026-Q3-09", warehouse: "Cold Storage Facility", warehouse_code: "WH-COLD", status: "RECONCILED", created_at: "2026-09-30T16:00:00Z", total_lines: 36, variance_detected: 0 },
+    {
+      id: "cnt-1",
+      reconciliation_number: "REC-2026-0001",
+      count_number: "REC-2026-0001",
+      reconciliation_date: "2026-10-25",
+      warehouse_name: "Main Central Hub",
+      warehouse_code: "WH-MAIN",
+      location_name: "LOC-499 - Aisle 3",
+      product_name: "Industrial Ball Bearing 6205-2RS",
+      sku: "BRG-6205-2RS",
+      system_quantity: 450,
+      physical_quantity: 448,
+      difference_quantity: -2,
+      reason: "Physical Count Difference",
+      remarks: "Variance during quarterly shelf audit",
+      status: "APPROVED",
+      adjustment_document_number: "ADJ-2026-7278",
+    },
+    {
+      id: "cnt-2",
+      reconciliation_number: "REC-2026-0002",
+      count_number: "REC-2026-0002",
+      reconciliation_date: "2026-10-28",
+      warehouse_name: "East Coast Terminal",
+      warehouse_code: "WH-EAST",
+      location_name: "LOC-499 - Aisle 1",
+      product_name: "Hydraulic Solenoid Valve 24V DC",
+      sku: "HYD-SV-24V",
+      system_quantity: 15,
+      physical_quantity: 18,
+      difference_quantity: 3,
+      reason: "Found Stock",
+      remarks: "Unpacked pallet discovered in receiving buffer",
+      status: "DRAFT",
+      adjustment_document_number: "",
+    },
   ];
 
   const local = getLocalEntities("reconciliation");
@@ -2048,7 +2171,7 @@ export async function fetchReconciliationCounts() {
   const merged = [];
 
   for (const item of [...local, ...base]) {
-    const key = (item.count_number || item.id).toLowerCase();
+    const key = (item.reconciliation_number || item.count_number || item.id).toLowerCase();
     if (!seen.has(key)) {
       seen.add(key);
       merged.push(item);
@@ -2058,17 +2181,32 @@ export async function fetchReconciliationCounts() {
   return { results: merged, count: merged.length };
 }
 
-export async function createStockCount(payload) {
+export const fetchReconciliationCounts = fetchReconciliations;
+
+export async function createReconciliation(payload) {
+  const recNum = payload.reconciliation_number || `REC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const sysQty = Number(payload.system_quantity || 0);
+  const phyQty = Number(payload.physical_quantity || 0);
+  const diffQty = phyQty - sysQty;
   let created = null;
+
   try {
     const res = await fetch(`${API_BASE}/inventory/reconciliation/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        count_number: payload.count_number,
-        warehouse: 1,
-        status: "COUNTING",
-        notes: payload.notes || "",
+        reconciliation_number: recNum,
+        count_number: recNum,
+        reconciliation_date: payload.reconciliation_date || new Date().toISOString().split("T")[0],
+        warehouse: payload.warehouse_id || payload.warehouse || 1,
+        location: payload.location_id || payload.location || null,
+        item: payload.item_id || payload.item || 1,
+        system_quantity: sysQty,
+        physical_quantity: phyQty,
+        difference_quantity: diffQty,
+        reason: payload.reason || "Physical Count Difference",
+        remarks: payload.remarks || "",
+        status: payload.status || "DRAFT",
       }),
     });
     if (res.ok) {
@@ -2080,39 +2218,307 @@ export async function createStockCount(payload) {
   if (!created) {
     created = {
       id: `cnt-${Date.now()}`,
-      count_number: payload.count_number || `CC-${Date.now().toString().slice(-6)}`,
-      warehouse: payload.warehouse_name || "Main Central Hub",
-      warehouse_code: payload.warehouse || "WH-MAIN",
-      status: "COUNTING",
-      created_at: new Date().toISOString(),
-      total_lines: payload.total_lines || 3,
-      variance_detected: 0,
+      reconciliation_number: recNum,
+      count_number: recNum,
+      reconciliation_date: payload.reconciliation_date || new Date().toISOString().split("T")[0],
+      warehouse_name: payload.warehouse_name || "Main Central Hub",
+      warehouse_code: payload.warehouse_code || "WH-MAIN",
+      location_name: payload.location_name || "",
+      product_name: payload.product_name || "Industrial Component",
+      sku: payload.sku || "SKU-001",
+      system_quantity: sysQty,
+      physical_quantity: phyQty,
+      difference_quantity: diffQty,
+      reason: payload.reason || "Physical Count Difference",
+      remarks: payload.remarks || "",
+      status: payload.status || "DRAFT",
+      adjustment_document_number: "",
     };
   }
 
-  saveLocalEntity("reconciliation", created, "count_number");
+  saveLocalEntity("reconciliation", created, "reconciliation_number");
   return created;
 }
 
-export async function reconcileStockCount(countId) {
+export const createStockCount = createReconciliation;
+
+export async function submitReconciliation(countId) {
   try {
-    const res = await fetch(`${API_BASE}/inventory/reconciliation/${countId}/reconcile/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    });
+    const res = await fetch(`${API_BASE}/inventory/reconciliation/${countId}/submit/`, { method: "POST" });
     if (res.ok) {
       updateApiStatus(true);
       return await res.json();
     }
   } catch (e) {}
 
-  updateLocalEntity("reconciliation", countId, { status: "RECONCILED" });
-  return {
-    id: countId,
-    status: "RECONCILED",
-    reconciled_at: new Date().toISOString(),
-    reconciled_by: "system_auditor",
-  };
+  updateLocalEntity("reconciliation", countId, { status: "SUBMITTED" });
+  return { id: countId, status: "SUBMITTED" };
+}
+
+export async function approveReconciliation(countId) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/reconciliation/${countId}/approve/`, { method: "POST" });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {}
+
+  updateLocalEntity("reconciliation", countId, { status: "APPROVED" });
+  return { id: countId, status: "APPROVED" };
+}
+
+export async function generateReconciliationAdjustment(countId) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/reconciliation/${countId}/generate_adjustment/`, { method: "POST" });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {}
+
+  const adjDoc = `ADJ-REC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  updateLocalEntity("reconciliation", countId, { status: "ADJUSTED", adjustment_document_number: adjDoc });
+  return { id: countId, status: "ADJUSTED", adjustment_document_number: adjDoc };
+}
+
+export const reconcileStockCount = generateReconciliationAdjustment;
+
+// ---------------------------------------------------------------------------
+// Damaged Stock API with Live Persistence
+// ---------------------------------------------------------------------------
+export async function fetchDamagedStock(params = {}) {
+  let fetchedList = [];
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/damaged-stock/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      fetchedList = data.results || data;
+    }
+  } catch (e) {}
+
+  const base = fetchedList.length > 0 ? fetchedList : [
+    {
+      id: "dmg-1",
+      product_name: "Hydraulic Solenoid Valve 24V DC",
+      sku: "HYD-SV-24V",
+      warehouse_name: "Main Central Hub",
+      warehouse_code: "WH-MAIN",
+      location_name: "LOC-499 - Aisle 1",
+      batch_number: "LOT-2025-DEC-09",
+      damaged_qty: 2,
+      damage_reason: "Crushed housing in forklift impact",
+      damage_date: "2026-10-27",
+      status: "QUARANTINED",
+      remarks: "Moved to isolation rack pending scrap clearance",
+    },
+    {
+      id: "dmg-2",
+      product_name: "Synthetic Compressor Lubricant ISO VG 46",
+      sku: "LUB-SYN-VG46",
+      warehouse_name: "Main Central Hub",
+      warehouse_code: "WH-MAIN",
+      location_name: "VAULT-CHEM",
+      batch_number: "LOT-2025-NOV-01",
+      damaged_qty: 15,
+      damage_reason: "Punctured drum barrel leakage",
+      damage_date: "2026-10-24",
+      status: "WRITTEN_OFF",
+      remarks: "Incident report filed with health & safety",
+    },
+    {
+      id: "dmg-3",
+      product_name: "Polyurethane Timing Belt T10-1200",
+      sku: "BELT-T10-1200",
+      warehouse_name: "East Coast Terminal",
+      warehouse_code: "WH-EAST",
+      location_name: "LOC-499 - Aisle 2",
+      batch_number: "",
+      damaged_qty: 4,
+      damage_reason: "Torn teeth during conveyor test run",
+      damage_date: "2026-10-29",
+      status: "PENDING",
+      remarks: "Awaiting supervisor inspection",
+    },
+  ];
+
+  const local = getLocalEntities("damaged_stock");
+  const seen = new Set();
+  const merged = [];
+
+  for (const item of [...local, ...base]) {
+    const key = String(item.id).toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(item);
+    }
+  }
+
+  return { results: merged, count: merged.length };
+}
+
+export async function createDamagedStock(payload) {
+  let created = null;
+  try {
+    const res = await fetch(`${API_BASE}/inventory/damaged-stock/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        item: payload.item_id || payload.item || 1,
+        warehouse: payload.warehouse_id || payload.warehouse || 1,
+        location: payload.location_id || payload.location || null,
+        batch_number: payload.batch_number || "",
+        damaged_qty: Number(payload.damaged_qty || 1),
+        damage_reason: payload.damage_reason || "",
+        damage_date: payload.damage_date || new Date().toISOString().split("T")[0],
+        status: payload.status || "PENDING",
+        remarks: payload.remarks || "",
+      }),
+    });
+    if (res.ok) {
+      updateApiStatus(true);
+      created = await res.json();
+    }
+  } catch (e) {}
+
+  if (!created) {
+    created = {
+      id: `dmg-${Date.now()}`,
+      product_name: payload.product_name || "Industrial Component",
+      sku: payload.sku || "SKU-001",
+      warehouse_name: payload.warehouse_name || "Main Central Hub",
+      warehouse_code: payload.warehouse_code || "WH-MAIN",
+      location_name: payload.location_name || "",
+      batch_number: payload.batch_number || "",
+      damaged_qty: Number(payload.damaged_qty || 1),
+      damage_reason: payload.damage_reason || "Handling damage",
+      damage_date: payload.damage_date || new Date().toISOString().split("T")[0],
+      status: payload.status || "PENDING",
+      remarks: payload.remarks || "",
+    };
+  }
+
+  saveLocalEntity("damaged_stock", created, "id");
+  return created;
+}
+
+export async function quarantineDamagedStock(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/damaged-stock/${id}/quarantine/`, { method: "POST" });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {}
+
+  updateLocalEntity("damaged_stock", id, { status: "QUARANTINED" });
+  return { id, status: "QUARANTINED" };
+}
+
+export async function approveWriteOffDamagedStock(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/damaged-stock/${id}/approve_write_off/`, { method: "POST" });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {}
+
+  updateLocalEntity("damaged_stock", id, { status: "WRITTEN_OFF" });
+  return { id, status: "WRITTEN_OFF" };
+}
+
+export async function disposeDamagedStock(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/damaged-stock/${id}/dispose/`, { method: "POST" });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {}
+
+  updateLocalEntity("damaged_stock", id, { status: "DISPOSED" });
+  return { id, status: "DISPOSED" };
+}
+
+// ---------------------------------------------------------------------------
+// Stock In Transit API
+// ---------------------------------------------------------------------------
+export async function fetchStockInTransit(params = {}) {
+  let fetchedList = [];
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/transit/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      fetchedList = data.results || data;
+    }
+  } catch (e) {}
+
+  const base = fetchedList.length > 0 ? fetchedList : [
+    {
+      id: "trf-101",
+      transfer_number: "TRF-2026-4410",
+      document_number: "TRF-2026-4410",
+      transfer_date: "2026-10-30",
+      source_warehouse: "Main Central Hub",
+      source_warehouse_code: "WH-MAIN",
+      destination_warehouse: "East Coast Terminal",
+      destination_warehouse_name: "East Coast Terminal",
+      destination_warehouse_code: "WH-EAST",
+      product: "Optical Rotary Encoder 1024 PPR",
+      product_name: "Optical Rotary Encoder 1024 PPR",
+      sku: "ENC-OPT-1024",
+      dispatched_quantity: 40,
+      received_quantity: 0,
+      pending_quantity: 40,
+      status: "In Transit",
+      transit_status: "In Transit",
+    },
+    {
+      id: "trf-102",
+      transfer_number: "TRF-2026-4415",
+      document_number: "TRF-2026-4415",
+      transfer_date: "2026-10-28",
+      source_warehouse: "Main Central Hub",
+      source_warehouse_code: "WH-MAIN",
+      destination_warehouse: "Cold Storage Facility",
+      destination_warehouse_name: "Cold Storage Facility",
+      destination_warehouse_code: "WH-COLD",
+      product: "Synthetic Compressor Lubricant ISO VG 46",
+      product_name: "Synthetic Compressor Lubricant ISO VG 46",
+      sku: "LUB-SYN-VG46",
+      dispatched_quantity: 120,
+      received_quantity: 60,
+      pending_quantity: 60,
+      status: "Partially Received",
+      transit_status: "Partially Received",
+    },
+    {
+      id: "trf-103",
+      transfer_number: "TRF-2026-4390",
+      document_number: "TRF-2026-4390",
+      transfer_date: "2026-10-25",
+      source_warehouse: "East Coast Terminal",
+      source_warehouse_code: "WH-EAST",
+      destination_warehouse: "Main Central Hub",
+      destination_warehouse_name: "Main Central Hub",
+      destination_warehouse_code: "WH-MAIN",
+      product: "Industrial Ball Bearing 6205-2RS",
+      product_name: "Industrial Ball Bearing 6205-2RS",
+      sku: "BRG-6205-2RS",
+      dispatched_quantity: 100,
+      received_quantity: 100,
+      pending_quantity: 0,
+      status: "Received",
+      transit_status: "Received",
+    },
+  ];
+
+  return { results: base, count: base.length };
 }
 
 // ---------------------------------------------------------------------------

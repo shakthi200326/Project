@@ -17,8 +17,13 @@ const WarehousesPage = lazy(() => import("../pages/WarehousesPage.jsx").then(m =
 const LocationsPage = lazy(() => import("../pages/LocationsPage.jsx").then(m => ({ default: m.LocationsPage })));
 const RackBinPage = lazy(() => import("../pages/RackBinPage.jsx").then(m => ({ default: m.RackBinPage })));
 const StockMovementsPage = lazy(() => import("../pages/StockMovementsPage.jsx").then(m => ({ default: m.StockMovementsPage })));
+const StockOverviewPage = lazy(() => import("../pages/StockOverviewPage.jsx").then(m => ({ default: m.StockOverviewPage || m.default })));
 const StockLedgerPage = lazy(() => import("../pages/StockLedgerPage.jsx").then(m => ({ default: m.StockLedgerPage })));
+const StockInHistoryPage = lazy(() => import("../pages/StockInHistoryPage.jsx").then(m => ({ default: m.StockInHistoryPage })));
+const StockOutHistoryPage = lazy(() => import("../pages/StockOutHistoryPage.jsx").then(m => ({ default: m.StockOutHistoryPage })));
 const StockBalancesPage = lazy(() => import("../pages/StockBalancesPage.jsx").then(m => ({ default: m.StockBalancesPage })));
+const DamagedStockPage = lazy(() => import("../pages/DamagedStockPage.jsx").then(m => ({ default: m.DamagedStockPage })));
+const StockInTransitPage = lazy(() => import("../pages/StockInTransitPage.jsx").then(m => ({ default: m.StockInTransitPage })));
 const ValuationPage = lazy(() => import("../pages/ValuationPage.jsx").then(m => ({ default: m.ValuationPage })));
 const SettingsPage = lazy(() => import("../pages/SettingsPage.jsx").then(m => ({ default: m.SettingsPage })));
 const ReconciliationPage = lazy(() => import("../pages/ReconciliationPage.jsx").then(m => ({ default: m.ReconciliationPage })));
@@ -72,9 +77,16 @@ export default function App() {
                 <Route path="/inventory/operations/reservations" element={<StockReservationsPage />} />
                 <Route path="/inventory/operations/reconciliation" element={<ReconciliationPage />} />
 
-                {/* Stock Control */}
+                {/* Stock Control — Exact 8 Modules */}
+                <Route path="/inventory/control/overview" element={<StockOverviewPage />} />
+                <Route path="/inventory/control/balances" element={<StockOverviewPage />} />
                 <Route path="/inventory/control/ledger" element={<StockLedgerPage />} />
-                <Route path="/inventory/control/balances" element={<StockBalancesPage />} />
+                <Route path="/inventory/control/stock-in-history" element={<StockInHistoryPage />} />
+                <Route path="/inventory/control/stock-out-history" element={<StockOutHistoryPage />} />
+                <Route path="/inventory/control/reservations" element={<StockReservationsPage />} />
+                <Route path="/inventory/control/reconciliation" element={<ReconciliationPage />} />
+                <Route path="/inventory/control/damaged" element={<DamagedStockPage />} />
+                <Route path="/inventory/control/transit" element={<StockInTransitPage />} />
                 <Route path="/inventory/control/batches" element={<BatchTrackingPage />} />
                 <Route path="/inventory/control/serials" element={<SerialTrackingPage />} />
                 <Route path="/inventory/control/expiry" element={<BatchTrackingPage />} />
@@ -101,8 +113,15 @@ export default function App() {
                 <Route path="/racks-bins" element={<Navigate to="/inventory/racks-bins" replace />} />
                 <Route path="/racks" element={<Navigate to="/inventory/racks-bins" replace />} />
                 <Route path="/bins" element={<Navigate to="/inventory/racks-bins" replace />} />
+                <Route path="/overview" element={<Navigate to="/inventory/control/overview" replace />} />
                 <Route path="/ledger" element={<Navigate to="/inventory/control/ledger" replace />} />
                 <Route path="/balances" element={<Navigate to="/inventory/control/balances" replace />} />
+                <Route path="/stock-in-history" element={<Navigate to="/inventory/control/stock-in-history" replace />} />
+                <Route path="/stock-out-history" element={<Navigate to="/inventory/control/stock-out-history" replace />} />
+                <Route path="/reservations" element={<Navigate to="/inventory/control/reservations" replace />} />
+                <Route path="/reconciliation" element={<Navigate to="/inventory/control/reconciliation" replace />} />
+                <Route path="/damaged" element={<Navigate to="/inventory/control/damaged" replace />} />
+                <Route path="/transit" element={<Navigate to="/inventory/control/transit" replace />} />
                 <Route path="/batches" element={<Navigate to="/inventory/control/batches" replace />} />
                 <Route path="/control/batches" element={<Navigate to="/inventory/control/batches" replace />} />
                 <Route path="/serials" element={<Navigate to="/inventory/control/serials" replace />} />
@@ -112,7 +131,6 @@ export default function App() {
                 <Route path="/settings" element={<Navigate to="/inventory/settings" replace />} />
                 <Route path="/returns" element={<Navigate to="/inventory/operations/returns" replace />} />
                 <Route path="/inventory/returns" element={<Navigate to="/inventory/operations/returns" replace />} />
-                <Route path="/reconciliation" element={<Navigate to="/inventory/operations/reconciliation" replace />} />
 
                 <Route path="*" element={<Navigate to="/inventory" replace />} />
               </Routes>

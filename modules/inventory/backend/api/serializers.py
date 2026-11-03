@@ -5,7 +5,7 @@ from apps.brands.models import Brand
 from apps.units.models import UnitOfMeasure
 from apps.products.models import InventoryItem, InventoryItemVariant
 from apps.warehouses.models import Warehouse, StorageLocation, Rack, Bin, WarehouseConfiguration
-from apps.stock.models import StockBalance, StockLedgerEntry
+from apps.stock.models import StockBalance, StockLedgerEntry, DamagedStock
 from apps.movements.models import StockTransaction, StockTransactionLine
 from apps.valuation.models import InventoryValuation
 from apps.reservations.models import StockReservation
@@ -89,19 +89,77 @@ class WarehouseConfigurationSerializer(serializers.ModelSerializer):
 class StockBalanceSerializer(serializers.ModelSerializer):
     available_qty = serializers.DecimalField(max_digits=20, decimal_places=4, read_only=True)
     item_name = serializers.CharField(source="item.name", read_only=True)
+    product_name = serializers.CharField(source="item.name", read_only=True)
+    sku = serializers.CharField(source="item.code", read_only=True)
+    category_name = serializers.CharField(source="item.category.name", read_only=True, default="")
     warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+    location_name = serializers.SerializerMethodField()
+    bin_name = serializers.SerializerMethodField()
+    total_stock = serializers.DecimalField(source="on_hand_qty", max_digits=20, decimal_places=4, read_only=True)
+    reserved_stock = serializers.DecimalField(source="reserved_qty", max_digits=20, decimal_places=4, read_only=True)
+    available_stock = serializers.DecimalField(source="available_qty", max_digits=20, decimal_places=4, read_only=True)
+    damaged_stock = serializers.DecimalField(source="blocked_qty", max_digits=20, decimal_places=4, read_only=True)
+    stock_status = serializers.SerializerMethodField()
+    unit = serializers.SerializerMethodField()
 
     class Meta:
         model = StockBalance
         fields = "__all__"
 
+    def get_location_name(self, obj):
+        return f"{obj.location.code} - {obj.location.name}" if obj.location else ""
+
+    def get_bin_name(self, obj):
+        return f"{obj.bin.code} - {obj.bin.name}" if obj.bin else ""
+
+    def get_stock_status(self, obj):
+        avail = obj.available_qty
+        if avail <= Decimal("0"):
+            return "Out of Stock"
+        reorder = getattr(obj.item, "reorder_point", Decimal("20"))
+        if avail <= Decimal(str(reorder)):
+            return "Low Stock"
+        return "In Stock"
+
+    def get_unit(self, obj):
+        if obj.item and obj.item.base_unit:
+            unit_val = obj.item.base_unit
+            return unit_val.code if hasattr(unit_val, "code") else str(unit_val)
+        return "EA"
+
 class StockLedgerEntrySerializer(serializers.ModelSerializer):
     item_code = serializers.CharField(source="item.code", read_only=True)
+    item_name = serializers.CharField(source="item.name", read_only=True)
+    sku = serializers.CharField(source="item.code", read_only=True)
+    product_name = serializers.CharField(source="item.name", read_only=True)
     warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    location_name = serializers.SerializerMethodField()
+    transaction_date = serializers.SerializerMethodField()
+    transaction_number = serializers.CharField(source="transaction_ref", read_only=True)
+    transaction_type = serializers.CharField(source="movement_type", read_only=True)
+    quantity_in = serializers.SerializerMethodField()
+    quantity_out = serializers.SerializerMethodField()
+    balance_quantity = serializers.DecimalField(source="balance_after", max_digits=20, decimal_places=4, read_only=True)
+    batch_number = serializers.CharField(read_only=True, default="")
+    reference_number = serializers.CharField(source="reason", read_only=True, default="")
 
     class Meta:
         model = StockLedgerEntry
         fields = "__all__"
+
+    def get_location_name(self, obj):
+        return f"{obj.location.code} - {obj.location.name}" if obj.location else ""
+
+    def get_transaction_date(self, obj):
+        return obj.created_at.date().isoformat() if obj.created_at else ""
+
+    def get_quantity_in(self, obj):
+        return float(obj.quantity_delta) if obj.quantity_delta > 0 else 0.0
+
+    def get_quantity_out(self, obj):
+        return float(abs(obj.quantity_delta)) if obj.quantity_delta < 0 else 0.0
 
 class StockTransactionLineSerializer(serializers.ModelSerializer):
     item_code = serializers.CharField(source="item.code", read_only=True)
@@ -270,11 +328,23 @@ class ValuationSerializer(serializers.ModelSerializer):
 class StockReservationSerializer(serializers.ModelSerializer):
     item_code = serializers.CharField(source="item.code", read_only=True)
     item_name = serializers.CharField(source="item.name", read_only=True)
+    sku = serializers.CharField(source="item.code", read_only=True)
+    product_name = serializers.CharField(source="item.name", read_only=True)
     warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+    location_name = serializers.SerializerMethodField()
+    available_quantity = serializers.SerializerMethodField()
 
     class Meta:
         model = StockReservation
         fields = "__all__"
+
+    def get_location_name(self, obj):
+        return f"{obj.location.code} - {obj.location.name}" if obj.location else ""
+
+    def get_available_quantity(self, obj):
+        bal = StockBalance.objects.filter(item=obj.item, warehouse=obj.warehouse).first()
+        return float(bal.available_qty) if bal else 0.0
 
 class StockCountLineSerializer(serializers.ModelSerializer):
     item_code = serializers.CharField(source="item.code", read_only=True)
@@ -289,10 +359,97 @@ class StockCountLineSerializer(serializers.ModelSerializer):
 class StockCountSerializer(serializers.ModelSerializer):
     lines = StockCountLineSerializer(many=True, read_only=True)
     warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+    location_name = serializers.SerializerMethodField()
+    item_name = serializers.CharField(source="item.name", read_only=True, default="")
+    item_code = serializers.CharField(source="item.code", read_only=True, default="")
+    sku = serializers.CharField(source="item.code", read_only=True, default="")
+    product_name = serializers.CharField(source="item.name", read_only=True, default="")
+    adjustment_document_number = serializers.CharField(source="adjustment_transaction.document_number", read_only=True, default="")
 
     class Meta:
         model = StockCount
         fields = "__all__"
+
+    def get_location_name(self, obj):
+        return f"{obj.location.code} - {obj.location.name}" if obj.location else ""
+
+class DamagedStockSerializer(serializers.ModelSerializer):
+    item_code = serializers.CharField(source="item.code", read_only=True)
+    item_name = serializers.CharField(source="item.name", read_only=True)
+    sku = serializers.CharField(source="item.code", read_only=True)
+    product_name = serializers.CharField(source="item.name", read_only=True)
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+    location_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DamagedStock
+        fields = "__all__"
+
+    def get_location_name(self, obj):
+        return f"{obj.location.code} - {obj.location.name}" if obj.location else ""
+
+class StockInTransitSerializer(serializers.ModelSerializer):
+    transfer_number = serializers.CharField(source="document_number", read_only=True)
+    source_warehouse = serializers.CharField(source="warehouse.name", read_only=True)
+    source_warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+    destination_warehouse_name = serializers.CharField(source="destination_warehouse.name", read_only=True, default="")
+    destination_warehouse_code = serializers.CharField(source="destination_warehouse.code", read_only=True, default="")
+    product = serializers.SerializerMethodField()
+    sku = serializers.SerializerMethodField()
+    dispatched_quantity = serializers.SerializerMethodField()
+    received_quantity = serializers.SerializerMethodField()
+    pending_quantity = serializers.SerializerMethodField()
+    transit_status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = StockTransaction
+        fields = [
+            "id",
+            "document_number",
+            "transfer_number",
+            "transaction_date",
+            "source_warehouse",
+            "source_warehouse_code",
+            "destination_warehouse_name",
+            "destination_warehouse_code",
+            "product",
+            "sku",
+            "dispatched_quantity",
+            "received_quantity",
+            "pending_quantity",
+            "transit_status",
+            "status",
+        ]
+
+    def get_product(self, obj):
+        line = obj.lines.first()
+        return line.item.name if line and line.item else "Industrial Product"
+
+    def get_sku(self, obj):
+        line = obj.lines.first()
+        return line.item.code if line and line.item else "SKU-000"
+
+    def get_dispatched_quantity(self, obj):
+        line = obj.lines.first()
+        return float(line.quantity) if line else 0.0
+
+    def get_received_quantity(self, obj):
+        if obj.status == "POSTED":
+            line = obj.lines.first()
+            return float(line.quantity) if line else 0.0
+        return 0.0
+
+    def get_pending_quantity(self, obj):
+        dispatched = self.get_dispatched_quantity(obj)
+        received = self.get_received_quantity(obj)
+        return max(0.0, dispatched - received)
+
+    def get_transit_status(self, obj):
+        if obj.status == "POSTED":
+            return "Received"
+        return "In Transit"
 
 class BatchSerializer(serializers.ModelSerializer):
     item_code = serializers.CharField(source="item.code", read_only=True)

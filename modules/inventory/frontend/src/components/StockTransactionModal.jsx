@@ -100,6 +100,7 @@ export function StockTransactionModal({
   const [locations, setLocations] = useState([]);
   const [barcodeInput, setBarcodeInput] = useState("");
   const [verifiedProduct, setVerifiedProduct] = useState(null);
+  const [decodedProduct, setDecodedProduct] = useState(null);
 
   // Form states per operation
   const [docNumber, setDocNumber] = useState(generateDocNumber(initialType));
@@ -242,12 +243,18 @@ export function StockTransactionModal({
 
   const handleBarcodeScan = (code) => {
     const clean = code?.trim();
-    if (!clean) return;
+    if (!clean) {
+      setDecodedProduct(null);
+      setError("Enter a barcode or SKU to decode.");
+      return;
+    }
     const match = lookupProductByBarcode(clean, products);
     if (match) {
       handleApplyProduct(match);
+      setDecodedProduct(match);
       setBarcodeInput("");
     } else {
+      setDecodedProduct(null);
       setError(`No product matched barcode "${clean}".`);
     }
   };
@@ -276,6 +283,22 @@ export function StockTransactionModal({
 
   const isBatchTracked = verifiedProduct?.tracking === "BATCH" || verifiedProduct?.tracking === "Batch / Lot";
   const isSerialTracked = verifiedProduct?.tracking === "SERIAL" || verifiedProduct?.tracking === "Serial";
+  const decodedQuantity = decodedProduct?.on_hand ?? decodedProduct?.available;
+  const decodedCost = decodedProduct?.unit_cost;
+  const decodedStockValuation =
+    decodedQuantity !== null &&
+    decodedQuantity !== undefined &&
+    decodedQuantity !== "" &&
+    decodedCost !== null &&
+    decodedCost !== undefined &&
+    decodedCost !== "" &&
+    Number.isFinite(Number(decodedQuantity)) &&
+    Number.isFinite(Number(decodedCost))
+      ? new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+        }).format(Number(decodedQuantity) * Number(decodedCost))
+      : "—";
 
   const handleAction = async (actionType) => {
     setError("");
@@ -556,7 +579,10 @@ export function StockTransactionModal({
                   <input
                     type="text"
                     value={barcodeInput}
-                    onChange={(e) => setBarcodeInput(e.target.value)}
+                    onChange={(e) => {
+                      setBarcodeInput(e.target.value);
+                      setDecodedProduct(null);
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
@@ -577,29 +603,21 @@ export function StockTransactionModal({
               </div>
 
               {/* Verified Product Telemetry */}
-              {verifiedProduct && (
+              {decodedProduct && (
                 <div className="pt-2 mt-2 border-t border-blue-200/60 dark:border-blue-900/40 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
                     <div>
                       <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <span>{verifiedProduct.name}</span>
+                        <span>{decodedProduct.name}</span>
                         <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
-                          {verifiedProduct.sku || verifiedProduct.code}
+                          {decodedProduct.sku || decodedProduct.code}
                         </span>
-                        {isBatchTracked && (
-                          <span className="font-mono text-[9px] px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-semibold">
-                            BATCH TRACKED
-                          </span>
-                        )}
-                        {isSerialTracked && (
-                          <span className="font-mono text-[9px] px-1.5 py-0.2 rounded bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-300 font-semibold">
-                            SERIAL TRACKED
-                          </span>
-                        )}
                       </div>
                       <div className="text-[10px] text-slate-500 dark:text-zinc-400 font-mono mt-0.5">
-                        Available Stock: <strong className="text-emerald-600 dark:text-emerald-400">{verifiedProduct.available ?? verifiedProduct.on_hand ?? 50} {verifiedProduct.unit || "EA"}</strong> • Cost: <strong className="text-slate-700 dark:text-zinc-300">${Number(verifiedProduct.unit_cost || 14.85).toFixed(2)}</strong>
+                        <span>Tracking: <strong className="text-slate-700 dark:text-zinc-300">{decodedProduct.tracking || "NONE"}</strong></span>
+                        {" • "}
+                        <span>Stock valuation: <strong className="text-slate-700 dark:text-zinc-300">{decodedStockValuation}</strong></span>
                       </div>
                     </div>
                   </div>

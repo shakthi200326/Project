@@ -1,14 +1,16 @@
 from decimal import Decimal
 from django.db import models
+from django.utils import timezone
 from django.core.validators import MinValueValidator
 from apps.products.models import InventoryItem, InventoryItemVariant
-from apps.warehouses.models import Warehouse, StorageLocation
+from apps.warehouses.models import Warehouse, StorageLocation, Bin
 
 class StockBalance(models.Model):
     item = models.ForeignKey(InventoryItem, on_delete=models.CASCADE, related_name="balances")
     variant = models.ForeignKey(InventoryItemVariant, on_delete=models.CASCADE, null=True, blank=True, related_name="balances")
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name="balances")
     location = models.ForeignKey(StorageLocation, on_delete=models.CASCADE, null=True, blank=True, related_name="balances")
+    bin = models.ForeignKey(Bin, on_delete=models.SET_NULL, null=True, blank=True, related_name="balances")
 
     on_hand_qty = models.DecimalField(
         max_digits=20, decimal_places=4, default=Decimal("0.0000"), validators=[MinValueValidator(0)]
@@ -58,6 +60,7 @@ class StockLedgerEntry(models.Model):
 
     transaction_ref = models.CharField(max_length=80, db_index=True)
     reason = models.CharField(max_length=255, blank=True)
+    batch_number = models.CharField(max_length=80, blank=True, default="")
     actor = models.CharField(max_length=120, default="system")
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
@@ -67,3 +70,33 @@ class StockLedgerEntry(models.Model):
 
     def __str__(self):
         return f"[{self.created_at}] {self.transaction_ref}: {self.item.code} {self.quantity_delta:+f}"
+
+class DamagedStock(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        QUARANTINED = "QUARANTINED", "Quarantined"
+        WRITTEN_OFF = "WRITTEN_OFF", "Written Off"
+        DISPOSED = "DISPOSED", "Disposed"
+
+    item = models.ForeignKey(InventoryItem, on_delete=models.PROTECT, related_name="damaged_records")
+    variant = models.ForeignKey(InventoryItemVariant, on_delete=models.PROTECT, null=True, blank=True)
+    warehouse = models.ForeignKey(Warehouse, on_delete=models.PROTECT, related_name="damaged_records")
+    location = models.ForeignKey(StorageLocation, on_delete=models.PROTECT, null=True, blank=True)
+    batch_number = models.CharField(max_length=80, blank=True, default="")
+    damaged_qty = models.DecimalField(
+        max_digits=20, decimal_places=4, default=Decimal("0.0000"), validators=[MinValueValidator(0)]
+    )
+    damage_reason = models.CharField(max_length=255, blank=True, default="")
+    damage_date = models.DateField(default=timezone.localdate)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    remarks = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "inv_damaged_stock"
+        ordering = ("-damage_date", "-id")
+
+    def __str__(self):
+        return f"{self.item.code} damaged x {self.damaged_qty} ({self.status})"
+

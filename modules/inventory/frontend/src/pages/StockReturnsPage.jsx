@@ -680,3 +680,4 @@ export function StockReturnsPage() {
     </div>
   );
 }
+
