@@ -29,6 +29,13 @@ const SettingsPage = lazy(() => import("../pages/SettingsPage.jsx").then(m => ({
 const ReconciliationPage = lazy(() => import("../pages/ReconciliationPage.jsx").then(m => ({ default: m.ReconciliationPage })));
 const BatchTrackingPage = lazy(() => import("../pages/BatchTrackingPage.jsx").then(m => ({ default: m.BatchTrackingPage })));
 const SerialTrackingPage = lazy(() => import("../pages/SerialTrackingPage.jsx").then(m => ({ default: m.SerialTrackingPage })));
+const BatchManagementPage = lazy(() => import("../pages/BatchManagementPage.jsx").then(m => ({ default: m.BatchManagementPage || m.default })));
+const BatchMovementHistoryPage = lazy(() => import("../pages/BatchMovementHistoryPage.jsx").then(m => ({ default: m.BatchMovementHistoryPage || m.default })));
+const BatchQuarantinePage = lazy(() => import("../pages/BatchQuarantinePage.jsx").then(m => ({ default: m.BatchQuarantinePage || m.default })));
+const BatchReleasePage = lazy(() => import("../pages/BatchReleasePage.jsx").then(m => ({ default: m.BatchReleasePage || m.default })));
+const ExpiryManagementPage = lazy(() => import("../pages/ExpiryManagementPage.jsx").then(m => ({ default: m.ExpiryManagementPage || m.default })));
+const SerialManagementPage = lazy(() => import("../pages/SerialManagementPage.jsx").then(m => ({ default: m.SerialManagementPage || m.default })));
+const SerialMovementHistoryPage = lazy(() => import("../pages/SerialMovementHistoryPage.jsx").then(m => ({ default: m.SerialMovementHistoryPage || m.default })));
 const StockReservationsPage = lazy(() => import("../pages/StockReservationsPage.jsx").then(m => ({ default: m.StockReservationsPage })));
 const StockReturnsPage = lazy(() => import("../pages/StockReturnsPage.jsx").then(m => ({ default: m.StockReturnsPage })));
 const ReplenishmentPage = lazy(() => import("../pages/ReplenishmentPage.jsx").then(m => ({ default: m.ReplenishmentPage })));
@@ -87,9 +94,18 @@ export default function App() {
                 <Route path="/inventory/control/reconciliation" element={<ReconciliationPage />} />
                 <Route path="/inventory/control/damaged" element={<DamagedStockPage />} />
                 <Route path="/inventory/control/transit" element={<StockInTransitPage />} />
-                <Route path="/inventory/control/batches" element={<BatchTrackingPage />} />
-                <Route path="/inventory/control/serials" element={<SerialTrackingPage />} />
-                <Route path="/inventory/control/expiry" element={<BatchTrackingPage />} />
+                <Route path="/inventory/control/batches" element={<BatchManagementPage />} />
+                <Route path="/inventory/control/serials" element={<SerialManagementPage />} />
+                <Route path="/inventory/control/expiry" element={<ExpiryManagementPage />} />
+
+                {/* Batch & Serial Tracking — Exact 7 Modules */}
+                <Route path="/inventory/tracking/batches" element={<BatchManagementPage />} />
+                <Route path="/inventory/tracking/batch-movements" element={<BatchMovementHistoryPage />} />
+                <Route path="/inventory/tracking/batch-quarantine" element={<BatchQuarantinePage />} />
+                <Route path="/inventory/tracking/batch-release" element={<BatchReleasePage />} />
+                <Route path="/inventory/tracking/expiry" element={<ExpiryManagementPage />} />
+                <Route path="/inventory/tracking/serials" element={<SerialManagementPage />} />
+                <Route path="/inventory/tracking/serial-movements" element={<SerialMovementHistoryPage />} />
 
                 {/* Planning & Analytics */}
                 <Route path="/inventory/planning/replenishment" element={<ReplenishmentPage />} />
@@ -122,9 +138,12 @@ export default function App() {
                 <Route path="/reconciliation" element={<Navigate to="/inventory/control/reconciliation" replace />} />
                 <Route path="/damaged" element={<Navigate to="/inventory/control/damaged" replace />} />
                 <Route path="/transit" element={<Navigate to="/inventory/control/transit" replace />} />
-                <Route path="/batches" element={<Navigate to="/inventory/control/batches" replace />} />
-                <Route path="/control/batches" element={<Navigate to="/inventory/control/batches" replace />} />
-                <Route path="/serials" element={<Navigate to="/inventory/control/serials" replace />} />
+                <Route path="/batches" element={<Navigate to="/inventory/tracking/batches" replace />} />
+                <Route path="/control/batches" element={<Navigate to="/inventory/tracking/batches" replace />} />
+                <Route path="/serials" element={<Navigate to="/inventory/tracking/serials" replace />} />
+                <Route path="/expiry" element={<Navigate to="/inventory/tracking/expiry" replace />} />
+                <Route path="/batch-quarantine" element={<Navigate to="/inventory/tracking/batch-quarantine" replace />} />
+                <Route path="/batch-release" element={<Navigate to="/inventory/tracking/batch-release" replace />} />
                 <Route path="/replenishment" element={<Navigate to="/inventory/planning/replenishment" replace />} />
                 <Route path="/valuation" element={<Navigate to="/inventory/analytics/valuation" replace />} />
                 <Route path="/reports" element={<Navigate to="/inventory/analytics/reports" replace />} />

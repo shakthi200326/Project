@@ -61,6 +61,8 @@ class StockLedgerEntry(models.Model):
     transaction_ref = models.CharField(max_length=80, db_index=True)
     reason = models.CharField(max_length=255, blank=True)
     batch_number = models.CharField(max_length=80, blank=True, default="")
+    serial_number = models.CharField(max_length=100, blank=True, default="")
+    destination_warehouse = models.ForeignKey(Warehouse, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     actor = models.CharField(max_length=120, default="system")
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 

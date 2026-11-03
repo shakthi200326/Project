@@ -5,6 +5,8 @@ from django.utils import timezone
 from apps.stock.models import StockBalance, StockLedgerEntry
 from apps.movements.models import StockTransaction, StockTransactionLine
 from apps.valuation.models import InventoryValuation
+from apps.batches.models import Batch
+from apps.serial_numbers.models import SerialNumber
 
 class InventoryPostingService:
     """
@@ -68,10 +70,12 @@ class InventoryPostingService:
             source_bal.on_hand_qty -= qty
             source_bal.save(update_fields=["on_hand_qty", "updated_at"])
 
+            sn = getattr(line, "serial_number", "") or (line.serial_numbers[0] if getattr(line, "serial_numbers", None) else "")
             StockLedgerEntry.objects.create(
                 item=line.item,
                 variant=line.variant,
                 warehouse=tx.warehouse,
+                destination_warehouse=tx.destination_warehouse,
                 location=line.location,
                 movement_type=StockLedgerEntry.MovementType.TRANSFER_OUT,
                 quantity_delta=-qty,
@@ -80,8 +84,15 @@ class InventoryPostingService:
                 total_value_delta=-(qty * line.unit_cost),
                 transaction_ref=tx.document_number,
                 reason="Dispatch: In-Transit Stock Movement",
+                batch_number=line.batch_number or "",
+                serial_number=sn,
                 actor=actor,
             )
+
+            if getattr(line, "serial_numbers", None):
+                SerialNumber.objects.filter(serial_number__in=line.serial_numbers, item=line.item).update(
+                    status=SerialNumber.Status.IN_TRANSIT
+                )
 
         tx.status = StockTransaction.Status.DISPATCHED
         tx.save(update_fields=["status"])
@@ -109,6 +120,7 @@ class InventoryPostingService:
             dest_bal.on_hand_qty += qty
             dest_bal.save(update_fields=["on_hand_qty", "updated_at"])
 
+            sn = getattr(line, "serial_number", "") or (line.serial_numbers[0] if getattr(line, "serial_numbers", None) else "")
             StockLedgerEntry.objects.create(
                 item=line.item,
                 variant=line.variant,
@@ -121,8 +133,17 @@ class InventoryPostingService:
                 total_value_delta=qty * line.unit_cost,
                 transaction_ref=tx.document_number,
                 reason="Receipt: Transferred Stock Received",
+                batch_number=line.batch_number or "",
+                serial_number=sn,
                 actor=actor,
             )
+
+            if getattr(line, "serial_numbers", None):
+                SerialNumber.objects.filter(serial_number__in=line.serial_numbers, item=line.item).update(
+                    status=SerialNumber.Status.AVAILABLE,
+                    warehouse=tx.destination_warehouse,
+                    location=line.destination_location,
+                )
 
         tx.status = StockTransaction.Status.POSTED
         tx.posted_by = actor
@@ -189,6 +210,8 @@ class InventoryPostingService:
         # Recalculate Moving Weighted Average (WAV)
         cls._update_valuation_on_receipt(line.item, tx.warehouse, line.quantity, line.unit_cost)
 
+        sn = getattr(line, "serial_number", "") or (line.serial_numbers[0] if getattr(line, "serial_numbers", None) else "")
+
         # Append immutable ledger record
         StockLedgerEntry.objects.create(
             item=line.item,
@@ -202,8 +225,46 @@ class InventoryPostingService:
             total_value_delta=line.quantity * line.unit_cost,
             transaction_ref=tx.document_number,
             reason=tx.reason or (f"Supplier: {tx.supplier}" if tx.supplier else "Goods Receipt"),
+            batch_number=line.batch_number or "",
+            serial_number=sn,
             actor=actor,
         )
+
+        batch_obj = None
+        if line.batch_number:
+            batch_obj, created = Batch.objects.get_or_create(
+                batch_number=line.batch_number,
+                item=line.item,
+                defaults={
+                    "warehouse": tx.warehouse,
+                    "location": line.location,
+                    "initial_quantity": line.quantity,
+                    "remaining_quantity": line.quantity,
+                    "batch_status": Batch.Status.RELEASED,
+                    "status": Batch.Status.HEALTHY,
+                    "expiry_date": getattr(line, "expiry_date", None),
+                    "supplier": getattr(tx, "supplier", "") or "",
+                    "received_date": getattr(tx, "transaction_date", None) or timezone.now().date(),
+                }
+            )
+            if not created:
+                batch_obj.remaining_quantity += line.quantity
+                batch_obj.save(update_fields=["remaining_quantity", "updated_at"])
+
+        if getattr(line, "serial_numbers", None):
+            for s_num in line.serial_numbers:
+                if str(s_num).strip():
+                    SerialNumber.objects.update_or_create(
+                        serial_number=str(s_num).strip(),
+                        item=line.item,
+                        defaults={
+                            "warehouse": tx.warehouse,
+                            "location": line.location,
+                            "status": SerialNumber.Status.AVAILABLE,
+                            "batch": batch_obj,
+                            "received_date": getattr(tx, "transaction_date", None) or timezone.now().date(),
+                        }
+                    )
 
     @classmethod
     def _process_issue(cls, tx: StockTransaction, line: StockTransactionLine, actor: str):
@@ -218,6 +279,21 @@ class InventoryPostingService:
                 f"Requested: {qty_to_issue}, Available: {balance.available_qty} (On-hand: {balance.on_hand_qty}, Reserved: {balance.reserved_qty})"
             )
 
+        if line.batch_number:
+            batch_obj = Batch.objects.filter(batch_number=line.batch_number, item=line.item).first()
+            if batch_obj:
+                if batch_obj.batch_status == Batch.Status.QUARANTINED or batch_obj.status == "QUARANTINED":
+                    raise ValidationError(f"Batch {line.batch_number} is quarantined and cannot be issued.")
+                if batch_obj.expiry_date and batch_obj.days_remaining <= 0:
+                    raise ValidationError(f"Batch {line.batch_number} has expired on {batch_obj.expiry_date} and cannot be issued.")
+                batch_obj.remaining_quantity = max(Decimal("0.0000"), batch_obj.remaining_quantity - qty_to_issue)
+                batch_obj.save(update_fields=["remaining_quantity", "updated_at"])
+
+        if getattr(line, "serial_numbers", None):
+            SerialNumber.objects.filter(serial_number__in=line.serial_numbers, item=line.item).update(
+                status=SerialNumber.Status.ISSUED
+            )
+
         balance.on_hand_qty -= qty_to_issue
         balance.save(update_fields=["on_hand_qty", "updated_at"])
 
@@ -228,6 +304,8 @@ class InventoryPostingService:
         val.total_on_hand = max(Decimal("0.0000"), val.total_on_hand - qty_to_issue)
         val.total_value = val.total_on_hand * val.weighted_average_cost
         val.save(update_fields=["total_on_hand", "total_value"])
+
+        sn = getattr(line, "serial_number", "") or (line.serial_numbers[0] if getattr(line, "serial_numbers", None) else "")
 
         StockLedgerEntry.objects.create(
             item=line.item,
@@ -241,6 +319,8 @@ class InventoryPostingService:
             total_value_delta=-(qty_to_issue * cost),
             transaction_ref=tx.document_number,
             reason=tx.reason or f"Stock Issue: {tx.issue_type}",
+            batch_number=line.batch_number or "",
+            serial_number=sn,
             actor=actor,
         )
 
@@ -264,11 +344,14 @@ class InventoryPostingService:
         dest_bal.on_hand_qty += qty
         dest_bal.save(update_fields=["on_hand_qty", "updated_at"])
 
+        sn = getattr(line, "serial_number", "") or (line.serial_numbers[0] if getattr(line, "serial_numbers", None) else "")
+
         # Ledger entries
         StockLedgerEntry.objects.create(
             item=line.item,
             variant=line.variant,
             warehouse=tx.warehouse,
+            destination_warehouse=tx.destination_warehouse,
             location=line.location,
             movement_type=StockLedgerEntry.MovementType.TRANSFER_OUT,
             quantity_delta=-qty,
@@ -277,6 +360,8 @@ class InventoryPostingService:
             total_value_delta=-(qty * line.unit_cost),
             transaction_ref=tx.document_number,
             reason=tx.reason or "Inter-Warehouse Transfer Out",
+            batch_number=line.batch_number or "",
+            serial_number=sn,
             actor=actor,
         )
 
@@ -292,6 +377,8 @@ class InventoryPostingService:
             total_value_delta=qty * line.unit_cost,
             transaction_ref=tx.document_number,
             reason=tx.reason or "Inter-Warehouse Transfer In",
+            batch_number=line.batch_number or "",
+            serial_number=sn,
             actor=actor,
         )
 
@@ -305,6 +392,8 @@ class InventoryPostingService:
         balance.on_hand_qty += delta
         balance.save(update_fields=["on_hand_qty", "updated_at"])
 
+        sn = getattr(line, "serial_number", "") or (line.serial_numbers[0] if getattr(line, "serial_numbers", None) else "")
+
         StockLedgerEntry.objects.create(
             item=line.item,
             variant=line.variant,
@@ -317,6 +406,8 @@ class InventoryPostingService:
             total_value_delta=delta * line.unit_cost,
             transaction_ref=tx.document_number,
             reason=tx.reason or f"Stock Adjustment: {tx.adjustment_type}",
+            batch_number=line.batch_number or "",
+            serial_number=sn,
             actor=actor,
         )
 
@@ -344,6 +435,8 @@ class InventoryPostingService:
                 balance.save(update_fields=["on_hand_qty", "updated_at"])
             delta = qty
 
+        sn = getattr(line, "serial_number", "") or (line.serial_numbers[0] if getattr(line, "serial_numbers", None) else "")
+
         StockLedgerEntry.objects.create(
             item=line.item,
             variant=line.variant,
@@ -356,6 +449,8 @@ class InventoryPostingService:
             total_value_delta=delta * line.unit_cost,
             transaction_ref=tx.document_number,
             reason=tx.reason or f"Return: {tx.return_type} ({tx.product_condition})",
+            batch_number=line.batch_number or "",
+            serial_number=sn,
             actor=actor,
         )
 

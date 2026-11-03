@@ -2522,26 +2522,143 @@ export async function fetchStockInTransit(params = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// Batch Tracking API with Live Persistence
 // ---------------------------------------------------------------------------
-export async function fetchBatches() {
+// Batch Tracking & Lifecycle API with Live Persistence
+// ---------------------------------------------------------------------------
+export async function fetchBatches(params = {}) {
   let fetchedList = [];
   try {
-    const res = await fetch(`${API_BASE}/inventory/batches/`);
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/batches/?${query}`);
     if (res.ok) {
       updateApiStatus(true);
       const data = await res.json();
-      fetchedList = (data.results || data).map((b) => ({
-        ...b,
-        status: b.status === "HEALTHY" ? "RELEASED" : b.status,
-      }));
+      fetchedList = (data.results || data).map((b) => {
+        const remainingDays = b.days_remaining !== undefined ? b.days_remaining : (b.days_to_expiry !== undefined ? b.days_to_expiry : 365);
+        let expStatus = b.expiry_status;
+        if (!expStatus) {
+          if (!b.expiry_date) expStatus = "Healthy";
+          else if (remainingDays <= 0) expStatus = "Expired";
+          else if (remainingDays <= 30) expStatus = "Expiring Soon";
+          else expStatus = "Healthy";
+        }
+        return {
+          ...b,
+          sku: b.sku || b.item_code || "SKU-000",
+          product: b.product_name || b.item_name || "Industrial Component",
+          product_name: b.product_name || b.item_name || "Industrial Component",
+          initial_quantity: Number(b.initial_quantity || b.quantity || 100),
+          remaining_quantity: Number(b.remaining_quantity !== undefined ? b.remaining_quantity : (b.quantity || 100)),
+          quarantined_quantity: Number(b.quarantined_quantity || 0),
+          batch_status: b.batch_status || (b.status === "QUARANTINED" ? "Quarantined" : (b.status === "HEALTHY" ? "Released" : b.status || "Released")),
+          days_to_expiry: remainingDays,
+          expiry_status: expStatus,
+        };
+      });
     }
   } catch (e) {}
 
   const base = fetchedList.length > 0 ? fetchedList : [
-    { id: "bt-1", batch_number: "LOT-2026-BRG-01", item_code: "BRG-6205-2RS", item_name: "Industrial Ball Bearing 6205-2RS", warehouse: "Main Central Hub", quantity: 250, manufacture_date: "2026-04-10", expiry_date: "2029-04-10", status: "RELEASED", days_to_expiry: 890 },
-    { id: "bt-2", batch_number: "LOT-2026-LUB-88", item_code: "LUB-SYN-VG46", item_name: "Synthetic Compressor Lubricant ISO VG 46", warehouse: "Main Central Hub", quantity: 800, manufacture_date: "2026-06-15", expiry_date: "2027-06-15", status: "RELEASED", days_to_expiry: 226 },
-    { id: "bt-3", batch_number: "LOT-2025-LUB-12", item_code: "LUB-SYN-VG46", item_name: "Synthetic Compressor Lubricant ISO VG 46", warehouse: "Main Central Hub", quantity: 450, manufacture_date: "2025-11-20", expiry_date: "2026-11-20", status: "EXPIRING_SOON", days_to_expiry: 19 },
+    {
+      id: "bt-1",
+      batch_number: "LOT-2026-BRG-01",
+      item: 1,
+      item_code: "BRG-6205-2RS",
+      sku: "BRG-6205-2RS",
+      item_name: "Industrial Ball Bearing 6205-2RS",
+      product: "Industrial Ball Bearing 6205-2RS",
+      product_name: "Industrial Ball Bearing 6205-2RS",
+      warehouse: "Main Central Fulfillment Hub",
+      warehouse_name: "Main Central Fulfillment Hub",
+      location: "LOC-STO-A1 - Aisle 1",
+      location_name: "LOC-STO-A1 - Aisle 1",
+      initial_quantity: 450,
+      remaining_quantity: 450,
+      quarantined_quantity: 0,
+      manufacturing_date: "2026-04-10",
+      received_date: "2026-04-15",
+      expiry_date: "2029-04-10",
+      batch_status: "Released",
+      status: "Released",
+      days_to_expiry: 888,
+      expiry_status: "Healthy",
+      supplier: "Apex Precision Components",
+    },
+    {
+      id: "bt-2",
+      batch_number: "LOT-2026-LUB-88",
+      item: 5,
+      item_code: "LUB-SYN-VG46",
+      sku: "LUB-SYN-VG46",
+      item_name: "Synthetic Compressor Lubricant ISO VG 46",
+      product: "Synthetic Compressor Lubricant ISO VG 46",
+      product_name: "Synthetic Compressor Lubricant ISO VG 46",
+      warehouse: "Main Central Fulfillment Hub",
+      warehouse_name: "Main Central Fulfillment Hub",
+      location: "LOC-STO-A1 - Aisle 1",
+      location_name: "LOC-STO-A1 - Aisle 1",
+      initial_quantity: 1200,
+      remaining_quantity: 1200,
+      quarantined_quantity: 0,
+      manufacturing_date: "2026-06-15",
+      received_date: "2026-06-20",
+      expiry_date: "2027-06-15",
+      batch_status: "Released",
+      status: "Released",
+      days_to_expiry: 224,
+      expiry_status: "Healthy",
+      supplier: "PetroSynth Chemical Corp",
+    },
+    {
+      id: "bt-3",
+      batch_number: "LOT-2025-LUB-12",
+      item: 5,
+      item_code: "LUB-SYN-VG46",
+      sku: "LUB-SYN-VG46",
+      item_name: "Synthetic Compressor Lubricant ISO VG 46",
+      product: "Synthetic Compressor Lubricant ISO VG 46",
+      product_name: "Synthetic Compressor Lubricant ISO VG 46",
+      warehouse: "Main Central Fulfillment Hub",
+      warehouse_name: "Main Central Fulfillment Hub",
+      location: "LOC-STO-A1 - Aisle 1",
+      location_name: "LOC-STO-A1 - Aisle 1",
+      initial_quantity: 500,
+      remaining_quantity: 450,
+      quarantined_quantity: 0,
+      manufacturing_date: "2025-11-20",
+      received_date: "2025-11-25",
+      expiry_date: "2026-11-20",
+      batch_status: "Released",
+      status: "Released",
+      days_to_expiry: 17,
+      expiry_status: "Expiring Soon",
+      supplier: "PetroSynth Chemical Corp",
+    },
+    {
+      id: "bt-4",
+      batch_number: "LOT-2024-VALVE-09",
+      item: 2,
+      item_code: "HYD-SV-24V",
+      sku: "HYD-SV-24V",
+      item_name: "Hydraulic Solenoid Valve 24V DC",
+      product: "Hydraulic Solenoid Valve 24V DC",
+      product_name: "Hydraulic Solenoid Valve 24V DC",
+      warehouse: "Main Central Fulfillment Hub",
+      warehouse_name: "Main Central Fulfillment Hub",
+      location: "LOC-QAR-01 - Quarantine Vault 1",
+      location_name: "LOC-QAR-01 - Quarantine Vault 1",
+      initial_quantity: 25,
+      remaining_quantity: 25,
+      quarantined_quantity: 25,
+      manufacturing_date: "2024-08-10",
+      received_date: "2024-08-15",
+      expiry_date: "2026-08-10",
+      batch_status: "Quarantined",
+      status: "Quarantined",
+      days_to_expiry: -85,
+      expiry_status: "Expired",
+      supplier: "HydroMotion Dynamics",
+    },
   ];
 
   const local = getLocalEntities("batches");
@@ -2560,7 +2677,7 @@ export async function fetchBatches() {
 }
 
 export async function createBatch(payload) {
-  const qty = Number(payload.quantity || 100);
+  const initQty = Number(payload.initial_quantity || payload.quantity || 100);
   let created = null;
 
   try {
@@ -2569,13 +2686,17 @@ export async function createBatch(payload) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         batch_number: payload.batch_number,
-        item: 1,
-        warehouse: 1,
-        initial_quantity: qty,
-        remaining_quantity: qty,
-        status: payload.status === "RELEASED" ? "HEALTHY" : (payload.status || "HEALTHY"),
-        manufacturing_date: payload.manufacture_date || new Date().toISOString().split("T")[0],
-        expiry_date: payload.expiry_date || "2028-12-31",
+        item: payload.item_id || payload.item || 1,
+        warehouse: payload.warehouse_id || payload.warehouse || 1,
+        location: payload.location_id || payload.location || null,
+        supplier: payload.supplier || "",
+        manufacturing_date: payload.manufacturing_date || payload.manufacture_date || null,
+        expiry_date: payload.expiry_date || null,
+        received_date: payload.received_date || new Date().toISOString().split("T")[0],
+        initial_quantity: initQty,
+        remaining_quantity: initQty,
+        batch_status: payload.batch_status || "Pending Inspection",
+        status: payload.batch_status === "Quarantined" ? "QUARANTINED" : "HEALTHY",
       }),
     });
     if (res.ok) {
@@ -2583,7 +2704,8 @@ export async function createBatch(payload) {
       const data = await res.json();
       created = {
         ...data,
-        status: data.status === "HEALTHY" ? "RELEASED" : data.status,
+        sku: data.sku || data.item_code,
+        product_name: data.product_name || data.item_name,
       };
     }
   } catch (e) {}
@@ -2592,14 +2714,25 @@ export async function createBatch(payload) {
     created = {
       id: `bt-${Date.now()}`,
       batch_number: payload.batch_number,
-      item_code: payload.item_code || "BRG-6205-2RS",
-      item_name: payload.item_name || "Industrial Component",
-      warehouse: payload.warehouse || "Main Central Hub",
-      quantity: qty,
-      manufacture_date: payload.manufacture_date || new Date().toISOString().split("T")[0],
+      sku: payload.sku || payload.item_code || "BRG-6205-2RS",
+      item_code: payload.sku || payload.item_code || "BRG-6205-2RS",
+      product: payload.product_name || payload.item_name || "Industrial Ball Bearing 6205-2RS",
+      product_name: payload.product_name || payload.item_name || "Industrial Ball Bearing 6205-2RS",
+      warehouse: payload.warehouse || "Main Central Fulfillment Hub",
+      warehouse_name: payload.warehouse || "Main Central Fulfillment Hub",
+      location: payload.storage_location || payload.location || "Aisle 1 High Rack Storage",
+      location_name: payload.storage_location || payload.location || "Aisle 1 High Rack Storage",
+      initial_quantity: initQty,
+      remaining_quantity: initQty,
+      quarantined_quantity: 0,
+      supplier: payload.supplier || "Standard Supplier",
+      manufacturing_date: payload.manufacturing_date || new Date().toISOString().split("T")[0],
+      received_date: payload.received_date || new Date().toISOString().split("T")[0],
       expiry_date: payload.expiry_date || "2028-12-31",
-      status: payload.status || "RELEASED",
+      batch_status: payload.batch_status || "Pending Inspection",
+      status: payload.batch_status || "Pending Inspection",
       days_to_expiry: 365,
+      expiry_status: "Healthy",
     };
   }
 
@@ -2607,13 +2740,90 @@ export async function createBatch(payload) {
   return created;
 }
 
-// ---------------------------------------------------------------------------
-// Serial Tracking API with Live Persistence
-// ---------------------------------------------------------------------------
-export async function fetchSerialNumbers() {
+export async function quarantineBatch(batchId, payload) {
+  let result = null;
+  const qty = Number(payload.quarantine_quantity || 1);
+  try {
+    const res = await fetch(`${API_BASE}/inventory/batches/${batchId}/quarantine/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      updateApiStatus(true);
+      result = await res.json();
+    }
+  } catch (e) {}
+
+  const localRecord = {
+    id: `qar-${Date.now()}`,
+    quarantine_number: `QAR-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+    batch_number: payload.batch_number || `LOT-${batchId}`,
+    product_name: payload.product_name || "Industrial Component",
+    sku: payload.sku || "SKU-000",
+    warehouse: payload.warehouse || "Main Central Hub",
+    location: payload.storage_location || payload.location || "Quarantine Vault",
+    quarantine_quantity: qty,
+    quarantine_reason: payload.quarantine_reason || "Quality Issue",
+    remarks: payload.remarks || "",
+    quarantine_date: payload.quarantine_date || new Date().toISOString().split("T")[0],
+    is_released: false,
+    status: "Quarantined",
+  };
+  saveLocalEntity("batch_quarantines", localRecord, "quarantine_number");
+
+  updateLocalEntity("batches", batchId, {
+    batch_status: "Quarantined",
+    status: "Quarantined",
+    quarantined_quantity: qty,
+  });
+
+  return result || localRecord;
+}
+
+export async function releaseBatch(batchId, payload) {
+  let result = null;
+  const releaseQty = Number(payload.release_quantity || 1);
+  try {
+    const res = await fetch(`${API_BASE}/inventory/batches/${batchId}/release/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      updateApiStatus(true);
+      result = await res.json();
+    }
+  } catch (e) {}
+
+  const releaseRecord = {
+    id: `rel-${Date.now()}`,
+    batch_number: payload.batch_number || `LOT-${batchId}`,
+    product_name: payload.product_name || "Industrial Component",
+    release_quantity: releaseQty,
+    inspection_result: payload.inspection_result || "Passed",
+    release_reason: payload.release_reason || "Passed authorized QA re-inspection",
+    released_by: payload.released_by || "QA Lead Inspector",
+    release_date: payload.release_date || new Date().toISOString().split("T")[0],
+  };
+  saveLocalEntity("batch_releases", releaseRecord, "id");
+
+  if (payload.inspection_result === "Passed" || payload.inspection_result === "Partially Passed") {
+    updateLocalEntity("batches", batchId, {
+      batch_status: "Released",
+      status: "Released",
+      quarantined_quantity: 0,
+    });
+  }
+
+  return result || releaseRecord;
+}
+
+export async function fetchBatchQuarantines(params = {}) {
   let fetchedList = [];
   try {
-    const res = await fetch(`${API_BASE}/inventory/serials/`);
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/batch-quarantines/?${query}`);
     if (res.ok) {
       updateApiStatus(true);
       const data = await res.json();
@@ -2622,9 +2832,166 @@ export async function fetchSerialNumbers() {
   } catch (e) {}
 
   const base = fetchedList.length > 0 ? fetchedList : [
-    { id: "sn-1", serial_number: "SN-HYD-24V-00109", item_code: "HYD-SV-24V", item_name: "Hydraulic Solenoid Valve 24V DC", warehouse: "Main Central Hub", location: "A1-B4", status: "IN_STOCK", warranty_until: "2028-10-20" },
-    { id: "sn-2", serial_number: "SN-HYD-24V-00110", item_code: "HYD-SV-24V", item_name: "Hydraulic Solenoid Valve 24V DC", warehouse: "Main Central Hub", location: "A1-B4", status: "IN_STOCK", warranty_until: "2028-10-20" },
-    { id: "sn-3", serial_number: "SN-ENC-1024-99812", item_code: "ENC-OPT-1024", item_name: "Optical Rotary Encoder 1024 PPR", warehouse: "Main Central Hub", location: "A1-B4", status: "DISPATCHED", warranty_until: "2027-05-15" },
+    {
+      id: "qar-101",
+      quarantine_number: "QAR-2026-1001",
+      batch_number: "LOT-2024-VALVE-09",
+      product_name: "Hydraulic Solenoid Valve 24V DC",
+      sku: "HYD-SV-24V",
+      warehouse_name: "Main Central Fulfillment Hub",
+      warehouse: "Main Central Fulfillment Hub",
+      location_name: "LOC-QAR-01 - Quarantine Vault 1",
+      location: "LOC-QAR-01 - Quarantine Vault 1",
+      quarantine_quantity: 25,
+      quarantine_reason: "Expiry Concern",
+      remarks: "Batch passed shelf life threshold; isolated from active dispatch",
+      quarantine_date: "2026-10-15",
+      is_released: false,
+      status: "Quarantined",
+    },
+    {
+      id: "qar-102",
+      quarantine_number: "QAR-2026-0988",
+      batch_number: "LOT-2026-BRG-Q",
+      product_name: "Industrial Ball Bearing 6205-2RS",
+      sku: "BRG-6205-2RS",
+      warehouse_name: "Main Central Fulfillment Hub",
+      warehouse: "Main Central Fulfillment Hub",
+      location_name: "LOC-QAR-01 - Quarantine Vault 1",
+      location: "LOC-QAR-01 - Quarantine Vault 1",
+      quarantine_quantity: 15,
+      quarantine_reason: "Inspection Failure",
+      remarks: "Sample bearing seal misalignment during in-bound staging",
+      quarantine_date: "2026-10-22",
+      is_released: true,
+      released_quantity: 15,
+      inspection_result: "Passed",
+      release_reason: "Full lot re-measured with calibrated gauge. Passed 100%.",
+      released_by: "QA Inspector Marcus",
+      release_date: "2026-10-25",
+      status: "Released",
+    },
+  ];
+
+  const local = getLocalEntities("batch_quarantines");
+  const seen = new Set();
+  const merged = [];
+  for (const item of [...local, ...base]) {
+    const key = (item.quarantine_number || item.id).toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(item);
+    }
+  }
+  return { results: merged, count: merged.length };
+}
+
+export async function fetchBatchMovements(params = {}) {
+  let fetchedList = [];
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/batch-movements/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      fetchedList = data.results || data;
+    }
+  } catch (e) {}
+
+  if (fetchedList.length > 0) {
+    return { results: fetchedList, count: fetchedList.length };
+  }
+
+  // Fallback to stock ledger entries that have a batch_number
+  const ledger = await fetchStockLedger();
+  const batchOnly = (ledger.results || []).filter((e) => Boolean(e.batch_number && e.batch_number !== "—"));
+
+  const fallback = [
+    {
+      id: "bm-1",
+      batch_number: "LOT-2026-BRG-01",
+      product: "Industrial Ball Bearing 6205-2RS",
+      transaction_number: "GRN-2026-0001",
+      transaction_type: "Receipt",
+      from_warehouse: "Supplier Apex",
+      to_warehouse: "Main Central Hub",
+      quantity: 450,
+      transaction_date: "2026-10-26",
+    },
+    {
+      id: "bm-2",
+      batch_number: "LOT-2026-LUB-88",
+      product: "Synthetic Compressor Lubricant ISO VG 46",
+      transaction_number: "TRF-2026-4415",
+      transaction_type: "Transfer",
+      from_warehouse: "Main Central Hub",
+      to_warehouse: "Cold Storage Facility",
+      quantity: 120,
+      transaction_date: "2026-10-28",
+    },
+    {
+      id: "bm-3",
+      batch_number: "LOT-2026-BRG-01",
+      product: "Industrial Ball Bearing 6205-2RS",
+      transaction_number: "ISS-2026-0104",
+      transaction_type: "Issue",
+      from_warehouse: "Main Central Hub",
+      to_warehouse: "Assembly Line 4",
+      quantity: 36,
+      transaction_date: "2026-10-29",
+    },
+  ];
+
+  const pool = [...batchOnly, ...fallback];
+  const seen = new Set();
+  const merged = [];
+  for (const item of pool) {
+    const key = `${item.transaction_number || item.transaction_ref}-${item.batch_number}`.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push({
+        id: item.id || key,
+        batch_number: item.batch_number,
+        product: item.product_name || item.product || item.item_name || "Industrial Component",
+        transaction_number: item.transaction_number || item.transaction_ref || "TX-001",
+        transaction_type: item.transaction_type || item.movement_type || "Receipt",
+        from_warehouse: item.from_warehouse || (item.quantity_delta < 0 ? (item.warehouse_name || item.warehouse) : "Origin"),
+        to_warehouse: item.to_warehouse || (item.destination_warehouse_name || item.warehouse_name || item.warehouse),
+        quantity: Number(item.quantity !== undefined ? item.quantity : Math.abs(item.quantity_delta || 10)),
+        transaction_date: item.transaction_date || (item.created_at ? item.created_at.split("T")[0] : new Date().toISOString().split("T")[0]),
+      });
+    }
+  }
+
+  return { results: merged, count: merged.length };
+}
+
+// ---------------------------------------------------------------------------
+// Serial Tracking API with Live Persistence
+// ---------------------------------------------------------------------------
+export async function fetchSerialNumbers(params = {}) {
+  let fetchedList = [];
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/serials/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      fetchedList = (data.results || data).map((s) => ({
+        ...s,
+        sku: s.sku || s.item_code,
+        product: s.product_name || s.item_name || "Industrial Component",
+        product_name: s.product_name || s.item_name || "Industrial Component",
+      }));
+    }
+  } catch (e) {}
+
+  const base = fetchedList.length > 0 ? fetchedList : [
+    { id: "sn-1", serial_number: "SN-HYD-24V-00109", sku: "HYD-SV-24V", item_code: "HYD-SV-24V", product: "Hydraulic Solenoid Valve 24V DC", product_name: "Hydraulic Solenoid Valve 24V DC", batch_number: "LOT-2026-VALVE-01", warehouse: "Main Central Fulfillment Hub", warehouse_name: "Main Central Fulfillment Hub", location: "LOC-STO-A1 - Aisle 1", location_name: "LOC-STO-A1 - Aisle 1", received_date: "2026-10-18", status: "Available", warranty_until: "2028-10-20" },
+    { id: "sn-2", serial_number: "SN-HYD-24V-00110", sku: "HYD-SV-24V", item_code: "HYD-SV-24V", product: "Hydraulic Solenoid Valve 24V DC", product_name: "Hydraulic Solenoid Valve 24V DC", batch_number: "LOT-2026-VALVE-01", warehouse: "Main Central Fulfillment Hub", warehouse_name: "Main Central Fulfillment Hub", location: "LOC-STO-A1 - Aisle 1", location_name: "LOC-STO-A1 - Aisle 1", received_date: "2026-10-18", status: "Available", warranty_until: "2028-10-20" },
+    { id: "sn-3", serial_number: "SN-ENC-1024-99812", sku: "ENC-OPT-1024", item_code: "ENC-OPT-1024", product: "Optical Rotary Encoder 1024 PPR", product_name: "Optical Rotary Encoder 1024 PPR", batch_number: "", warehouse: "Main Central Fulfillment Hub", warehouse_name: "Main Central Fulfillment Hub", location: "LOC-STO-A1 - Aisle 1", location_name: "LOC-STO-A1 - Aisle 1", received_date: "2026-10-20", status: "In Transit", warranty_until: "2027-05-15" },
+    { id: "sn-4", serial_number: "SN-ENC-1024-99815", sku: "ENC-OPT-1024", item_code: "ENC-OPT-1024", product: "Optical Rotary Encoder 1024 PPR", product_name: "Optical Rotary Encoder 1024 PPR", batch_number: "", warehouse: "East Coast Terminal", warehouse_name: "East Coast Terminal", location: "LOC-STO-E1", location_name: "LOC-STO-E1", received_date: "2026-10-22", status: "Reserved", warranty_until: "2027-05-15" },
+    { id: "sn-5", serial_number: "SN-HYD-24V-00080", sku: "HYD-SV-24V", item_code: "HYD-SV-24V", product: "Hydraulic Solenoid Valve 24V DC", product_name: "Hydraulic Solenoid Valve 24V DC", batch_number: "LOT-2024-VALVE-09", warehouse: "Main Central Fulfillment Hub", warehouse_name: "Main Central Fulfillment Hub", location: "LOC-QAR-01", location_name: "LOC-QAR-01", received_date: "2024-08-15", status: "Quarantined", warranty_until: "2026-08-15" },
   ];
 
   const local = getLocalEntities("serials");
@@ -2650,10 +3017,13 @@ export async function createSerialNumber(payload) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         serial_number: payload.serial_number,
-        item: 2,
-        warehouse: 1,
-        status: payload.status || "IN_STOCK",
-        warranty_until: payload.warranty_until || "2028-12-31",
+        item: payload.item_id || payload.item || 2,
+        warehouse: payload.warehouse_id || payload.warehouse || 1,
+        location: payload.location_id || payload.location || null,
+        batch: payload.batch_id || payload.batch || null,
+        received_date: payload.received_date || new Date().toISOString().split("T")[0],
+        status: payload.status || "Available",
+        notes: payload.notes || "",
       }),
     });
     if (res.ok) {
@@ -2666,13 +3036,18 @@ export async function createSerialNumber(payload) {
     created = {
       id: `sn-${Date.now()}`,
       serial_number: payload.serial_number,
-      item_code: payload.item_code || "HYD-SV-24V",
-      item_name: payload.item_name || "Hydraulic Solenoid Valve 24V DC",
-      warehouse: payload.warehouse || "Main Central Hub",
-      location: payload.location || "A1-B4",
-      status: payload.status || "IN_STOCK",
-      received_at: new Date().toISOString(),
-      warranty_until: payload.warranty_until || "2028-12-31",
+      sku: payload.sku || payload.item_code || "HYD-SV-24V",
+      item_code: payload.sku || payload.item_code || "HYD-SV-24V",
+      product: payload.product_name || payload.item_name || "Hydraulic Solenoid Valve 24V DC",
+      product_name: payload.product_name || payload.item_name || "Hydraulic Solenoid Valve 24V DC",
+      batch_number: payload.batch_number || "",
+      warehouse: payload.warehouse || "Main Central Fulfillment Hub",
+      warehouse_name: payload.warehouse || "Main Central Fulfillment Hub",
+      location: payload.storage_location || payload.location || "Aisle 1 - Buffer",
+      location_name: payload.storage_location || payload.location || "Aisle 1 - Buffer",
+      received_date: payload.received_date || new Date().toISOString().split("T")[0],
+      status: payload.status || "Available",
+      notes: payload.notes || "",
     };
   }
 
@@ -2694,6 +3069,86 @@ export async function updateSerialNumberStatus(id, newStatus) {
 
   updateLocalEntity("serials", id, { status: newStatus });
   return { id, status: newStatus };
+}
+
+export async function fetchSerialMovements(params = {}) {
+  let fetchedList = [];
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/serial-movements/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      fetchedList = data.results || data;
+    }
+  } catch (e) {}
+
+  if (fetchedList.length > 0) {
+    return { results: fetchedList, count: fetchedList.length };
+  }
+
+  // Fallback to stock ledger entries that have a serial_number
+  const ledger = await fetchStockLedger();
+  const serialOnly = (ledger.results || []).filter((e) => Boolean(e.serial_number && e.serial_number !== "—"));
+
+  const fallback = [
+    {
+      id: "sm-1",
+      serial_number: "SN-HYD-24V-00109",
+      product: "Hydraulic Solenoid Valve 24V DC",
+      transaction_number: "GRN-2026-0002",
+      transaction_type: "Receipt",
+      from_warehouse: "Supplier HydroMotion",
+      to_warehouse: "Main Central Hub",
+      transaction_date: "2026-10-18",
+      serial_status: "Available",
+    },
+    {
+      id: "sm-2",
+      serial_number: "SN-ENC-1024-99812",
+      product: "Optical Rotary Encoder 1024 PPR",
+      transaction_number: "TRF-2026-4410",
+      transaction_type: "Transfer",
+      from_warehouse: "Main Central Hub",
+      to_warehouse: "East Coast Terminal",
+      transaction_date: "2026-10-30",
+      serial_status: "In Transit",
+    },
+    {
+      id: "sm-3",
+      serial_number: "SN-HYD-24V-00080",
+      product: "Hydraulic Solenoid Valve 24V DC",
+      transaction_number: "RET-2026-0033",
+      transaction_type: "Return",
+      from_warehouse: "Client Automotive Plant",
+      to_warehouse: "Main Central Hub (Quarantine Vault)",
+      transaction_date: "2026-10-25",
+      serial_status: "Quarantined",
+    },
+  ];
+
+  const pool = [...serialOnly, ...fallback];
+  const seen = new Set();
+  const merged = [];
+  for (const item of pool) {
+    const key = `${item.transaction_number || item.transaction_ref}-${item.serial_number}`.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push({
+        id: item.id || key,
+        serial_number: item.serial_number,
+        product: item.product_name || item.product || item.item_name || "Industrial Component",
+        transaction_number: item.transaction_number || item.transaction_ref || "TX-001",
+        transaction_type: item.transaction_type || item.movement_type || "Receipt",
+        from_warehouse: item.from_warehouse || (item.quantity_delta < 0 ? (item.warehouse_name || item.warehouse) : "Origin"),
+        to_warehouse: item.to_warehouse || (item.destination_warehouse_name || item.warehouse_name || item.warehouse),
+        transaction_date: item.transaction_date || (item.created_at ? item.created_at.split("T")[0] : new Date().toISOString().split("T")[0]),
+        serial_status: item.serial_status || (item.movement_type === "RECEIPT" ? "Available" : (item.movement_type === "ISSUE" ? "Issued" : "In Transit")),
+      });
+    }
+  }
+
+  return { results: merged, count: merged.length };
 }
 
 // ---------------------------------------------------------------------------

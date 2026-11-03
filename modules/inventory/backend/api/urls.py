@@ -19,7 +19,10 @@ from .views import (
     DamagedStockViewSet,
     StockInTransitViewSet,
     BatchViewSet,
+    BatchQuarantineViewSet,
+    BatchMovementViewSet,
     SerialNumberViewSet,
+    SerialMovementViewSet,
     DashboardKPIView,
 )
 
@@ -41,7 +44,10 @@ router.register(r"reconciliation", StockCountViewSet)
 router.register(r"damaged-stock", DamagedStockViewSet)
 router.register(r"transit", StockInTransitViewSet, basename="transit")
 router.register(r"batches", BatchViewSet)
+router.register(r"batch-quarantines", BatchQuarantineViewSet, basename="batch-quarantine")
+router.register(r"batch-movements", BatchMovementViewSet, basename="batch-movement")
 router.register(r"serials", SerialNumberViewSet)
+router.register(r"serial-movements", SerialMovementViewSet, basename="serial-movement")
 router.register(r"valuation", ValuationViewSet)
 
 urlpatterns = [

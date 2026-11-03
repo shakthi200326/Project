@@ -42,6 +42,8 @@ import {
   ShieldCheck,
   Database,
   Radio,
+  History,
+  Calendar,
 } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 import { useWorkspace } from "./ContextSelector";
@@ -92,6 +94,7 @@ export function AppShell({ children }) {
     warehouses: true,
     operations: true,
     control: false,
+    tracking: true,
     planning: false,
     analytics: false,
   });
@@ -121,6 +124,8 @@ export function AppShell({ children }) {
       setOpenGroups((p) => ({ ...p, operations: true }));
     } else if (path.startsWith("/inventory/control")) {
       setOpenGroups((p) => ({ ...p, control: true }));
+    } else if (path.startsWith("/inventory/tracking")) {
+      setOpenGroups((p) => ({ ...p, tracking: true }));
     } else if (path.startsWith("/inventory/planning")) {
       setOpenGroups((p) => ({ ...p, planning: true }));
     } else if (path.startsWith("/inventory/analytics")) {
@@ -225,6 +230,19 @@ export function AppShell({ children }) {
       ],
     },
     {
+      key: "tracking",
+      title: "Batch & Serial Tracking",
+      items: [
+        { label: "Batch Management", path: "/inventory/tracking/batches", icon: Hash },
+        { label: "Batch Movement History", path: "/inventory/tracking/batch-movements", icon: History },
+        { label: "Batch Quarantine", path: "/inventory/tracking/batch-quarantine", icon: ShieldAlert },
+        { label: "Batch Release", path: "/inventory/tracking/batch-release", icon: ShieldCheck },
+        { label: "Expiry Management", path: "/inventory/tracking/expiry", icon: Calendar },
+        { label: "Serial Number Management", path: "/inventory/tracking/serials", icon: Cpu },
+        { label: "Serial Movement History", path: "/inventory/tracking/serial-movements", icon: Activity },
+      ],
+    },
+    {
       key: "planning",
       title: "Planning",
       items: [
@@ -275,6 +293,13 @@ export function AppShell({ children }) {
       "/inventory/control/transit": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock in Transit" }],
       "/inventory/control/batches": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Batch Tracking" }],
       "/inventory/control/serials": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Serial Registry" }],
+      "/inventory/tracking/batches": [{ label: "Inventory", path: "/inventory" }, { label: "Batch & Serial Tracking", path: "/inventory/tracking/batches" }, { label: "Batch Management" }],
+      "/inventory/tracking/batch-movements": [{ label: "Inventory", path: "/inventory" }, { label: "Batch & Serial Tracking", path: "/inventory/tracking/batches" }, { label: "Batch Movement History" }],
+      "/inventory/tracking/batch-quarantine": [{ label: "Inventory", path: "/inventory" }, { label: "Batch & Serial Tracking", path: "/inventory/tracking/batches" }, { label: "Batch Quarantine" }],
+      "/inventory/tracking/batch-release": [{ label: "Inventory", path: "/inventory" }, { label: "Batch & Serial Tracking", path: "/inventory/tracking/batches" }, { label: "Batch Release" }],
+      "/inventory/tracking/expiry": [{ label: "Inventory", path: "/inventory" }, { label: "Batch & Serial Tracking", path: "/inventory/tracking/batches" }, { label: "Expiry Management" }],
+      "/inventory/tracking/serials": [{ label: "Inventory", path: "/inventory" }, { label: "Batch & Serial Tracking", path: "/inventory/tracking/serials" }, { label: "Serial Number Management" }],
+      "/inventory/tracking/serial-movements": [{ label: "Inventory", path: "/inventory" }, { label: "Batch & Serial Tracking", path: "/inventory/tracking/serials" }, { label: "Serial Movement History" }],
       "/inventory/planning/replenishment": [{ label: "Inventory", path: "/inventory" }, { label: "Planning", path: "/inventory/planning/replenishment" }, { label: "Replenishment & Alerts" }],
       "/inventory/analytics/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Valuation Reports" }],
       "/inventory/analytics/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Analytics Reports" }],
