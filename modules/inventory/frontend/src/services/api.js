@@ -24,22 +24,35 @@ function updateApiStatus(connected) {
 // ---------------------------------------------------------------------------
 // Barcode Scanner & Optical Chime Audio Helper
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Barcode Scanner & Optical Chime Audio Helper (Optimized Singleton)
+// ---------------------------------------------------------------------------
+let cachedAudioCtx = null;
+
 export function playScanBeep() {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
-    const ctx = new AudioCtx();
+    if (!cachedAudioCtx || cachedAudioCtx.state === "closed") {
+      cachedAudioCtx = new AudioCtx();
+    }
+    if (cachedAudioCtx.state === "suspended") {
+      cachedAudioCtx.resume().catch(() => {});
+    }
+    const ctx = cachedAudioCtx;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = "sine";
     osc.frequency.setValueAtTime(1850, ctx.currentTime);
     gain.gain.setValueAtTime(0.12, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start();
-    osc.stop(ctx.currentTime + 0.1);
-  } catch (e) {}
+    osc.stop(ctx.currentTime + 0.08);
+  } catch (e) {
+    // Graceful fallback
+  }
 }
 
 export function lookupProductByBarcode(query, productsList = []) {
@@ -59,6 +72,32 @@ export function lookupProductByBarcode(query, productsList = []) {
     }) ||
     null
   );
+}
+
+export async function searchProductOnlineOrLocal(query, productsList = []) {
+  if (!query) return null;
+  const localMatch = lookupProductByBarcode(query, productsList);
+  if (localMatch) return localMatch;
+
+  try {
+    const clean = encodeURIComponent(String(query).trim());
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1800);
+    const res = await fetch(`${API_BASE}/inventory/items/?search=${clean}`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (res.ok) {
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : data.results || [];
+      const match = lookupProductByBarcode(query, list);
+      if (match) return match;
+      if (list.length > 0) return list[0];
+    }
+  } catch (err) {
+    // Graceful fallback for offline / network timeout
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
