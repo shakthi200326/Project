@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Package, Layers, Tag, Ruler, Barcode, Shield, Save, AlertCircle, Sparkles } from "lucide-react";
-import { createProduct, fetchCategories } from "../services/api";
+import { createProduct, fetchCategories, fetchBrands } from "../services/api";
 
 export function CreateProductModal({ isOpen, onClose, onCreated }) {
   const [tab, setTab] = useState("basic");
@@ -11,6 +11,7 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
   ];
   const currentStepIndex = steps.findIndex((step) => step.key === tab);
   const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
   const [formData, setFormData] = useState({
     code: "",
     name: "",
@@ -54,6 +55,13 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
             ...prev,
             category: prev.category || "Mechanical Components",
           }));
+        }
+      });
+
+      fetchBrands().then((res) => {
+        const list = res.results || res || [];
+        if (list.length > 0) {
+          setBrands(list);
         }
       });
     }
@@ -266,14 +274,30 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                     <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
                       Brand / Manufacturer
                     </label>
-                    <input
-                      type="text"
+                    <select
                       name="brand"
                       value={formData.brand}
                       onChange={handleChange}
-                      placeholder="e.g. SKF Precision"
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
-                    />
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                    >
+                      <option value="">Select Brand / Manufacturer</option>
+                      {brands.length > 0 ? (
+                        brands.map((b) => (
+                          <option key={b.id || b.code} value={b.name}>
+                            {b.name} {b.code ? `(${b.code})` : ""}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="SKF Precision">SKF Precision (SKF)</option>
+                          <option value="Bosch Rexroth">Bosch Rexroth (BOSCH)</option>
+                          <option value="Parker Hannifin">Parker Hannifin (PARKER)</option>
+                          <option value="Festo Pneumatics">Festo Pneumatics (FESTO)</option>
+                          <option value="Schneider Electric">Schneider Electric (SCHNEIDER)</option>
+                          <option value="Gates Industrial">Gates Industrial (GATES)</option>
+                        </>
+                      )}
+                    </select>
                   </div>
                 </div>
 

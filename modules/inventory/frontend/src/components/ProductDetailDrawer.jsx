@@ -27,12 +27,14 @@ import {
   uploadAttachment,
   deleteAttachment,
   fetchCategories,
+  fetchBrands,
 } from "@/services/api";
 
 export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [attachments, setAttachments] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -64,6 +66,9 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
             category: String(selectedCategory.id ?? selectedCategory.name),
           }));
         }
+      });
+      fetchBrands().then((list) => {
+        setBrands(list.results || list || []);
       });
       setEditForm({
         name: product.name || "",
@@ -283,12 +288,32 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
                 </div>
                 <div>
                   <label className="block text-slate-500 dark:text-zinc-400 font-medium mb-1">Brand / Manufacturer</label>
-                  <input
-                    type="text"
+                  <select
                     value={editForm.brand}
                     onChange={(e) => setEditForm((prev) => ({ ...prev, brand: e.target.value }))}
                     className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 text-xs"
-                  />
+                  >
+                    <option value="">Select Brand / Manufacturer</option>
+                    {brands.length > 0 ? (
+                      brands.map((b) => (
+                        <option key={b.id || b.code} value={b.name}>
+                          {b.name} {b.code ? `(${b.code})` : ""}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="SKF Precision">SKF Precision (SKF)</option>
+                        <option value="Bosch Rexroth">Bosch Rexroth (BOSCH)</option>
+                        <option value="Parker Hannifin">Parker Hannifin (PARKER)</option>
+                        <option value="Festo Pneumatics">Festo Pneumatics (FESTO)</option>
+                        <option value="Schneider Electric">Schneider Electric (SCHNEIDER)</option>
+                        <option value="Gates Industrial">Gates Industrial (GATES)</option>
+                      </>
+                    )}
+                    {editForm.brand && !brands.some((b) => b.name === editForm.brand) && (
+                      <option value={editForm.brand}>{editForm.brand}</option>
+                    )}
+                  </select>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
