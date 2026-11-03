@@ -70,14 +70,7 @@ const COUNTRIES = [
   "Netherlands",
 ];
 
-const WAREHOUSE_MANAGERS = [
-  "Alex Morgan",
-  "Sarah Chen",
-  "David Kim",
-  "Elena Rostova",
-  "Marcus Vance",
-  "Rachel Torres",
-];
+
 
 const FACILITY_RADAR_DATA = [
   { metric: "Space Density", WH_MAIN: 78, WH_EAST: 64, WH_COLD: 42, fullMark: 100 },
@@ -880,16 +873,13 @@ export function WarehousesPage() {
                   <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
                     Warehouse Manager
                   </label>
-                  <select
+                  <input
+                    type="text"
                     value={formData.manager}
                     onChange={(e) => setFormData({ ...formData, manager: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-medium"
-                  >
-                    <option value="">Select Warehouse Manager...</option>
-                    {WAREHOUSE_MANAGERS.map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
+                    placeholder="e.g. Operations Lead or Manager Name"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white"
+                  />
                 </div>
 
                 <div>

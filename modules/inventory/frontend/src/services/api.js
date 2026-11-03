@@ -83,16 +83,17 @@ export async function searchProductOnlineOrLocal(query, productsList = []) {
     const clean = encodeURIComponent(String(query).trim());
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 1800);
-    const res = await fetch(`${API_BASE}/inventory/items/?search=${clean}`, {
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-    if (res.ok) {
-      const data = await res.json();
-      const list = Array.isArray(data) ? data : data.results || [];
-      const match = lookupProductByBarcode(query, list);
-      if (match) return match;
-      if (list.length > 0) return list[0];
+    try {
+      const res = await fetch(`${API_BASE}/inventory/items/?search=${clean}`, {
+        signal: controller.signal,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : data.results || [];
+        return lookupProductByBarcode(query, list);
+      }
+    } finally {
+      clearTimeout(timeoutId);
     }
   } catch (err) {
     // Graceful fallback for offline / network timeout
@@ -602,9 +603,13 @@ export const fetchInventoryKPIs = fetchDashboardKPIs;
 // ---------------------------------------------------------------------------
 export async function fetchProducts(params = {}) {
   let fetchedList = [];
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
   try {
     const query = new URLSearchParams(params).toString();
-    const res = await fetch(`${API_BASE}/inventory/items/?${query}`);
+    const res = await fetch(`${API_BASE}/inventory/items/?${query}`, {
+      signal: controller.signal,
+    });
     if (res.ok) {
       updateApiStatus(true);
       const data = await res.json();
@@ -633,6 +638,8 @@ export async function fetchProducts(params = {}) {
     }
   } catch (e) {
     updateApiStatus(false);
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   const baseList = fetchedList.length > 0 ? fetchedList : DEMO_PRODUCTS;
@@ -1055,8 +1062,8 @@ export async function fetchWarehouses() {
         city: wh.city || "Chicago",
         state: wh.state || "IL",
         country: wh.country || "United States",
-        manager: wh.manager || "Alex Morgan",
-        contact_number: wh.contact_number || "+1 (312) 555-0192",
+        manager: wh.manager || "",
+        contact_number: wh.contact_number || "",
         capacity_used: wh.capacity_used ?? 68,
         zones_count: wh.zones_count ?? 4,
         locations_count: wh.locations_count ?? 50,

@@ -203,7 +203,8 @@ function ThermalLabel({ product, size, preview = false }) {
 
 export function BarcodesPage() {
   const navigate = useNavigate();
-  const [products, setProducts] = useState(DEMO_PRODUCTS);
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(DEMO_PRODUCTS[0]);
   const [scanResult, setScanResult] = useState(null);
@@ -222,8 +223,10 @@ export function BarcodesPage() {
   const [decoding, setDecoding] = useState(false);
   const [stationDecodedProduct, setStationDecodedProduct] = useState(null);
   const [stationScanStatus, setStationScanStatus] = useState(null);
+  const scanRequestRef = useRef(0);
 
   const handleOpenScanner = () => {
+    scanRequestRef.current += 1;
     setScannerInput("");
     setStationDecodedProduct(null);
     setStationScanStatus(null);
@@ -232,13 +235,24 @@ export function BarcodesPage() {
   };
 
   useEffect(() => {
-    fetchProducts().then((res) => {
-      const list = res.results || res || [];
-      if (list.length > 0) {
+    let active = true;
+    fetchProducts()
+      .then((res) => {
+        if (!active) return;
+        const list = res.results || res || [];
         setProducts(list);
-        setSelectedProduct(list[0]);
-      }
-    });
+        if (list.length > 0) setSelectedProduct(list[0]);
+      })
+      .catch((error) => {
+        console.error("Failed to load barcode catalog", error);
+      })
+      .finally(() => {
+        if (active) setProductsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -268,31 +282,44 @@ export function BarcodesPage() {
   // Universal Barcode Decode Handler (Instant & Non-Blocking)
   const handleExecuteScan = async (barcodeQuery, openDetailsModal = false) => {
     const clean = barcodeQuery?.trim();
-    if (!clean) return;
+    if (!clean) {
+      setStationDecodedProduct(null);
+      setStationScanStatus({ found: false, message: "Enter or scan a barcode to decode." });
+      return;
+    }
+    if (decoding) return;
 
+    const requestId = ++scanRequestRef.current;
     setDecoding(true);
+    setStationDecodedProduct(null);
     setStationScanStatus(null);
 
-    // Instant local memory lookup + non-blocking online search fallback
-    const match = await searchProductOnlineOrLocal(clean, products);
-    setDecoding(false);
+    try {
+      const match = await searchProductOnlineOrLocal(clean, products);
+      if (requestId !== scanRequestRef.current) return;
 
-    if (match) {
-      playScanBeep();
-      setSelectedProduct(match);
-      setStationDecodedProduct(match);
-      setScanResult({ found: true, barcode: clean, product: match });
-      setStationScanStatus({ found: true, message: `Decoded: ${match.name} (${match.sku || match.code})` });
-      showToast(`Scanned: ${match.name} (${match.sku || match.code})`);
-      if (openDetailsModal) {
-        setIsScannerOpen(false);
-        setIsDetailModalOpen(true);
+      if (match) {
+        playScanBeep();
+        setSelectedProduct(match);
+        setStationDecodedProduct(match);
+        setScanResult({ found: true, barcode: clean, product: match });
+        setStationScanStatus({ found: true, message: `Decoded: ${match.name} (${match.sku || match.code})` });
+        showToast(`Scanned: ${match.name} (${match.sku || match.code})`);
+        if (openDetailsModal) {
+          setIsScannerOpen(false);
+          setIsDetailModalOpen(true);
+        }
+      } else {
+        setScanResult({ found: false, barcode: clean });
+        setStationScanStatus({ found: false, message: `No product matching barcode "${clean}".` });
+        showToast(`No product matching barcode "${clean}".`);
       }
-    } else {
-      setStationDecodedProduct(null);
-      setScanResult({ found: false, barcode: clean });
-      setStationScanStatus({ found: false, message: `No product matching barcode "${clean}".` });
-      showToast(`No product matching barcode "${clean}".`);
+    } catch (error) {
+      if (requestId !== scanRequestRef.current) return;
+      console.error("Barcode decoding failed", error);
+      setStationScanStatus({ found: false, message: "Barcode decoding failed. Please try again." });
+    } finally {
+      if (requestId === scanRequestRef.current) setDecoding(false);
     }
   };
 
@@ -317,14 +344,30 @@ export function BarcodesPage() {
 
   const handleScannerSubmit = async (e) => {
     e.preventDefault();
-    if (!scannerInput.trim()) return;
     await handleExecuteScan(scannerInput, false);
   };
 
-  const handleCatalogBarcodeClick = async (barcode) => {
+  const handleCatalogBarcodeClick = (barcode) => {
+    scanRequestRef.current += 1;
     setScannerInput(barcode);
+    setDecoding(false);
+    setStationDecodedProduct(null);
+    setStationScanStatus(null);
     scannerInputRef.current?.focus();
-    await handleExecuteScan(barcode, false);
+  };
+
+  const handleScannerInputChange = (value) => {
+    scanRequestRef.current += 1;
+    setScannerInput(value);
+    setDecoding(false);
+    setStationDecodedProduct(null);
+    setStationScanStatus(null);
+  };
+
+  const handleCloseScanner = () => {
+    scanRequestRef.current += 1;
+    setDecoding(false);
+    setIsScannerOpen(false);
   };
 
   const handlePrint = (product) => {
@@ -942,7 +985,7 @@ export function BarcodesPage() {
       {/* --------------------------------------------------------------------- */}
       {isScannerOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          <div className="w-full max-h-[calc(100vh-2rem)] max-w-lg overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 animate-in fade-in zoom-in-95 duration-150">
             {/* Header */}
             <div className="p-5 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/50">
               <div className="flex items-center gap-3">
@@ -960,7 +1003,7 @@ export function BarcodesPage() {
                 </div>
               </div>
               <button
-                onClick={() => setIsScannerOpen(false)}
+                onClick={handleCloseScanner}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
               >
                 <X className="h-5 w-5" />
@@ -980,7 +1023,7 @@ export function BarcodesPage() {
                       ref={scannerInputRef}
                       type="text"
                       value={scannerInput}
-                      onChange={(e) => setScannerInput(e.target.value)}
+                      onChange={(e) => handleScannerInputChange(e.target.value)}
                       placeholder="e.g. 890123620501 or BRG-6205-2RS"
                       className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
@@ -1028,11 +1071,11 @@ export function BarcodesPage() {
                           </span>
                           <span>•</span>
                           <span>
-                            Stock: <strong className="text-slate-900 dark:text-white">{stationDecodedProduct.available ?? stationDecodedProduct.total_stock ?? 0} {stationDecodedProduct.unit || "Units"}</strong>
+                            Stock: <strong className="text-slate-900 dark:text-white">{stationDecodedProduct.available ?? stationDecodedProduct.on_hand ?? stationDecodedProduct.total_stock ?? 0} {stationDecodedProduct.unit || stationDecodedProduct.base_unit || "Units"}</strong>
                           </span>
                           <span>•</span>
                           <span>
-                            Price: <strong className="text-slate-900 dark:text-white">${Number(stationDecodedProduct.unit_price || stationDecodedProduct.price || 0).toFixed(2)}</strong>
+                            Cost: <strong className="text-slate-900 dark:text-white">${Number(stationDecodedProduct.unit_cost ?? stationDecodedProduct.unit_price ?? stationDecodedProduct.price ?? 0).toFixed(2)}</strong>
                           </span>
                         </div>
                       </div>
@@ -1078,15 +1121,18 @@ export function BarcodesPage() {
                   <Barcode className="h-3 w-3 text-blue-500" /> Existing Catalog Barcodes:
                 </span>
                 <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto">
-                  {catalogProductsWithBarcodes.length > 0 ? (
+                  {productsLoading ? (
+                    <span role="status" className="flex items-center gap-1.5 text-[10px] text-slate-400">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Loading catalog barcodes...
+                    </span>
+                  ) : catalogProductsWithBarcodes.length > 0 ? (
                     catalogProductsWithBarcodes.map((product) => (
                       <button
                         key={product.id || product.sku || product.barcode}
                         type="button"
-                        onClick={() =>
-                          handleCatalogBarcodeClick(String(product.barcode))
-                        }
-                        title={`Click to instantly decode: ${product.name} (${product.barcode})`}
+                        onClick={() => handleCatalogBarcodeClick(String(product.barcode))}
+                        title={`Place ${product.barcode} in the scan field`}
                         className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-zinc-800 dark:hover:bg-blue-950/60 text-slate-700 hover:text-blue-600 dark:text-zinc-300 dark:hover:text-blue-300 text-[10px] font-semibold border border-slate-200/80 dark:border-zinc-700 transition-colors cursor-pointer flex items-center gap-1"
                       >
                         <span>{product.name}</span>
@@ -1109,7 +1155,7 @@ export function BarcodesPage() {
               </span>
               <button
                 type="button"
-                onClick={() => setIsScannerOpen(false)}
+                onClick={handleCloseScanner}
                 className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 font-semibold cursor-pointer"
               >
                 Close Station
