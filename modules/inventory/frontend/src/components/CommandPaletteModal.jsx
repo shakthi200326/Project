@@ -96,8 +96,14 @@ export function CommandPaletteModal({ isOpen, onClose }) {
     { label: "Full Stock Count", path: "/inventory/audit/full-count", icon: Boxes, category: "Physical Inventory & Audit" },
     { label: "Stock Variance Review", path: "/inventory/audit/variance", icon: Scale, category: "Physical Inventory & Audit" },
     { label: "Audit History", path: "/inventory/audit/history", icon: History, category: "Physical Inventory & Audit" },
-    { label: "Valuation Reports (WAV)", path: "/inventory/analytics/valuation", icon: DollarSign, category: "Analytics" },
-    { label: "Analytics & KPI Reports", path: "/inventory/analytics/reports", icon: PieChart, category: "Analytics" },
+    { label: "Stock Summary Report", path: "/inventory/reports/stock-summary", icon: FileSpreadsheet, category: "Reports & Analytics" },
+    { label: "Stock Movement Report", path: "/inventory/reports/stock-movement", icon: ArrowLeftRight, category: "Reports & Analytics" },
+    { label: "Stock Ledger Report", path: "/inventory/reports/stock-ledger", icon: FileSpreadsheet, category: "Reports & Analytics" },
+    { label: "Stock Valuation Report", path: "/inventory/reports/valuation", icon: DollarSign, category: "Reports & Analytics" },
+    { label: "Low Stock Report", path: "/inventory/reports/low-stock", icon: AlertTriangle, category: "Reports & Analytics" },
+    { label: "Stock Ageing Report", path: "/inventory/reports/ageing", icon: Clock, category: "Reports & Analytics" },
+    { label: "Expiry Report", path: "/inventory/reports/expiry", icon: Calendar, category: "Reports & Analytics" },
+    { label: "Warehouse Report", path: "/inventory/reports/warehouse", icon: Boxes, category: "Reports & Analytics" },
     { label: "Inventory Settings", path: "/inventory/settings", icon: Settings, category: "Configuration" },
   ];
 

@@ -4068,3 +4068,187 @@ export async function createAuditHistory(payload) {
   setStored("inv_audit_history", [newAudit, ...current]);
   return newAudit;
 }
+
+
+// ---------------------------------------------------------------------------
+// Phase 8: Reports & Analytics API (Read-Only)
+// ---------------------------------------------------------------------------
+
+export const DEMO_STOCK_SUMMARY_REPORT = [
+  { id: 1, product_name: "Industrial Ball Bearing 6205-2RS", sku: "BRG-6205", category: "Mechanical Components", warehouse: "Main Central Hub", total_stock: 1420, reserved_stock: 120, available_stock: 1280, damaged_stock: 20, stock_status: "In Stock" },
+  { id: 2, product_name: "Hydraulic Solenoid Valve 24V", sku: "HYD-SV-24V", category: "Hydraulics", warehouse: "Main Central Hub", total_stock: 28, reserved_stock: 10, available_stock: 18, damaged_stock: 0, stock_status: "Low Stock" },
+  { id: 3, product_name: "Timing Belt T10-1200 Steel Cord", sku: "BELT-T10", category: "Drive Belts", warehouse: "East Coast Terminal", total_stock: 350, reserved_stock: 45, available_stock: 305, damaged_stock: 0, stock_status: "In Stock" },
+  { id: 4, product_name: "Optical Rotary Encoder 1024 PPR", sku: "ENC-OPT", category: "Sensors & Encoders", warehouse: "West Coast Depot", total_stock: 0, reserved_stock: 0, available_stock: 0, damaged_stock: 0, stock_status: "Out of Stock" },
+  { id: 5, product_name: "Synthetic Compressor Lubricant ISO VG 46", sku: "LUB-VG46", category: "Lubricants", warehouse: "Main Central Hub", total_stock: 840, reserved_stock: 60, available_stock: 780, damaged_stock: 0, stock_status: "In Stock" },
+  { id: 6, product_name: "Brushless Servomotor 400W 3000RPM", sku: "MTR-BL400", category: "Motors & Actuators", warehouse: "Main Central Hub", total_stock: 42, reserved_stock: 5, available_stock: 37, damaged_stock: 0, stock_status: "In Stock" },
+];
+
+export const DEMO_STOCK_MOVEMENT_REPORT = [
+  { id: 1, transaction_date: "2026-11-03 09:15", transaction_number: "GRN-2026-0891", product: "Industrial Ball Bearing 6205-2RS", sku: "BRG-6205", warehouse: "Main Central Hub", transaction_type: "Receipt", quantity_in: 500, quantity_out: 0, reference_number: "PO-2026-4401" },
+  { id: 2, transaction_date: "2026-11-03 10:20", transaction_number: "ISS-2026-0142", product: "Industrial Ball Bearing 6205-2RS", sku: "BRG-6205", warehouse: "Main Central Hub", transaction_type: "Issue", quantity_in: 0, quantity_out: 50, reference_number: "WO-9901" },
+  { id: 3, transaction_date: "2026-11-02 14:30", transaction_number: "TRF-2026-0331", product: "Timing Belt T10-1200 Steel Cord", sku: "BELT-T10", warehouse: "East Coast Terminal", transaction_type: "Transfer", quantity_in: 80, quantity_out: 0, reference_number: "TR-ORD-02" },
+  { id: 4, transaction_date: "2026-11-02 16:45", transaction_number: "ADJ-2026-0089", product: "Hydraulic Solenoid Valve 24V", sku: "HYD-SV-24V", warehouse: "Main Central Hub", transaction_type: "Adjustment", quantity_in: 0, quantity_out: 2, reference_number: "VAR-0012" },
+  { id: 5, transaction_date: "2026-11-01 11:00", transaction_number: "RET-2026-0045", product: "Synthetic Compressor Lubricant ISO VG 46", sku: "LUB-VG46", warehouse: "Main Central Hub", transaction_type: "Return", quantity_in: 20, quantity_out: 0, reference_number: "RMA-2026-01" },
+];
+
+export const DEMO_STOCK_LEDGER_REPORT = [
+  { id: 1, transaction_date: "2026-11-03 09:15", transaction_number: "GRN-2026-0891", product: "Industrial Ball Bearing 6205-2RS", warehouse: "Main Central Hub", transaction_type: "Receipt", quantity_in: 500, quantity_out: 0, running_balance: 1470 },
+  { id: 2, transaction_date: "2026-11-03 10:20", transaction_number: "ISS-2026-0142", product: "Industrial Ball Bearing 6205-2RS", warehouse: "Main Central Hub", transaction_type: "Issue", quantity_in: 0, quantity_out: 50, running_balance: 1420 },
+  { id: 3, transaction_date: "2026-11-02 14:00", transaction_number: "GRN-2026-0880", product: "Timing Belt T10-1200 Steel Cord", warehouse: "East Coast Terminal", transaction_type: "Receipt", quantity_in: 350, quantity_out: 0, running_balance: 350 },
+  { id: 4, transaction_date: "2026-11-01 16:20", transaction_number: "ADJ-2026-0085", product: "Hydraulic Solenoid Valve 24V", warehouse: "Main Central Hub", transaction_type: "Adjustment", quantity_in: 30, quantity_out: 0, running_balance: 30 },
+  { id: 5, transaction_date: "2026-11-02 16:45", transaction_number: "ISS-2026-0130", product: "Hydraulic Solenoid Valve 24V", warehouse: "Main Central Hub", transaction_type: "Issue", quantity_in: 0, quantity_out: 2, running_balance: 28 },
+];
+
+export const DEMO_STOCK_VALUATION_REPORT = [
+  { id: 1, product: "Industrial Ball Bearing 6205-2RS", sku: "BRG-6205", warehouse: "Main Central Hub", stock_quantity: 1420, unit_cost: 14.85, total_stock_value: 21087.00, valuation_method: "Weighted Average Cost" },
+  { id: 2, product: "Hydraulic Solenoid Valve 24V", sku: "HYD-SV-24V", warehouse: "Main Central Hub", stock_quantity: 28, unit_cost: 142.00, total_stock_value: 3976.00, valuation_method: "Weighted Average Cost" },
+  { id: 3, product: "Timing Belt T10-1200 Steel Cord", sku: "BELT-T10", warehouse: "East Coast Terminal", stock_quantity: 350, unit_cost: 32.50, total_stock_value: 11375.00, valuation_method: "Weighted Average Cost" },
+  { id: 4, product: "Optical Rotary Encoder 1024 PPR", sku: "ENC-OPT", warehouse: "West Coast Depot", stock_quantity: 0, unit_cost: 89.00, total_stock_value: 0.00, valuation_method: "Weighted Average Cost" },
+  { id: 5, product: "Synthetic Compressor Lubricant ISO VG 46", sku: "LUB-VG46", warehouse: "Main Central Hub", stock_quantity: 840, unit_cost: 24.00, total_stock_value: 20160.00, valuation_method: "Weighted Average Cost" },
+  { id: 6, product: "Brushless Servomotor 400W 3000RPM", sku: "MTR-BL400", warehouse: "Main Central Hub", stock_quantity: 42, unit_cost: 260.00, total_stock_value: 10920.00, valuation_method: "Weighted Average Cost" },
+];
+
+export const DEMO_LOW_STOCK_REPORT = [
+  { id: 1, product: "Hydraulic Solenoid Valve 24V", sku: "HYD-SV-24V", warehouse: "Main Central Hub", available_stock: 18, reorder_level: 25, required_quantity: 15, stock_status: "Low Stock" },
+  { id: 2, product: "Optical Rotary Encoder 1024 PPR", sku: "ENC-OPT", warehouse: "West Coast Depot", available_stock: 0, reorder_level: 15, required_quantity: 20, stock_status: "Out of Stock" },
+  { id: 3, product: "Miniature Linear Guide Rail MGN12", sku: "RAIL-MGN12", warehouse: "Main Central Hub", available_stock: 4, reorder_level: 20, required_quantity: 16, stock_status: "Low Stock" },
+];
+
+export const DEMO_STOCK_AGEING_REPORT = [
+  { id: 1, product: "Industrial Ball Bearing 6205-2RS", sku: "BRG-6205", warehouse: "Main Central Hub", batch_number: "BAT-BRG-2026-01", received_date: "2026-10-18", current_quantity: 600, age_in_days: 16, ageing_bucket: "0–30 days" },
+  { id: 2, product: "Timing Belt T10-1200 Steel Cord", sku: "BELT-T10", warehouse: "East Coast Terminal", batch_number: "BAT-BELT-2026-08", received_date: "2026-09-20", current_quantity: 200, age_in_days: 44, ageing_bucket: "31–60 days" },
+  { id: 3, product: "Hydraulic Solenoid Valve 24V", sku: "HYD-SV-24V", warehouse: "Main Central Hub", batch_number: "BAT-HYD-2026-03", received_date: "2026-08-15", current_quantity: 18, age_in_days: 80, ageing_bucket: "61–90 days" },
+  { id: 4, product: "Compressor Gasket Seal Nitrile", sku: "GSK-NITR-40", warehouse: "West Coast Depot", batch_number: "BAT-GSK-2026-00", received_date: "2026-06-10", current_quantity: 150, age_in_days: 146, ageing_bucket: "90+ days" },
+];
+
+export const DEMO_EXPIRY_REPORT = [
+  { id: 1, product: "Synthetic Compressor Lubricant ISO VG 46", sku: "LUB-VG46", batch_number: "BAT-LUB-2026-04", warehouse: "Main Central Hub", expiry_date: "2026-11-20", remaining_quantity: 80, days_to_expiry: 17, expiry_status: "Expiring Soon" },
+  { id: 2, product: "Silicone Thermal Paste HeatSink 50g", sku: "PST-THRM-50", batch_number: "BAT-PST-2025-11", warehouse: "West Coast Depot", expiry_date: "2026-10-30", remaining_quantity: 25, days_to_expiry: -4, expiry_status: "Expired" },
+  { id: 3, product: "Anaerobic Threadlocker Blue 242", sku: "CHEM-LK-242", batch_number: "BAT-CHEM-2026-01", warehouse: "Main Central Hub", expiry_date: "2026-11-28", remaining_quantity: 110, days_to_expiry: 25, expiry_status: "Expiring Soon" },
+];
+
+export const DEMO_WAREHOUSE_REPORT = [
+  { id: 1, warehouse: "Main Central Hub", total_products: 42, total_stock: 4580, available_stock: 4190, reserved_stock: 350, damaged_stock: 40, stock_value: 124850.00 },
+  { id: 2, warehouse: "East Coast Terminal", total_products: 28, total_stock: 1980, available_stock: 1860, reserved_stock: 120, damaged_stock: 0, stock_value: 62400.00 },
+  { id: 3, warehouse: "West Coast Depot", total_products: 19, total_stock: 1140, available_stock: 1080, reserved_stock: 60, damaged_stock: 0, stock_value: 38950.00 },
+];
+
+export async function fetchStockSummaryReport(params = {}) {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/reports/stock-summary/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      return data.results || data || [];
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  return DEMO_STOCK_SUMMARY_REPORT;
+}
+
+export async function fetchStockMovementReport(params = {}) {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/reports/stock-movement/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      return data.results || data || [];
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  return DEMO_STOCK_MOVEMENT_REPORT;
+}
+
+export async function fetchStockLedgerReport(params = {}) {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/reports/stock-ledger/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      return data.results || data || [];
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  return DEMO_STOCK_LEDGER_REPORT;
+}
+
+export async function fetchStockValuationReport(params = {}) {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/reports/valuation/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      return data.results || data || [];
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  return DEMO_STOCK_VALUATION_REPORT;
+}
+
+export async function fetchLowStockReport(params = {}) {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/reports/low-stock/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      return data.results || data || [];
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  return DEMO_LOW_STOCK_REPORT;
+}
+
+export async function fetchStockAgeingReport(params = {}) {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/reports/ageing/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      return data.results || data || [];
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  return DEMO_STOCK_AGEING_REPORT;
+}
+
+export async function fetchExpiryReport(params = {}) {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/reports/expiry/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      return data.results || data || [];
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  return DEMO_EXPIRY_REPORT;
+}
+
+export async function fetchWarehouseReport(params = {}) {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/reports/warehouse/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      return data.results || data || [];
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  return DEMO_WAREHOUSE_REPORT;
+}

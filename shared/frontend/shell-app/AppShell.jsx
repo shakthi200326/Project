@@ -48,6 +48,7 @@ import {
   BarChart3,
   ClipboardCheck,
   RefreshCw,
+  BookOpen,
 } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 import { useWorkspace } from "./ContextSelector";
@@ -181,8 +182,16 @@ export function AppShell({ children }) {
       "/inventory/audit/full-count": [{ label: "Inventory", path: "/inventory" }, { label: "Physical Inventory & Audit", path: "/inventory/audit/stock-count" }, { label: "Full Stock Count" }],
       "/inventory/audit/variance": [{ label: "Inventory", path: "/inventory" }, { label: "Physical Inventory & Audit", path: "/inventory/audit/stock-count" }, { label: "Stock Variance" }],
       "/inventory/audit/history": [{ label: "Inventory", path: "/inventory" }, { label: "Physical Inventory & Audit", path: "/inventory/audit/stock-count" }, { label: "Audit History" }],
-      "/inventory/analytics/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Valuation Reports" }],
-      "/inventory/analytics/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Analytics Reports" }],
+      "/inventory/reports/stock-summary": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/stock-summary" }, { label: "Stock Summary Report" }],
+      "/inventory/reports/stock-movement": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/stock-summary" }, { label: "Stock Movement Report" }],
+      "/inventory/reports/stock-ledger": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/stock-summary" }, { label: "Stock Ledger Report" }],
+      "/inventory/reports/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/stock-summary" }, { label: "Stock Valuation Report" }],
+      "/inventory/reports/low-stock": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/stock-summary" }, { label: "Low Stock Report" }],
+      "/inventory/reports/ageing": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/stock-summary" }, { label: "Stock Ageing Report" }],
+      "/inventory/reports/expiry": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/stock-summary" }, { label: "Expiry Report" }],
+      "/inventory/reports/warehouse": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/stock-summary" }, { label: "Warehouse Report" }],
+      "/inventory/analytics/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/valuation" }, { label: "Stock Valuation Report" }],
+      "/inventory/analytics/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/stock-summary" }, { label: "Stock Summary Report" }],
       "/inventory/settings": [{ label: "Inventory", path: "/inventory" }, { label: "Configuration" }, { label: "Inventory Settings" }],
     };
     return map[pathname] || [{ label: "Inventory", path: "/inventory" }, { label: "Module View" }];
@@ -282,10 +291,16 @@ export function AppShell({ children }) {
     },
     {
       key: "analytics",
-      title: "Analytics",
+      title: "Reports & Analytics",
       items: [
-        { label: "Valuation Reports", path: "/inventory/analytics/valuation", icon: DollarSign },
-        { label: "Inventory Analytics", path: "/inventory/analytics/reports", icon: PieChart },
+        { label: "Stock Summary Report", path: "/inventory/reports/stock-summary", icon: FileSpreadsheet },
+        { label: "Stock Movement Report", path: "/inventory/reports/stock-movement", icon: ArrowLeftRight },
+        { label: "Stock Ledger Report", path: "/inventory/reports/stock-ledger", icon: BookOpen },
+        { label: "Stock Valuation Report", path: "/inventory/reports/valuation", icon: DollarSign },
+        { label: "Low Stock Report", path: "/inventory/reports/low-stock", icon: AlertTriangle },
+        { label: "Stock Ageing Report", path: "/inventory/reports/ageing", icon: Clock },
+        { label: "Expiry Report", path: "/inventory/reports/expiry", icon: Calendar },
+        { label: "Warehouse Report", path: "/inventory/reports/warehouse", icon: Warehouse },
       ],
     },
     {

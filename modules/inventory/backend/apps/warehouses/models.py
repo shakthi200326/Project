@@ -132,6 +132,7 @@ class WarehouseConfiguration(models.Model):
     location_code_prefix = models.CharField(max_length=20, default="LOC")
     rack_code_prefix = models.CharField(max_length=20, default="RACK")
     bin_code_prefix = models.CharField(max_length=20, default="BIN")
+    valuation_method = models.CharField(max_length=50, default="Weighted Average Cost")
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

@@ -1,3 +1,13 @@
+from .report_views import (
+    StockSummaryReportView,
+    StockMovementReportView,
+    StockLedgerReportView,
+    StockValuationReportView,
+    LowStockReportView,
+    StockAgeingReportView,
+    ExpiryReportView,
+    WarehouseReportView,
+)
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
@@ -70,5 +80,13 @@ router.register(r"audit/history", AuditHistoryViewSet, basename="audit-history")
 
 urlpatterns = [
     path("dashboard/kpis/", DashboardKPIView.as_view(), name="inventory-dashboard-kpis"),
+    path("reports/stock-summary/", StockSummaryReportView.as_view(), name="report-stock-summary"),
+    path("reports/stock-movement/", StockMovementReportView.as_view(), name="report-stock-movement"),
+    path("reports/stock-ledger/", StockLedgerReportView.as_view(), name="report-stock-ledger"),
+    path("reports/valuation/", StockValuationReportView.as_view(), name="report-valuation"),
+    path("reports/low-stock/", LowStockReportView.as_view(), name="report-low-stock"),
+    path("reports/ageing/", StockAgeingReportView.as_view(), name="report-ageing"),
+    path("reports/expiry/", ExpiryReportView.as_view(), name="report-expiry"),
+    path("reports/warehouse/", WarehouseReportView.as_view(), name="report-warehouse"),
     path("", include(router.urls)),
 ]

@@ -50,6 +50,14 @@ const StockVariancePage = lazy(() => import("../pages/StockVariancePage.jsx").th
 const AuditHistoryPage = lazy(() => import("../pages/AuditHistoryPage.jsx").then(m => ({ default: m.AuditHistoryPage || m.default })));
 const ReplenishmentPage = lazy(() => import("../pages/ReplenishmentPage.jsx").then(m => ({ default: m.ReplenishmentPage })));
 const ReportsPage = lazy(() => import("../pages/ReportsPage.jsx").then(m => ({ default: m.ReportsPage })));
+const StockSummaryReportPage = lazy(() => import("../pages/StockSummaryReportPage.jsx").then(m => ({ default: m.StockSummaryReportPage || m.default })));
+const StockMovementReportPage = lazy(() => import("../pages/StockMovementReportPage.jsx").then(m => ({ default: m.StockMovementReportPage || m.default })));
+const StockLedgerReportPage = lazy(() => import("../pages/StockLedgerReportPage.jsx").then(m => ({ default: m.StockLedgerReportPage || m.default })));
+const StockValuationReportPage = lazy(() => import("../pages/StockValuationReportPage.jsx").then(m => ({ default: m.StockValuationReportPage || m.default })));
+const LowStockReportPage = lazy(() => import("../pages/LowStockReportPage.jsx").then(m => ({ default: m.LowStockReportPage || m.default })));
+const StockAgeingReportPage = lazy(() => import("../pages/StockAgeingReportPage.jsx").then(m => ({ default: m.StockAgeingReportPage || m.default })));
+const ExpiryReportPage = lazy(() => import("../pages/ExpiryReportPage.jsx").then(m => ({ default: m.ExpiryReportPage || m.default })));
+const WarehouseReportPage = lazy(() => import("../pages/WarehouseReportPage.jsx").then(m => ({ default: m.WarehouseReportPage || m.default })));
 
 export default function App() {
   return (
@@ -131,9 +139,18 @@ export default function App() {
                 <Route path="/inventory/audit/full-count" element={<FullStockCountPage />} />
                 <Route path="/inventory/audit/variance" element={<StockVariancePage />} />
                 <Route path="/inventory/audit/history" element={<AuditHistoryPage />} />
-                <Route path="/inventory/analytics/reports" element={<ReportsPage />} />
-                <Route path="/inventory/analytics/valuation" element={<ValuationPage />} />
-                <Route path="/inventory/analytics/movement" element={<DashboardPage />} />
+                {/* Reports & Analytics — Exact 8 Reports */}
+                <Route path="/inventory/reports/stock-summary" element={<StockSummaryReportPage />} />
+                <Route path="/inventory/reports/stock-movement" element={<StockMovementReportPage />} />
+                <Route path="/inventory/reports/stock-ledger" element={<StockLedgerReportPage />} />
+                <Route path="/inventory/reports/valuation" element={<StockValuationReportPage />} />
+                <Route path="/inventory/reports/low-stock" element={<LowStockReportPage />} />
+                <Route path="/inventory/reports/ageing" element={<StockAgeingReportPage />} />
+                <Route path="/inventory/reports/expiry" element={<ExpiryReportPage />} />
+                <Route path="/inventory/reports/warehouse" element={<WarehouseReportPage />} />
+                <Route path="/inventory/analytics/reports" element={<Navigate to="/inventory/reports/stock-summary" replace />} />
+                <Route path="/inventory/analytics/valuation" element={<Navigate to="/inventory/reports/valuation" replace />} />
+                <Route path="/inventory/analytics/movement" element={<Navigate to="/inventory/reports/stock-movement" replace />} />
 
                 {/* Settings */}
                 <Route path="/inventory/settings" element={<SettingsPage />} />
@@ -176,7 +193,15 @@ export default function App() {
                 <Route path="/variance" element={<Navigate to="/inventory/audit/variance" replace />} />
                 <Route path="/audit-history" element={<Navigate to="/inventory/audit/history" replace />} />
                 <Route path="/valuation" element={<Navigate to="/inventory/analytics/valuation" replace />} />
-                <Route path="/reports" element={<Navigate to="/inventory/analytics/reports" replace />} />
+                <Route path="/reports" element={<Navigate to="/inventory/reports/stock-summary" replace />} />
+                <Route path="/reports/stock-summary" element={<Navigate to="/inventory/reports/stock-summary" replace />} />
+                <Route path="/reports/stock-movement" element={<Navigate to="/inventory/reports/stock-movement" replace />} />
+                <Route path="/reports/stock-ledger" element={<Navigate to="/inventory/reports/stock-ledger" replace />} />
+                <Route path="/reports/valuation" element={<Navigate to="/inventory/reports/valuation" replace />} />
+                <Route path="/reports/low-stock" element={<Navigate to="/inventory/reports/low-stock" replace />} />
+                <Route path="/reports/ageing" element={<Navigate to="/inventory/reports/ageing" replace />} />
+                <Route path="/reports/expiry" element={<Navigate to="/inventory/reports/expiry" replace />} />
+                <Route path="/reports/warehouse" element={<Navigate to="/inventory/reports/warehouse" replace />} />
                 <Route path="/settings" element={<Navigate to="/inventory/settings" replace />} />
                 <Route path="/returns" element={<Navigate to="/inventory/operations/returns" replace />} />
                 <Route path="/inventory/returns" element={<Navigate to="/inventory/operations/returns" replace />} />
