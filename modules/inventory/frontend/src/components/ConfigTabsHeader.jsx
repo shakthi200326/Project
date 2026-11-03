@@ -76,3 +76,4 @@ export function ConfigTabsHeader({ title, subtitle, icon: Icon = Settings }) {
     </div>
   );
 }
+
