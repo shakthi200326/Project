@@ -627,20 +627,20 @@ export function BarcodesPage() {
                   dataKey="cleanPass"
                   stackId="a"
                   fill="#10b981"
-                  isAnimationActive={true}
+                  isAnimationActive={false}
                 />
                 <Bar
                   dataKey="retry"
                   stackId="a"
                   fill="#f59e0b"
-                  isAnimationActive={true}
+                  isAnimationActive={false}
                 />
                 <Bar
                   dataKey="reject"
                   stackId="a"
                   fill="#f43f5e"
                   radius={[5, 5, 0, 0]}
-                  isAnimationActive={true}
+                  isAnimationActive={false}
                 />
               </BarChart>
             </ResponsiveContainer>
@@ -677,7 +677,7 @@ export function BarcodesPage() {
                   outerRadius={75}
                   paddingAngle={3}
                   dataKey="value"
-                  isAnimationActive={true}
+                  isAnimationActive={false}
                 >
                   {ansiGradeData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -984,7 +984,7 @@ export function BarcodesPage() {
       {/* INTERACTIVE BARCODE SCANNER MODAL */}
       {/* --------------------------------------------------------------------- */}
       {isScannerOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 flex items-center justify-center p-4">
           <div className="w-full max-h-[calc(100vh-2rem)] max-w-lg overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 animate-in fade-in zoom-in-95 duration-150">
             {/* Header */}
             <div className="p-5 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/50">

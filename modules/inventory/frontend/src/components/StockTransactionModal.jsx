@@ -91,6 +91,7 @@ function generateDocNumber(type) {
 export function StockTransactionModal({
   isOpen,
   initialType = "RECEIPT",
+  lockType = false,
   onClose,
   onPosted,
 }) {
@@ -525,7 +526,8 @@ export function StockTransactionModal({
         </div>
 
         {/* 5-Operation Tab Selector */}
-        <div className="grid shrink-0 grid-cols-5 gap-1 border-b border-slate-100 bg-slate-50/70 p-1.5 text-xs dark:border-zinc-800 dark:bg-zinc-800/30">
+        {!lockType && (
+          <div className="grid shrink-0 grid-cols-5 gap-1 border-b border-slate-100 bg-slate-50/70 p-1.5 text-xs dark:border-zinc-800 dark:bg-zinc-800/30">
           {[
             { key: "RECEIPT", label: "Goods Receipt", icon: ArrowDownLeft, activeColor: "text-emerald-600 dark:text-emerald-400" },
             { key: "ISSUE", label: "Stock Issue", icon: ArrowUpRight, activeColor: "text-rose-600 dark:text-rose-400" },
@@ -551,7 +553,8 @@ export function StockTransactionModal({
               </button>
             );
           })}
-        </div>
+          </div>
+        )}
 
         {error && (
           <div className="mx-6 mt-4 shrink-0 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-400 flex items-center gap-2">

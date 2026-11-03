@@ -17,6 +17,10 @@ const WarehousesPage = lazy(() => import("../pages/WarehousesPage.jsx").then(m =
 const LocationsPage = lazy(() => import("../pages/LocationsPage.jsx").then(m => ({ default: m.LocationsPage })));
 const RackBinPage = lazy(() => import("../pages/RackBinPage.jsx").then(m => ({ default: m.RackBinPage })));
 const StockMovementsPage = lazy(() => import("../pages/StockMovementsPage.jsx").then(m => ({ default: m.StockMovementsPage })));
+const GoodsReceiptPage = lazy(() => import("../pages/GoodsReceiptPage.jsx").then(m => ({ default: m.GoodsReceiptPage || m.default })));
+const StockIssuePage = lazy(() => import("../pages/StockIssuePage.jsx").then(m => ({ default: m.StockIssuePage || m.default })));
+const StockTransferPage = lazy(() => import("../pages/StockTransferPage.jsx").then(m => ({ default: m.StockTransferPage || m.default })));
+const StockAdjustmentPage = lazy(() => import("../pages/StockAdjustmentPage.jsx").then(m => ({ default: m.StockAdjustmentPage || m.default })));
 const StockOverviewPage = lazy(() => import("../pages/StockOverviewPage.jsx").then(m => ({ default: m.StockOverviewPage || m.default })));
 const StockLedgerPage = lazy(() => import("../pages/StockLedgerPage.jsx").then(m => ({ default: m.StockLedgerPage })));
 const StockInHistoryPage = lazy(() => import("../pages/StockInHistoryPage.jsx").then(m => ({ default: m.StockInHistoryPage })));
@@ -99,12 +103,17 @@ export default function App() {
                 <Route path="/inventory/racks" element={<RackBinPage />} />
                 <Route path="/inventory/bins" element={<RackBinPage />} />
 
-                {/* Stock Operations */}
-                <Route path="/inventory/operations/stock-in" element={<StockMovementsPage initialType="RECEIPT" />} />
-                <Route path="/inventory/operations/stock-out" element={<StockMovementsPage initialType="ISSUE" />} />
-                <Route path="/inventory/operations/transfers" element={<StockMovementsPage initialType="TRANSFER" />} />
-                <Route path="/inventory/operations/adjustments" element={<StockMovementsPage initialType="ADJUSTMENT" />} />
+                {/* Stock Operations — Dedicated Process Pages */}
+                <Route path="/inventory/operations/stock-in" element={<GoodsReceiptPage />} />
+                <Route path="/inventory/operations/goods-receipt" element={<GoodsReceiptPage />} />
+                <Route path="/inventory/operations/stock-out" element={<StockIssuePage />} />
+                <Route path="/inventory/operations/stock-issue" element={<StockIssuePage />} />
+                <Route path="/inventory/operations/transfers" element={<StockTransferPage />} />
+                <Route path="/inventory/operations/stock-transfer" element={<StockTransferPage />} />
+                <Route path="/inventory/operations/adjustments" element={<StockAdjustmentPage />} />
+                <Route path="/inventory/operations/stock-adjustment" element={<StockAdjustmentPage />} />
                 <Route path="/inventory/operations/returns" element={<StockReturnsPage />} />
+                <Route path="/inventory/operations/movements" element={<StockMovementsPage initialType="ALL" />} />
                 <Route path="/inventory/operations/reservations" element={<StockReservationsPage />} />
                 <Route path="/inventory/operations/reconciliation" element={<ReconciliationPage />} />
 
@@ -175,6 +184,14 @@ export default function App() {
                 <Route path="/variants" element={<Navigate to="/inventory/products" replace />} />
                 <Route path="/units" element={<Navigate to="/inventory/units" replace />} />
                 <Route path="/barcodes" element={<Navigate to="/inventory/barcodes" replace />} />
+                <Route path="/goods-receipt" element={<Navigate to="/inventory/operations/stock-in" replace />} />
+                <Route path="/stock-in" element={<Navigate to="/inventory/operations/stock-in" replace />} />
+                <Route path="/stock-issue" element={<Navigate to="/inventory/operations/stock-out" replace />} />
+                <Route path="/stock-out" element={<Navigate to="/inventory/operations/stock-out" replace />} />
+                <Route path="/stock-transfer" element={<Navigate to="/inventory/operations/transfers" replace />} />
+                <Route path="/transfers" element={<Navigate to="/inventory/operations/transfers" replace />} />
+                <Route path="/stock-adjustment" element={<Navigate to="/inventory/operations/adjustments" replace />} />
+                <Route path="/adjustments" element={<Navigate to="/inventory/operations/adjustments" replace />} />
                 <Route path="/warehouses" element={<Navigate to="/inventory/warehouses" replace />} />
                 <Route path="/locations" element={<Navigate to="/inventory/locations" replace />} />
                 <Route path="/racks-bins" element={<Navigate to="/inventory/racks-bins" replace />} />
