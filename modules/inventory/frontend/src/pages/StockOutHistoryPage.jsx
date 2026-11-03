@@ -327,3 +327,4 @@ export function StockOutHistoryPage() {
 }
 
 export default StockOutHistoryPage;
+

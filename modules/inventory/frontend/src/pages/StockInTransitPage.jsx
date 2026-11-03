@@ -556,3 +556,4 @@ export function StockInTransitPage() {
   );
 }
 export default StockInTransitPage;
+

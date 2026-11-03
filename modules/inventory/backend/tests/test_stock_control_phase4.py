@@ -221,3 +221,4 @@ class StockControlPhase4Tests(TestCase):
         self.assertEqual(Decimal(str(transit_tx["dispatched_quantity"])), Decimal("30.0000"))
         self.assertEqual(Decimal(str(transit_tx["pending_quantity"])), Decimal("30.0000"))
         self.assertEqual(transit_tx["transit_status"], "In Transit")
+

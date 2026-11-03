@@ -183,6 +183,7 @@ export function StockBalancesPage() {
 
   const totalProducts = new Set(filtered.map((b) => b.sku || b.item_code)).size;
   const totalStockQty = filtered.reduce((acc, b) => acc + Number(b.total_stock !== undefined ? b.total_stock : (b.on_hand_qty || 0)), 0);
+  const totalOnHand = totalStockQty;
   const totalReserved = filtered.reduce((acc, b) => acc + Number(b.reserved_stock !== undefined ? b.reserved_stock : (b.reserved_qty || 0)), 0);
   const totalDamaged = filtered.reduce((acc, b) => acc + Number(b.damaged_stock !== undefined ? b.damaged_stock : (b.blocked_qty || 0)), 0);
   const totalAvailable = filtered.reduce((acc, b) => acc + Number(b.available_stock !== undefined ? b.available_stock : (b.available_qty || 0)), 0);
@@ -424,7 +425,7 @@ export function StockBalancesPage() {
             </div>
             <div className="text-right">
               <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                {totalOnHand > 0 ? ((totalAvailable / totalOnHand) * 100).toFixed(1) : "100"}%
+                {totalStockQty > 0 ? ((totalAvailable / totalStockQty) * 100).toFixed(1) : "100"}%
               </span>
               <span className="text-[10px] text-slate-400 block">Fleet Availability</span>
             </div>
@@ -710,7 +711,7 @@ export function StockBalancesPage() {
           </div>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
-              {totalOnHand > 0 ? ((totalAvailable / totalOnHand) * 100).toFixed(1) : "100"}%
+              {totalStockQty > 0 ? ((totalAvailable / totalStockQty) * 100).toFixed(1) : "100"}%
             </span>
             <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded">
               High Liquidity
@@ -719,7 +720,7 @@ export function StockBalancesPage() {
           <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3">
             <div
               className="bg-emerald-500 h-full rounded-full"
-              style={{ width: `${totalOnHand > 0 ? (totalAvailable / totalOnHand) * 100 : 100}%` }}
+              style={{ width: `${totalStockQty > 0 ? (totalAvailable / totalStockQty) * 100 : 100}%` }}
             />
           </div>
           <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2">
@@ -734,7 +735,7 @@ export function StockBalancesPage() {
           </div>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-2xl font-bold font-mono text-purple-600 dark:text-purple-400">
-              {totalOnHand > 0 ? ((totalReserved / totalOnHand) * 100).toFixed(1) : "0.0"}%
+              {totalStockQty > 0 ? ((totalReserved / totalStockQty) * 100).toFixed(1) : "0.0"}%
             </span>
             <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/60 px-1.5 py-0.5 rounded">
               Sales Committed
@@ -743,7 +744,7 @@ export function StockBalancesPage() {
           <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3">
             <div
               className="bg-purple-600 h-full rounded-full"
-              style={{ width: `${totalOnHand > 0 ? (totalReserved / totalOnHand) * 100 : 0}%` }}
+              style={{ width: `${totalStockQty > 0 ? (totalReserved / totalStockQty) * 100 : 0}%` }}
             />
           </div>
           <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2">
