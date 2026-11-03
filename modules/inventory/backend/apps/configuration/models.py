@@ -159,3 +159,4 @@ class ConfigurationAuditLog(models.Model):
 
     def __str__(self):
         return f"{self.section} {self.action} by {self.changed_by} at {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
+

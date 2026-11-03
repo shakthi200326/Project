@@ -140,3 +140,4 @@ class ConfigurationAuditLogListView(APIView):
         logs = ConfigurationAuditLog.objects.all()[:100]
         serializer = ConfigurationAuditLogSerializer(logs, many=True)
         return Response({"count": len(logs), "results": serializer.data})
+

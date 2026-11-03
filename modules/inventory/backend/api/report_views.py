@@ -374,7 +374,7 @@ class StockAgeingReportView(APIView, BaseReportFilterMixin):
         if len(results) == 0:
             bal_qs = StockBalance.objects.filter(on_hand_qty__gt=0).select_related("item", "warehouse")
             for sb in bal_qs:
-                rec_date = sb.created_at.date() if sb.created_at else today - timedelta(days=22)
+                rec_date = sb.updated_at.date() if hasattr(sb, "updated_at") and sb.updated_at else today - timedelta(days=22)
                 age_days = (today - rec_date).days
                 if age_days <= 30:
                     bucket = "0–30 days"

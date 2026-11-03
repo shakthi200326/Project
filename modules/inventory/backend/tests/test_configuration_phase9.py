@@ -150,3 +150,4 @@ class ConfigurationPhase9Tests(TestCase):
         results = res.data.get("results", [])
         self.assertTrue(len(results) >= 1)
         self.assertEqual(results[0]["changed_by"], "Auditor Jane")
+
