@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Package,
   Plus,
@@ -60,7 +60,9 @@ const RADIAL_HEALTH_DATA = [
 
 export function ProductsPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -81,13 +83,39 @@ export function ProductsPage() {
   const [barcodeScanInput, setBarcodeScanInput] = useState("");
 
   useEffect(() => {
-    fetchProducts().then((res) => setProducts(res.results || []));
+    fetchProducts()
+      .then((res) => setProducts(res.results || []))
+      .finally(() => setLoading(false));
   }, []);
+
+  // Sync URL query parameters from Categories, Brands, or Overview links
+  useEffect(() => {
+    const catParam = searchParams.get("category");
+    if (catParam) {
+      setCategoryFilter(catParam);
+    }
+    const brandParam = searchParams.get("brand");
+    if (brandParam) {
+      setSearch(brandParam);
+    }
+    const statusParam = searchParams.get("status");
+    if (statusParam) {
+      setStatusFilter(statusParam);
+    }
+  }, [searchParams]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
   };
+
+  const availableCategories = useMemo(() => {
+    const set = new Set();
+    products.forEach((p) => {
+      if (p.category) set.add(p.category);
+    });
+    return Array.from(set).sort();
+  }, [products]);
 
   const handleExecuteScan = (rawCode) => {
     const clean = rawCode?.trim();
@@ -122,8 +150,14 @@ export function ProductsPage() {
       (p.barcode && String(p.barcode).toLowerCase().includes(q));
     const matchesCategory =
       categoryFilter === "ALL" || p.category === categoryFilter;
+    const normStatus = (p.stock_status || "IN_STOCK").toUpperCase();
     const matchesStatus =
-      statusFilter === "ALL" || p.stock_status === statusFilter;
+      statusFilter === "ALL" ||
+      normStatus === statusFilter ||
+      normStatus.replace("_", " ") === statusFilter ||
+      (statusFilter === "IN_STOCK" && (normStatus === "IN_STOCK" || normStatus === "IN STOCK")) ||
+      (statusFilter === "LOW_STOCK" && (normStatus === "LOW_STOCK" || normStatus === "LOW STOCK")) ||
+      (statusFilter === "OUT_OF_STOCK" && (normStatus === "OUT_OF_STOCK" || normStatus === "OUT OF STOCK"));
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
@@ -604,11 +638,19 @@ export function ProductsPage() {
               className="bg-transparent focus:outline-none cursor-pointer font-medium"
             >
               <option value="ALL">All Categories</option>
-              <option value="Mechanical Components">Mechanical Components</option>
-              <option value="Hydraulics & Pneumatics">Hydraulics & Pneumatics</option>
-              <option value="Power Transmission">Power Transmission</option>
-              <option value="Sensors & Automation">Sensors & Automation</option>
-              <option value="Chemicals & Fluids">Chemicals & Fluids</option>
+              {availableCategories.length > 0 ? (
+                availableCategories.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))
+              ) : (
+                <>
+                  <option value="Mechanical Components">Mechanical Components</option>
+                  <option value="Hydraulics & Pneumatics">Hydraulics & Pneumatics</option>
+                  <option value="Power Transmission">Power Transmission</option>
+                  <option value="Sensors & Automation">Sensors & Automation</option>
+                  <option value="Chemicals & Fluids">Chemicals & Fluids</option>
+                </>
+              )}
             </select>
           </div>
         </div>
@@ -670,82 +712,101 @@ export function ProductsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
-              {paginatedProducts.map((p) => (
-                <tr
-                  key={p.id}
-                  onClick={() => handleOpenDetail(p)}
-                  className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors"
-                >
-                  <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(p.id)}
-                      onChange={() => handleSelectOne(p.id)}
-                      className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
-                    />
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-[11px] font-bold text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md bg-blue-50/80 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/40">
-                        {p.sku}
-                      </span>
-                    </div>
-                    <div className="font-semibold text-slate-900 dark:text-zinc-100 mt-1">
-                      {p.name}
-                    </div>
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <div className="text-slate-800 dark:text-zinc-200 font-medium">
-                      {p.category}
-                    </div>
-                    <div className="text-[11px] text-slate-400 dark:text-zinc-500">
-                      {p.brand}
-                    </div>
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
-                      <Boxes className="h-3 w-3 text-slate-400" /> {p.variants_count || 1}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-semibold tabular-nums text-slate-900 dark:text-zinc-100">
-                    {(p.on_hand || 0).toLocaleString()} {p.unit}
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-medium tabular-nums text-purple-600 dark:text-purple-400">
-                    {p.reserved > 0 ? `${p.reserved.toLocaleString()} ${p.unit}` : "-"}
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-                    {(p.available || 0).toLocaleString()} {p.unit}
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                        p.stock_status === "IN_STOCK"
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50"
-                          : p.stock_status === "LOW_STOCK"
-                          ? "bg-amber-50 text-amber-700 dark:bg-amber-950/70 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50"
-                          : "bg-rose-50 text-rose-700 dark:bg-rose-950/70 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50"
-                      }`}
-                    >
-                      <span className={`h-1.5 w-1.5 rounded-full ${
-                        p.stock_status === "IN_STOCK" ? "bg-emerald-500" : p.stock_status === "LOW_STOCK" ? "bg-amber-500" : "bg-rose-500"
-                      }`} />
-                      {(p.stock_status || "IN_STOCK").replace("_", " ")}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-mono tabular-nums text-slate-700 dark:text-zinc-300 font-medium">
-                    ${(p.unit_cost || 0).toFixed(2)}
-                  </td>
-                  <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => handleOpenDetail(p)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                      title="Inspect Product Specifications"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
+              {loading ? (
+                <tr>
+                  <td colSpan={10} className="py-12 text-center text-slate-400 dark:text-zinc-500">
+                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent mb-2" />
+                    <p className="text-xs font-semibold">Loading product catalog...</p>
                   </td>
                 </tr>
-              ))}
+              ) : paginatedProducts.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="py-12 text-center text-slate-400 dark:text-zinc-500">
+                    <Package className="h-10 w-10 mx-auto mb-2 opacity-40 text-slate-400" />
+                    <p className="font-semibold text-sm text-slate-700 dark:text-zinc-300">No products found</p>
+                    <p className="text-xs mt-1 text-slate-400">
+                      Try adjusting your search terms or filters, or create a new catalog item.
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                paginatedProducts.map((p) => (
+                  <tr
+                    key={p.id}
+                    onClick={() => handleOpenDetail(p)}
+                    className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors"
+                  >
+                    <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(p.id)}
+                        onChange={() => handleSelectOne(p.id)}
+                        className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[11px] font-bold text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md bg-blue-50/80 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/40">
+                          {p.sku}
+                        </span>
+                      </div>
+                      <div className="font-semibold text-slate-900 dark:text-zinc-100 mt-1">
+                        {p.name}
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="text-slate-800 dark:text-zinc-200 font-medium">
+                        {p.category}
+                      </div>
+                      <div className="text-[11px] text-slate-400 dark:text-zinc-500">
+                        {p.brand}
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
+                        <Boxes className="h-3 w-3 text-slate-400" /> {p.variants_count || 1}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-semibold tabular-nums text-slate-900 dark:text-zinc-100">
+                      {(p.on_hand || 0).toLocaleString()} {p.unit}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-medium tabular-nums text-purple-600 dark:text-purple-400">
+                      {p.reserved > 0 ? `${p.reserved.toLocaleString()} ${p.unit}` : "-"}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                      {(p.available || 0).toLocaleString()} {p.unit}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                          p.stock_status === "IN_STOCK"
+                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50"
+                            : p.stock_status === "LOW_STOCK"
+                            ? "bg-amber-50 text-amber-700 dark:bg-amber-950/70 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50"
+                            : "bg-rose-50 text-rose-700 dark:bg-rose-950/70 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50"
+                        }`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${
+                          p.stock_status === "IN_STOCK" ? "bg-emerald-500" : p.stock_status === "LOW_STOCK" ? "bg-amber-500" : "bg-rose-500"
+                        }`} />
+                        {(p.stock_status || "IN_STOCK").replace("_", " ")}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-mono tabular-nums text-slate-700 dark:text-zinc-300 font-medium">
+                      ${(p.unit_cost || 0).toFixed(2)}
+                    </td>
+                    <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleOpenDetail(p)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                        title="Inspect Product Specifications"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -753,9 +814,12 @@ export function ProductsPage() {
         {/* Pagination Footer */}
         <div className="p-3 px-4 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
           <span>
-            Showing {(currentPage - 1) * pageSize + 1} to{" "}
-            {Math.min(currentPage * pageSize, filteredProducts.length)} of{" "}
-            {filteredProducts.length} products
+            {filteredProducts.length === 0
+              ? "Showing 0 products"
+              : `Showing ${(currentPage - 1) * pageSize + 1} to ${Math.min(
+                  currentPage * pageSize,
+                  filteredProducts.length
+                )} of ${filteredProducts.length} products`}
           </span>
           <div className="flex items-center gap-1">
             <button

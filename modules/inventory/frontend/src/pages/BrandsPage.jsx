@@ -504,48 +504,58 @@ export function BrandsPage() {
       </div>
 
       {/* Brands Grid Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredBrands.map((b, idx) => (
-          <div
-            key={b.id || idx}
-            className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs hover:shadow-md hover:border-blue-400/60 dark:hover:border-blue-700/60 transition-all flex flex-col justify-between space-y-3.5 group"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-linear-to-tr from-slate-100 to-slate-200 dark:from-zinc-800 dark:to-zinc-700 text-slate-800 dark:text-zinc-200 font-bold font-mono text-sm tracking-wider border border-slate-200/60 dark:border-zinc-700 group-hover:scale-105 transition-transform">
-                  {b.code.slice(0, 3)}
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">{b.name}</h3>
-                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">
-                    <Globe className="h-3 w-3" />
-                    <span>{b.country || "Global"}</span>
+      {filteredBrands.length === 0 ? (
+        <div className="p-12 text-center rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
+          <Globe className="h-10 w-10 mx-auto mb-2 opacity-40 text-slate-400" />
+          <p className="font-semibold text-sm text-slate-700 dark:text-zinc-300">No brands found</p>
+          <p className="text-xs mt-1 text-slate-400">
+            Try adjusting your search criteria or register a new OEM manufacturer.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredBrands.map((b, idx) => (
+            <div
+              key={b.id || idx}
+              className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs hover:shadow-md hover:border-blue-400/60 dark:hover:border-blue-700/60 transition-all flex flex-col justify-between space-y-3.5 group"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-linear-to-tr from-slate-100 to-slate-200 dark:from-zinc-800 dark:to-zinc-700 text-slate-800 dark:text-zinc-200 font-bold font-mono text-sm tracking-wider border border-slate-200/60 dark:border-zinc-700 group-hover:scale-105 transition-transform">
+                    {b.code.slice(0, 3)}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">{b.name}</h3>
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">
+                      <Globe className="h-3 w-3" />
+                      <span>{b.country || "Global"}</span>
+                    </div>
                   </div>
                 </div>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  ACTIVE
+                </span>
               </div>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                ACTIVE
-              </span>
-            </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-zinc-800/80 text-xs">
-              <span className="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400">
-                <Package className="h-3.5 w-3.5 text-slate-400" />
-                <span className="font-bold text-slate-800 dark:text-zinc-200 tabular-nums">
-                  {b.skus_count ?? (idx % 2 === 0 ? 34 : 28)}
-                </span> SKUs in catalog
-              </span>
-              <Link
-                to={`/inventory/products?brand=${encodeURIComponent(b.name)}`}
-                className="text-blue-600 dark:text-blue-400 font-bold hover:underline text-[11px] flex items-center gap-0.5"
-              >
-                View Items <ArrowUpRight className="h-3 w-3" />
-              </Link>
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-zinc-800/80 text-xs">
+                <span className="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400">
+                  <Package className="h-3.5 w-3.5 text-slate-400" />
+                  <span className="font-bold text-slate-800 dark:text-zinc-200 tabular-nums">
+                    {b.skus_count ?? (idx % 2 === 0 ? 34 : 28)}
+                  </span> SKUs in catalog
+                </span>
+                <Link
+                  to={`/inventory/products?brand=${encodeURIComponent(b.name)}`}
+                  className="text-blue-600 dark:text-blue-400 font-bold hover:underline text-[11px] flex items-center gap-0.5"
+                >
+                  View Items <ArrowUpRight className="h-3 w-3" />
+                </Link>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Register Brand Modal */}
       {isModalOpen && (

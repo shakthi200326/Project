@@ -44,7 +44,7 @@ import {
   Pie,
 } from "recharts";
 import JsBarcode from "jsbarcode";
-import { DEMO_PRODUCTS, fetchProducts, playScanBeep, lookupProductByBarcode } from "../services/api";
+import { DEMO_PRODUCTS, fetchProducts, updateProduct, playScanBeep, lookupProductByBarcode } from "../services/api";
 
 const symbologyData = [
   {
@@ -311,6 +311,40 @@ export function BarcodesPage() {
     setPrintError("");
   };
 
+  const handleGenerateBarcode = async (product) => {
+    if (!product) return;
+    const cleanSku = (product.sku || product.code || "ITEM").replace(/[^a-zA-Z0-9]/g, "").slice(0, 4);
+    const randDigits = Math.floor(10000000 + Math.random() * 90000000);
+    const newBarcode = `890${cleanSku}${randDigits}`.slice(0, 12);
+    try {
+      await updateProduct(product.id, { ...product, barcode: newBarcode });
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, barcode: newBarcode } : p))
+      );
+      setSelectedProduct((prev) =>
+        prev && prev.id === product.id ? { ...prev, barcode: newBarcode } : prev
+      );
+      if (printProduct && printProduct.id === product.id) {
+        setPrintProduct((prev) => ({ ...prev, barcode: newBarcode }));
+        setPrintError("");
+      }
+      showToast(`Generated & assigned barcode ${newBarcode} to ${product.sku || product.name}.`);
+    } catch (err) {
+      // Local fallback
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, barcode: newBarcode } : p))
+      );
+      setSelectedProduct((prev) =>
+        prev && prev.id === product.id ? { ...prev, barcode: newBarcode } : prev
+      );
+      if (printProduct && printProduct.id === product.id) {
+        setPrintProduct((prev) => ({ ...prev, barcode: newBarcode }));
+        setPrintError("");
+      }
+      showToast(`Assigned barcode ${newBarcode} to ${product.sku || product.name}.`);
+    }
+  };
+
   const handlePrintLabels = () => {
     const copies = Number(labelCopies);
     if (!Number.isInteger(copies) || copies < 1 || copies > 500) {
@@ -318,7 +352,7 @@ export function BarcodesPage() {
       return;
     }
     if (!printProduct?.barcode) {
-      setPrintError("This product has no barcode to print.");
+      setPrintError("This product has no barcode to print. Click 'Generate Barcode' first.");
       return;
     }
 
@@ -784,12 +818,22 @@ export function BarcodesPage() {
             </div>
 
             {selectedProduct && (
-              <div className="flex justify-center">
+              <div className="flex flex-col items-center justify-center">
                 <ThermalLabel
                   product={selectedProduct}
                   size={THERMAL_LABEL_SIZES[labelSize]}
                   preview
                 />
+                {!selectedProduct.barcode && (
+                  <button
+                    type="button"
+                    onClick={() => handleGenerateBarcode(selectedProduct)}
+                    className="mt-3 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-900 font-semibold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-blue-500" />
+                    <span>Assign Auto-Generated Barcode</span>
+                  </button>
+                )}
               </div>
             )}
 
@@ -1215,9 +1259,18 @@ export function BarcodesPage() {
                     </p>
                   )}
                   {!printProduct.barcode && (
-                    <p className="text-xs text-amber-600">
-                      This product has no barcode, so a scannable label cannot be printed.
-                    </p>
+                    <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 flex items-center justify-between gap-2">
+                      <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
+                        This product has no barcode assigned yet.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateBarcode(printProduct)}
+                        className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shrink-0 cursor-pointer shadow-xs"
+                      >
+                        Generate & Assign
+                      </button>
+                    </div>
                   )}
                 </div>
 

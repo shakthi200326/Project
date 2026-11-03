@@ -443,45 +443,57 @@ export function UnitsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
-              {filteredUnits.map((u) => (
-                <tr key={u.id} className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors">
-                  <td className="py-3.5 px-4">
-                    <span className="font-mono text-[11px] font-bold text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md bg-blue-50/80 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/40">
-                      {u.code}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-white">
-                    {u.name}
-                  </td>
-                  <td className="py-3.5 px-4 font-mono text-slate-600 dark:text-zinc-300 font-medium">
-                    {u.symbol}
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                        u.is_base
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50"
-                          : "bg-purple-50 text-purple-700 dark:bg-purple-950/70 dark:text-purple-400 border border-purple-200 dark:border-purple-900/50"
-                      }`}
-                    >
-                      <span className={`h-1.5 w-1.5 rounded-full ${u.is_base ? "bg-emerald-500" : "bg-purple-500"}`} />
-                      {u.is_base ? "Base Standard" : "Secondary Pack"}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-600 dark:text-zinc-300 font-mono tabular-nums">
-                    {u.is_base ? (
-                      <span className="text-slate-400">1.0000 (Universal Reference)</span>
-                    ) : (
-                      <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-semibold">
-                        <ArrowRightLeft className="h-3 w-3" /> 1 {u.code} = {Number(u.conversion_factor)} {u.base_unit_code || u.base_unit || "EA"}
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-mono tabular-nums text-slate-500">
-                    {u.decimal_places} decimal places
+              {filteredUnits.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-slate-400 dark:text-zinc-500">
+                    <Ruler className="h-10 w-10 mx-auto mb-2 opacity-40 text-slate-400" />
+                    <p className="font-semibold text-sm text-slate-700 dark:text-zinc-300">No units of measure found</p>
+                    <p className="text-xs mt-1 text-slate-400">
+                      Try adjusting your search criteria or define a new UOM conversion standard.
+                    </p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredUnits.map((u) => (
+                  <tr key={u.id} className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors">
+                    <td className="py-3.5 px-4">
+                      <span className="font-mono text-[11px] font-bold text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md bg-blue-50/80 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/40">
+                        {u.code}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-white">
+                      {u.name}
+                    </td>
+                    <td className="py-3.5 px-4 font-mono text-slate-600 dark:text-zinc-300 font-medium">
+                      {u.symbol}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                          u.is_base
+                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50"
+                            : "bg-purple-50 text-purple-700 dark:bg-purple-950/70 dark:text-purple-400 border border-purple-200 dark:border-purple-900/50"
+                        }`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${u.is_base ? "bg-emerald-500" : "bg-purple-500"}`} />
+                        {u.is_base ? "Base Standard" : "Secondary Pack"}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-600 dark:text-zinc-300 font-mono tabular-nums">
+                      {u.is_base ? (
+                        <span className="text-slate-400">1.0000 (Universal Reference)</span>
+                      ) : (
+                        <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-semibold">
+                          <ArrowRightLeft className="h-3 w-3" /> 1 {u.code} = {Number(u.conversion_factor)} {u.base_unit_code || u.base_unit || "EA"}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-mono tabular-nums text-slate-500">
+                      {u.decimal_places} decimal places
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
