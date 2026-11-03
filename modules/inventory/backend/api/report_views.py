@@ -27,6 +27,70 @@ class BaseReportFilterMixin:
             "search": request.query_params.get("search"),
         }
 
+    def filter_item(self, qs, product_val, item_prefix="item"):
+        if not product_val or product_val == "ALL":
+            return qs
+        item_field = f"{item_prefix}__" if item_prefix else ""
+        val_str = str(product_val).strip()
+        if val_str.isdigit():
+            id_col = f"{item_prefix}_id" if item_prefix else "id"
+            return qs.filter(
+                models.Q(**{id_col: int(val_str)})
+                | models.Q(**{f"{item_field}code__iexact": val_str})
+                | models.Q(**{f"{item_field}name__icontains": val_str})
+            )
+        return qs.filter(
+            models.Q(**{f"{item_field}code__iexact": val_str})
+            | models.Q(**{f"{item_field}name__icontains": val_str})
+        )
+
+    def filter_warehouse(self, qs, warehouse_val, wh_prefix="warehouse"):
+        if not warehouse_val or warehouse_val == "ALL":
+            return qs
+        wh_field = f"{wh_prefix}__" if wh_prefix else ""
+        val_str = str(warehouse_val).strip()
+        if val_str.isdigit():
+            id_col = f"{wh_prefix}_id" if wh_prefix else "id"
+            return qs.filter(
+                models.Q(**{id_col: int(val_str)})
+                | models.Q(**{f"{wh_field}code__iexact": val_str})
+                | models.Q(**{f"{wh_field}name__icontains": val_str})
+            )
+        return qs.filter(
+            models.Q(**{f"{wh_field}code__iexact": val_str})
+            | models.Q(**{f"{wh_field}name__icontains": val_str})
+        )
+
+    def filter_category(self, qs, cat_val):
+        if not cat_val or cat_val == "ALL":
+            return qs
+        val_str = str(cat_val).strip()
+        if val_str.isdigit():
+            return qs.filter(
+                models.Q(item__category_id=int(val_str))
+                | models.Q(item__category__name__icontains=val_str)
+                | models.Q(item__category__code__iexact=val_str)
+            )
+        return qs.filter(
+            models.Q(item__category__name__icontains=val_str)
+            | models.Q(item__category__code__iexact=val_str)
+        )
+
+    def filter_location(self, qs, loc_val):
+        if not loc_val or loc_val == "ALL":
+            return qs
+        val_str = str(loc_val).strip()
+        if val_str.isdigit():
+            return qs.filter(
+                models.Q(location_id=int(val_str))
+                | models.Q(location__code__iexact=val_str)
+                | models.Q(location__name__icontains=val_str)
+            )
+        return qs.filter(
+            models.Q(location__code__iexact=val_str)
+            | models.Q(location__name__icontains=val_str)
+        )
+
 
 class StockSummaryReportView(APIView, BaseReportFilterMixin):
     """
@@ -38,25 +102,11 @@ class StockSummaryReportView(APIView, BaseReportFilterMixin):
         filters = self.get_common_filters(request)
         qs = StockBalance.objects.select_related("item__category", "warehouse", "location").all()
 
-        if filters["warehouse_id"] and filters["warehouse_id"] != "ALL":
-            qs = qs.filter(
-                models.Q(warehouse_id=filters["warehouse_id"])
-                | models.Q(warehouse__name=filters["warehouse_id"])
-                | models.Q(warehouse__code=filters["warehouse_id"])
-            )
-        if filters["category_id"] and filters["category_id"] != "ALL":
-            qs = qs.filter(
-                models.Q(item__category_id=filters["category_id"])
-                | models.Q(item__category__name=filters["category_id"])
-            )
-        if filters["product_id"] and filters["product_id"] != "ALL":
-            qs = qs.filter(
-                models.Q(item_id=filters["product_id"])
-                | models.Q(item__code=filters["product_id"])
-                | models.Q(item__name=filters["product_id"])
-            )
-        if filters["location_id"] and filters["location_id"] != "ALL":
-            qs = qs.filter(location_id=filters["location_id"])
+        qs = self.filter_warehouse(qs, filters["warehouse_id"])
+        qs = self.filter_category(qs, filters["category_id"])
+        qs = self.filter_item(qs, filters["product_id"])
+        qs = self.filter_location(qs, filters["location_id"])
+
         if filters["search"]:
             q = filters["search"]
             qs = qs.filter(
@@ -109,18 +159,10 @@ class StockMovementReportView(APIView, BaseReportFilterMixin):
         filters = self.get_common_filters(request)
         qs = StockLedgerEntry.objects.select_related("item__category", "warehouse", "location").all().order_by("-created_at")
 
-        if filters["warehouse_id"] and filters["warehouse_id"] != "ALL":
-            qs = qs.filter(
-                models.Q(warehouse_id=filters["warehouse_id"])
-                | models.Q(warehouse__name=filters["warehouse_id"])
-            )
-        if filters["product_id"] and filters["product_id"] != "ALL":
-            qs = qs.filter(
-                models.Q(item_id=filters["product_id"])
-                | models.Q(item__code=filters["product_id"])
-            )
-        if filters["category_id"] and filters["category_id"] != "ALL":
-            qs = qs.filter(item__category_id=filters["category_id"])
+        qs = self.filter_warehouse(qs, filters["warehouse_id"])
+        qs = self.filter_item(qs, filters["product_id"])
+        qs = self.filter_category(qs, filters["category_id"])
+
         if filters["date_from"]:
             qs = qs.filter(created_at__date__gte=filters["date_from"])
         if filters["date_to"]:
@@ -169,10 +211,10 @@ class StockLedgerReportView(APIView, BaseReportFilterMixin):
         filters = self.get_common_filters(request)
         qs = StockLedgerEntry.objects.select_related("item", "warehouse", "location").all().order_by("-created_at")
 
-        if filters["warehouse_id"] and filters["warehouse_id"] != "ALL":
-            qs = qs.filter(models.Q(warehouse_id=filters["warehouse_id"]) | models.Q(warehouse__name=filters["warehouse_id"]))
-        if filters["product_id"] and filters["product_id"] != "ALL":
-            qs = qs.filter(models.Q(item_id=filters["product_id"]) | models.Q(item__code=filters["product_id"]))
+        qs = self.filter_warehouse(qs, filters["warehouse_id"])
+        qs = self.filter_item(qs, filters["product_id"])
+        qs = self.filter_location(qs, filters["location_id"])
+
         if filters["date_from"]:
             qs = qs.filter(created_at__date__gte=filters["date_from"])
         if filters["date_to"]:
@@ -228,12 +270,10 @@ class StockValuationReportView(APIView, BaseReportFilterMixin):
 
         qs = StockBalance.objects.select_related("item__category", "warehouse").all()
 
-        if filters["warehouse_id"] and filters["warehouse_id"] != "ALL":
-            qs = qs.filter(models.Q(warehouse_id=filters["warehouse_id"]) | models.Q(warehouse__name=filters["warehouse_id"]))
-        if filters["product_id"] and filters["product_id"] != "ALL":
-            qs = qs.filter(models.Q(item_id=filters["product_id"]) | models.Q(item__code=filters["product_id"]))
-        if filters["category_id"] and filters["category_id"] != "ALL":
-            qs = qs.filter(item__category_id=filters["category_id"])
+        qs = self.filter_warehouse(qs, filters["warehouse_id"])
+        qs = self.filter_item(qs, filters["product_id"])
+        qs = self.filter_category(qs, filters["category_id"])
+
         if filters["search"]:
             q = filters["search"]
             qs = qs.filter(models.Q(item__name__icontains=q) | models.Q(item__code__icontains=q))
@@ -274,10 +314,10 @@ class LowStockReportView(APIView, BaseReportFilterMixin):
         filters = self.get_common_filters(request)
         qs = StockBalance.objects.select_related("item", "warehouse").all()
 
-        if filters["warehouse_id"] and filters["warehouse_id"] != "ALL":
-            qs = qs.filter(models.Q(warehouse_id=filters["warehouse_id"]) | models.Q(warehouse__name=filters["warehouse_id"]))
-        if filters["product_id"] and filters["product_id"] != "ALL":
-            qs = qs.filter(models.Q(item_id=filters["product_id"]) | models.Q(item__code=filters["product_id"]))
+        qs = self.filter_warehouse(qs, filters["warehouse_id"])
+        qs = self.filter_item(qs, filters["product_id"])
+        qs = self.filter_category(qs, filters["category_id"])
+
         if filters["search"]:
             q = filters["search"]
             qs = qs.filter(models.Q(item__name__icontains=q) | models.Q(item__code__icontains=q))
@@ -341,10 +381,8 @@ class StockAgeingReportView(APIView, BaseReportFilterMixin):
 
         # 1. Batches with positive quantity
         batch_qs = Batch.objects.filter(remaining_quantity__gt=0).select_related("item", "warehouse")
-        if filters["warehouse_id"] and filters["warehouse_id"] != "ALL":
-            batch_qs = batch_qs.filter(models.Q(warehouse_id=filters["warehouse_id"]) | models.Q(warehouse__name=filters["warehouse_id"]))
-        if filters["product_id"] and filters["product_id"] != "ALL":
-            batch_qs = batch_qs.filter(models.Q(item_id=filters["product_id"]) | models.Q(item__code=filters["product_id"]))
+        batch_qs = self.filter_warehouse(batch_qs, filters["warehouse_id"])
+        batch_qs = self.filter_item(batch_qs, filters["product_id"])
 
         for b in batch_qs:
             rec_date = b.received_date or b.created_at.date()
@@ -373,6 +411,8 @@ class StockAgeingReportView(APIView, BaseReportFilterMixin):
         # 2. If no batches, query StockBalance
         if len(results) == 0:
             bal_qs = StockBalance.objects.filter(on_hand_qty__gt=0).select_related("item", "warehouse")
+            bal_qs = self.filter_warehouse(bal_qs, filters["warehouse_id"])
+            bal_qs = self.filter_item(bal_qs, filters["product_id"])
             for sb in bal_qs:
                 rec_date = sb.updated_at.date() if hasattr(sb, "updated_at") and sb.updated_at else today - timedelta(days=22)
                 age_days = (today - rec_date).days
@@ -416,10 +456,8 @@ class ExpiryReportView(APIView, BaseReportFilterMixin):
             remaining_quantity__gt=0
         ).select_related("item", "warehouse").order_by("expiry_date")
 
-        if filters["warehouse_id"] and filters["warehouse_id"] != "ALL":
-            batch_qs = batch_qs.filter(models.Q(warehouse_id=filters["warehouse_id"]) | models.Q(warehouse__name=filters["warehouse_id"]))
-        if filters["product_id"] and filters["product_id"] != "ALL":
-            batch_qs = batch_qs.filter(models.Q(item_id=filters["product_id"]) | models.Q(item__code=filters["product_id"]))
+        batch_qs = self.filter_warehouse(batch_qs, filters["warehouse_id"])
+        batch_qs = self.filter_item(batch_qs, filters["product_id"])
 
         results = []
         for b in batch_qs:
@@ -458,10 +496,7 @@ class WarehouseReportView(APIView, BaseReportFilterMixin):
         filters = self.get_common_filters(request)
         warehouses_qs = Warehouse.objects.filter(is_active=True)
 
-        if filters["warehouse_id"] and filters["warehouse_id"] != "ALL":
-            warehouses_qs = warehouses_qs.filter(
-                models.Q(id=filters["warehouse_id"]) | models.Q(name=filters["warehouse_id"]) | models.Q(code=filters["warehouse_id"])
-            )
+        warehouses_qs = self.filter_warehouse(warehouses_qs, filters["warehouse_id"], wh_prefix="")
 
         results = []
         for wh in warehouses_qs:

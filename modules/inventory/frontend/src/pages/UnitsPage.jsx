@@ -157,6 +157,7 @@ export function UnitsPage() {
       });
     } catch (err) {
       console.error(err);
+      showToast("Failed to create unit of measure. Please verify parameters.");
     }
   };
 

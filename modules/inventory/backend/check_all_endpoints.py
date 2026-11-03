@@ -87,3 +87,4 @@ for ep in endpoints:
         print(f"  [ERR] {ep}: {e}")
 
 print(f"\nCompleted: {len(endpoints) - len(failures)} OK, {len(failures)} Failed.")
+

@@ -175,6 +175,12 @@ export function CategoriesPage() {
   const [search, setSearch] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newCat, setNewCat] = useState({ name: "", code: "", parent: "" });
+  const [toastMessage, setToastMessage] = useState("");
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(""), 3500);
+  };
 
   useEffect(() => {
     fetchCategories().then((res) => {
@@ -201,7 +207,10 @@ export function CategoriesPage() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!newCat.name || !newCat.code) return;
+    if (!newCat.name || !newCat.code) {
+      showToast("Category name and code are required.");
+      return;
+    }
     try {
       const item = await createCategory({
         name: newCat.name.trim(),
@@ -212,15 +221,25 @@ export function CategoriesPage() {
         item,
         ...prev.filter((c) => c.id !== item.id && c.code !== item.code),
       ]);
+      showToast(`Category "${newCat.name}" created successfully.`);
       setNewCat({ name: "", code: "", parent: "" });
       setIsCreateOpen(false);
     } catch (err) {
       console.error(err);
+      showToast("Failed to create category. Please verify input parameters.");
     }
   };
 
   return (
     <div className="space-y-6">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-slate-900/95 dark:bg-zinc-800/95 backdrop-blur-md text-white text-xs font-medium shadow-2xl border border-slate-700/60 animate-in slide-in-from-top-2">
+          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

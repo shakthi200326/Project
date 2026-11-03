@@ -188,6 +188,7 @@ export function BrandsPage() {
       setIsModalOpen(false);
     } catch (err) {
       console.error(err);
+      showToast("Failed to register brand OEM. Please verify parameters.");
     }
   };
 
