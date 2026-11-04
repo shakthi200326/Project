@@ -377,7 +377,7 @@ export function BatchQuarantinePage() {
       <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-zinc-800/50 text-slate-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-200 dark:border-zinc-800">
+            <thead className="bg-slate-50 dark:bg-zinc-800/50 text-slate-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-200 dark:border-zinc-800 whitespace-nowrap">
               <tr>
                 <th className="py-3 px-4">Quarantine #</th>
                 <th className="py-3 px-4">Batch Number</th>
@@ -429,7 +429,7 @@ export function BatchQuarantinePage() {
                         {r.location_name || "Storage Location"}
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-right tabular-nums font-bold text-rose-600 dark:text-rose-400">
+                    <td className="py-3.5 px-4 text-right tabular-nums whitespace-nowrap font-bold text-rose-600 dark:text-rose-400">
                       {Number(r.quarantine_quantity || 0)}
                     </td>
                     <td className="py-3.5 px-4">
@@ -440,8 +440,8 @@ export function BatchQuarantinePage() {
                     <td className="py-3.5 px-4 text-slate-600 dark:text-zinc-400">
                       {r.quarantine_date}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-500 dark:text-zinc-400 max-w-xs truncate">
-                      {r.remarks || "—"}
+                    <td className="py-3.5 px-4 text-slate-500 dark:text-zinc-400">
+                      <span className="block max-w-xs truncate">{r.remarks || "—"}</span>
                     </td>
                     <td className="py-3.5 px-4 text-center">
                       {!r.is_released ? (

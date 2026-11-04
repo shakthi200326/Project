@@ -120,7 +120,7 @@ export function StockSettingsPage() {
               : "bg-rose-50 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800"
           }`}
         >
-          {toast.type === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+          {toast.type === "success" ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
           <span>{toast.message}</span>
         </div>
       )}
@@ -162,8 +162,8 @@ export function StockSettingsPage() {
               key={t.key}
               className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40 hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition-colors"
             >
-              <div className="pr-4">
-                <div className="flex items-center gap-2">
+              <div className="min-w-0 pr-4">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-bold text-slate-900 dark:text-white">
                     {t.label}
                   </span>
@@ -173,7 +173,7 @@ export function StockSettingsPage() {
                     <span className="text-[10px] text-slate-400 dark:text-zinc-500">(Optional)</span>
                   )}
                   {t.warn && form[t.key] && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-900/50">
+                    <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-900/50">
                       <AlertTriangle className="h-3 w-3" />
                       Auditor Warning
                     </span>

@@ -232,13 +232,13 @@ export function StockMovementsPage({ initialType = "ALL" }) {
       {/* High-Configuration Charts: Dual Operations & Flux Control Deck */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         <div className="lg:col-span-6 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                   Warehouse Movement Pipeline & Fulfillment Funnel
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/40">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/40 shrink-0">
                   Throughput Funnel
                 </span>
               </div>
@@ -246,7 +246,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
                 Conversion velocity from dock PO receipts through QA gating, putaway binning, transfers & dispatches.
               </p>
             </div>
-            <div className="text-right">
+            <div className="text-right shrink-0">
               <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">96.8%</span>
               <span className="text-[10px] text-slate-400 block">SLA Compliance</span>
             </div>
@@ -254,7 +254,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
 
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <FunnelChart>
+              <FunnelChart margin={{ top: 5, right: 160, bottom: 5, left: 5 }}>
                 <Tooltip
                   content={({ active, payload }) => {
                     if (!active || !payload || !payload.length) return null;
@@ -280,7 +280,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
                 <Funnel
                   dataKey="value"
                   data={movementPipelineData}
-                  isAnimationActive={true}
+                  isAnimationActive={false}
                 >
                   <LabelList
                     position="right"
@@ -297,13 +297,13 @@ export function StockMovementsPage({ initialType = "ALL" }) {
 
         {/* Chart 2: 7-Day Operational Inflow vs Outflow Velocity Flux */}
         <div className="lg:col-span-6 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                   7-Day Operational Inflow vs Outflow Velocity Flux
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 shrink-0">
                   Dual-Stream Flux
                 </span>
               </div>
@@ -311,7 +311,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
                 Inbound dock receipts vs customer dispatch outflow with carrier on-time SLA spline.
               </p>
             </div>
-            <div className="text-right">
+            <div className="text-right shrink-0">
               <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400">97.9%</span>
               <span className="text-[10px] text-slate-400 block">Dispatch SLA</span>
             </div>
@@ -321,7 +321,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={operationalFluxData}
-                margin={{ top: 15, right: 10, left: -20, bottom: 20 }}
+                margin={{ top: 15, right: 10, left: 0, bottom: 20 }}
               >
                 <defs>
                   <linearGradient id="opInboundGrad" x1="0" y1="0" x2="0" y2="1">
@@ -341,7 +341,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
                   tickLine={false}
                   axisLine={{ stroke: "#64748b", opacity: 0.2 }}
                 />
-                <YAxis
+                <YAxis width="auto"
                   yAxisId="units"
                   stroke="#94a3b8"
                   fontSize={11}
@@ -349,7 +349,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
                   axisLine={{ stroke: "#64748b", opacity: 0.2 }}
                   tickFormatter={(v) => `${v}`}
                 />
-                <YAxis
+                <YAxis width="auto"
                   yAxisId="sla"
                   orientation="right"
                   stroke="#f59e0b"
@@ -418,7 +418,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
                   fill="url(#opInboundGrad)"
                   stroke="#3b82f6"
                   strokeWidth={2}
-                />
+                  isAnimationActive={false}/>
                 <Area
                   yAxisId="units"
                   type="monotone"
@@ -427,7 +427,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
                   fill="url(#opOutboundGrad)"
                   stroke="#10b981"
                   strokeWidth={2}
-                />
+                  isAnimationActive={false}/>
                 <Line
                   yAxisId="sla"
                   type="monotone"
@@ -436,7 +436,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
                   stroke="#f59e0b"
                   strokeWidth={2}
                   dot={{ r: 3, fill: "#f59e0b" }}
-                />
+                  isAnimationActive={false}/>
                 <ReferenceLine
                   yAxisId="sla"
                   y={95}
@@ -502,7 +502,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
       </div>
 
       {/* Modern Filter Tabs */}
-      <div className="flex items-center gap-1 border-b border-slate-200/80 dark:border-zinc-800/80 text-xs">
+      <div className="flex items-center gap-1 overflow-x-auto border-b border-slate-200/80 dark:border-zinc-800/80 text-xs">
         {[
           { key: "ALL", label: "All Movements" },
           { key: "RECEIPT", label: "Goods Receipts (In)" },
@@ -515,13 +515,13 @@ export function StockMovementsPage({ initialType = "ALL" }) {
             key={tab.key}
             onClick={() => {
               setActiveTab(tab.key);
-              if (tab.key === "RECEIPT") navigate("/inventory/operations/stock-in");
+              if (tab.key === "RECEIPT") navigate("/inventory/goods-receipt/register");
               else if (tab.key === "ISSUE") navigate("/inventory/operations/stock-out");
               else if (tab.key === "TRANSFER") navigate("/inventory/operations/transfers");
               else if (tab.key === "ADJUSTMENT") navigate("/inventory/operations/adjustments");
               else if (tab.key === "RETURN") navigate("/inventory/operations/returns");
             }}
-            className={`px-3.5 py-2.5 font-medium border-b-2 transition-all cursor-pointer ${
+            className={`px-3.5 py-2.5 font-medium whitespace-nowrap border-b-2 transition-all cursor-pointer ${
               activeTab === tab.key
                 ? "border-blue-600 text-blue-600 dark:text-blue-400 font-bold"
                 : "border-transparent text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-200"
@@ -545,7 +545,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
             className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/80 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500 font-medium"
           />
         </div>
-        <span className="text-xs text-slate-400 dark:text-zinc-500 font-mono tabular-nums">
+        <span className="text-xs text-slate-400 dark:text-zinc-500 font-mono tabular-nums shrink-0 whitespace-nowrap">
           {filteredMovements.length} transactions recorded
         </span>
       </div>
@@ -555,7 +555,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400 whitespace-nowrap">
                 <th className="py-3.5 px-4 font-semibold">Document No.</th>
                 <th className="py-3.5 px-4 font-semibold">Type</th>
                 <th className="py-3.5 px-4 font-semibold">Date / Time</th>
@@ -618,7 +618,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
                       {txType}
                     </span>
                   </td>
-                  <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px]">
+                  <td className="py-3.5 px-4 text-slate-500 dark:text-zinc-400 font-mono text-[11px] whitespace-nowrap">
                     <div>{m.transaction_date || (m.created_at ? m.created_at.split("T")[0] : "")}</div>
                     <div className="text-[10px] text-slate-400">
                       {new Date(m.created_at || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -648,7 +648,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
                       )}
                     </div>
                   </td>
-                  <td className={`py-3.5 px-4 text-right font-mono tabular-nums font-bold ${itemQty > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                  <td className={`py-3.5 px-4 text-right font-mono tabular-nums font-bold whitespace-nowrap ${itemQty > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                     {itemQty > 0 ? `+${itemQty}` : itemQty} {itemUnit}
                     {txType === "ADJUSTMENT" && m.difference_quantity !== undefined && (
                       <div className="text-[10px] text-slate-400 font-normal">
@@ -656,7 +656,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
                       </div>
                     )}
                   </td>
-                  <td className="py-3.5 px-4 text-right font-mono tabular-nums text-slate-700 dark:text-zinc-300 font-medium">
+                  <td className="py-3.5 px-4 text-right font-mono tabular-nums whitespace-nowrap text-slate-700 dark:text-zinc-300 font-medium">
                     ${itemCost.toFixed(2)}
                   </td>
                   <td className="py-3.5 px-4 text-center">

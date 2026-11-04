@@ -92,8 +92,8 @@ export function ExpiryReportPage() {
           <span
             className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
               isExpired
-                ? "bg-rose-50 text-rose-700 dark:bg-rose-950/70 dark:text-rose-400 border-rose-200"
-                : "bg-amber-50 text-amber-700 dark:bg-amber-950/70 dark:text-amber-400 border-amber-200"
+                ? "bg-rose-50 text-rose-700 dark:bg-rose-950/70 dark:text-rose-400 border-rose-200 dark:border-rose-900/50"
+                : "bg-amber-50 text-amber-700 dark:bg-amber-950/70 dark:text-amber-400 border-amber-200 dark:border-amber-900/50"
             }`}
           >
             <span className={`h-1.5 w-1.5 rounded-full ${isExpired ? "bg-rose-500" : "bg-amber-500"}`} />

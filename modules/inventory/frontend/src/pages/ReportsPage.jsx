@@ -98,12 +98,12 @@ export function ReportsPage() {
 
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="min-w-0 text-xl font-bold tracking-tight text-slate-900 dark:text-white">
               Inventory Analytics & Reports
             </h1>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/60">
+            <span className="inline-flex shrink-0 items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60">
               <Sparkles className="h-2.5 w-2.5" />
               Intelligence Engine
             </span>
@@ -113,7 +113,7 @@ export function ReportsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 text-xs text-slate-700 dark:text-zinc-300 shadow-2xs font-medium">
             <Calendar className="h-3.5 w-3.5 text-slate-400" />
             <select
@@ -160,7 +160,7 @@ export function ReportsPage() {
           <div className="text-2xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400 mt-1">
             99.82%
           </div>
-          <span className="text-[11px] text-emerald-600 font-medium">Within tolerance</span>
+          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">Within tolerance</span>
         </div>
 
         <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
@@ -168,23 +168,23 @@ export function ReportsPage() {
           <div className="text-2xl font-bold font-mono tabular-nums text-amber-600 dark:text-amber-400 mt-1">
             $3,420.00
           </div>
-          <span className="text-[11px] text-amber-600 font-medium">0.8% of portfolio</span>
+          <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">0.8% of portfolio</span>
         </div>
       </div>
 
       {/* High Configuration ABC Pareto Velocity Analysis Chart */}
       <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-blue-500" />
+              <BarChart3 className="h-4 w-4 shrink-0 text-blue-500" />
               ABC Velocity & Pareto 80/20 Capital Concentration
             </h2>
             <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
               Dual-axis Pareto analysis: Bars indicate capital held per subcategory; line tracks cumulative valuation percentage.
             </p>
           </div>
-          <div className="flex items-center gap-3 text-xs font-semibold">
+          <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5 text-xs font-semibold">
             <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
               <span className="h-2.5 w-2.5 rounded-sm bg-blue-500" /> Class A (Top 80%)
             </span>
@@ -202,11 +202,11 @@ export function ReportsPage() {
 
         <div className="h-68 w-full pt-2">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={ABC_PARETO_DATA} margin={{ top: 15, right: 15, left: -15, bottom: 0 }}>
+            <ComposedChart data={ABC_PARETO_DATA} margin={{ top: 15, right: 15, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#e2e8f0" opacity={0.5} />
               <XAxis dataKey="rank" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-              <YAxis yAxisId="val" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} domain={[0, 200]} />
-              <YAxis yAxisId="pct" orientation="right" tick={{ fontSize: 11, fill: "#F43F5E" }} tickLine={false} axisLine={false} domain={[0, 100]} />
+              <YAxis width="auto" yAxisId="val" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} domain={[0, 200]} />
+              <YAxis width="auto" yAxisId="pct" orientation="right" tick={{ fontSize: 11, fill: "#F43F5E" }} tickLine={false} axisLine={false} domain={[0, 100]} />
               <Tooltip
                 cursor={{ fill: "rgba(0, 0, 0, 0.03)" }}
                 contentStyle={{
@@ -224,7 +224,7 @@ export function ReportsPage() {
                 ]}
               />
               <ReferenceLine yAxisId="pct" y={80} stroke="#F43F5E" strokeDasharray="3 3" label={{ value: "80% Pareto Frontier", position: "insideTopRight", fill: "#F43F5E", fontSize: 10, fontWeight: "bold" }} />
-              <Bar yAxisId="val" dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={44}>
+              <Bar yAxisId="val" dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={44} isAnimationActive={false}>
                 {ABC_PARETO_DATA.map((entry, index) => (
                   <Cell
                     key={`pareto-bar-${index}`}
@@ -232,7 +232,7 @@ export function ReportsPage() {
                   />
                 ))}
               </Bar>
-              <Line yAxisId="pct" type="monotone" dataKey="cumulative" stroke="#F43F5E" strokeWidth={2.5} dot={{ r: 4, fill: "#F43F5E", stroke: "#fff" }} />
+              <Line yAxisId="pct" type="monotone" dataKey="cumulative" stroke="#F43F5E" strokeWidth={2.5} dot={{ r: 4, fill: "#F43F5E", stroke: "#fff" }} isAnimationActive={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -246,7 +246,7 @@ export function ReportsPage() {
             className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs flex flex-col justify-between space-y-4 hover:shadow-md hover:border-blue-400/60 dark:hover:border-blue-700/60 transition-all group"
           >
             <div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/50">
                   {rep.category}
                 </span>

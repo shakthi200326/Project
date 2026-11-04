@@ -5,6 +5,170 @@
 
 @source "../../../../../shared/frontend";
 
+/* ThemeProvider toggles a `.dark` class on <html>. Without this, Tailwind v4
+   binds `dark:` to prefers-color-scheme, so pages followed the OS theme
+   instead of the in-app toggle and mixed light and dark styles. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* --- Native dropdowns -------------------------------------------------------
+   The open option list is drawn by the browser. Selects with transparent or
+   translucent backgrounds (bg-transparent, dark:bg-zinc-800/50) get a white
+   list in Chromium on Windows while the options inherit the select's light
+   dark-mode text, so they turn unreadable. Give options solid colours. */
+select option,
+select optgroup {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+.dark select,
+.dark input[type="date"],
+.dark input[type="datetime-local"],
+.dark input[type="time"],
+.dark input[type="month"] {
+  color-scheme: dark;
+}
+
+.dark select option,
+.dark select optgroup {
+  background-color: #18181b;
+  color: #f4f4f5;
+}
+
+select option:disabled {
+  color: #94a3b8;
+}
+
+.dark select option:disabled {
+  color: #71717a;
+}
+
+.dark select option:checked {
+  background-color: #27272a;
+}
+
+/* --- Dark-mode hover fallback -----------------------------------------------
+   Many buttons and rows only declare a light hover tint (hover:bg-slate-50,
+   hover:bg-blue-100, ...), which flashes a pale block on dark surfaces.
+   Remap those tints in dark mode, unless the element sets its own
+   dark:hover:bg-* (which always wins). */
+.dark :is([class~="hover:bg-slate-50"], [class~="hover:bg-slate-50/60"], [class~="hover:bg-slate-50/70"], [class~="hover:bg-slate-50/80"]):hover:not([class*="dark:hover:bg-"]) {
+  background-color: color-mix(in oklab, var(--color-zinc-800) 60%, transparent);
+}
+
+.dark :is([class~="hover:bg-slate-100"], [class~="hover:bg-slate-100/80"]):hover:not([class*="dark:hover:bg-"]) {
+  background-color: var(--color-zinc-800);
+}
+
+.dark [class~="hover:bg-slate-200"]:hover:not([class*="dark:hover:bg-"]) {
+  background-color: var(--color-zinc-700);
+}
+
+.dark :is([class~="hover:bg-blue-50"], [class~="hover:bg-blue-100"]):hover:not([class*="dark:hover:bg-"]) {
+  background-color: color-mix(in oklab, var(--color-blue-900) 45%, transparent);
+}
+
+.dark :is([class~="hover:bg-emerald-50"], [class~="hover:bg-emerald-100"], [class~="hover:bg-emerald-200"]):hover:not([class*="dark:hover:bg-"]) {
+  background-color: color-mix(in oklab, var(--color-emerald-900) 45%, transparent);
+}
+
+.dark :is([class~="hover:bg-rose-50"], [class~="hover:bg-rose-100"]):hover:not([class*="dark:hover:bg-"]) {
+  background-color: color-mix(in oklab, var(--color-rose-900) 45%, transparent);
+}
+
+.dark :is([class~="hover:bg-amber-50"], [class~="hover:bg-amber-100"], [class~="hover:bg-amber-200"]):hover:not([class*="dark:hover:bg-"]) {
+  background-color: color-mix(in oklab, var(--color-amber-900) 45%, transparent);
+}
+
+.dark [class~="hover:bg-purple-100"]:hover:not([class*="dark:hover:bg-"]) {
+  background-color: color-mix(in oklab, var(--color-purple-900) 45%, transparent);
+}
+
+.dark [class~="hover:bg-indigo-50"]:hover:not([class*="dark:hover:bg-"]) {
+  background-color: color-mix(in oklab, var(--color-indigo-900) 45%, transparent);
+}
+
+/* --- Recharts baseline ------------------------------------------------------
+   Shared typography and theming for every chart, so individual pages only
+   set what is specific to their data. */
+.recharts-wrapper,
+.recharts-surface {
+  font-family: inherit;
+}
+
+.recharts-text {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Default legends inherit the card's body size; match the 10-11px axis ticks. */
+.recharts-legend-wrapper {
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.recharts-legend-item {
+  display: inline-flex !important;
+  align-items: center;
+}
+
+.recharts-legend-item-text {
+  vertical-align: middle;
+}
+
+/* Keep tooltips above the absolutely positioned centre labels on donuts and gauges. */
+.recharts-tooltip-wrapper {
+  z-index: 30;
+}
+
+.recharts-default-tooltip {
+  border-radius: 12px;
+  text-align: left;
+}
+
+.recharts-default-tooltip .recharts-tooltip-label {
+  margin-bottom: 4px !important;
+  font-weight: 600;
+}
+
+.recharts-default-tooltip .recharts-tooltip-item {
+  padding: 1px 0 !important;
+}
+
+/* Recharts 3 makes the chart focusable; only show the ring for keyboard focus. */
+.recharts-wrapper:focus:not(:focus-visible),
+.recharts-surface:focus:not(:focus-visible),
+.recharts-sector:focus:not(:focus-visible),
+.recharts-rectangle:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Grid and axis strokes are hard-coded for light backgrounds in the pages;
+   soften them on dark surfaces. CSS outranks SVG presentation attributes. */
+.dark .recharts-cartesian-grid line {
+  stroke: #3f3f46;
+}
+
+.dark .recharts-cartesian-axis-line {
+  stroke: #52525b;
+}
+
+.dark .recharts-polar-grid line,
+.dark .recharts-polar-grid path {
+  stroke: #3f3f46;
+}
+
+.dark .recharts-tooltip-cursor {
+  fill: rgba(255, 255, 255, 0.04);
+}
+
+/* White separators between pie slices and rings around line dots should
+   match the card surface (zinc-900) in dark mode. */
+.dark .recharts-sector:is([stroke="#fff"], [stroke="#ffffff"], [stroke="#FFF"], [stroke="#FFFFFF"], [stroke="white"]),
+.dark .recharts-dot:is([stroke="#fff"], [stroke="#ffffff"], [stroke="#FFF"], [stroke="#FFFFFF"], [stroke="white"]),
+.dark .recharts-active-dot circle:is([stroke="#fff"], [stroke="#ffffff"], [stroke="white"]) {
+  stroke: #18181b;
+}
+
 /* Keep centered dialogs within the viewport and scroll their content when needed. */
 .fixed.inset-0.z-50.flex.items-center.justify-center > div {
   max-height: calc(100vh - 2rem);
@@ -122,6 +286,14 @@
   background: rgba(24, 24, 27, 0.82);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+}
+
+/* Keep translucent overlays without the expensive full-screen blur effect. */
+[class*="backdrop-blur"],
+.glass-panel,
+.dark .glass-panel {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 .stat-card-gradient {

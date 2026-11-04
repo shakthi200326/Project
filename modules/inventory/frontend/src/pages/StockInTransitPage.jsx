@@ -355,7 +355,7 @@ export function StockInTransitPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-100 dark:border-zinc-800 bg-slate-50/75 dark:bg-zinc-800/40 text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+              <tr className="border-b border-slate-100 dark:border-zinc-800 bg-slate-50/75 dark:bg-zinc-800/40 text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider whitespace-nowrap">
                 <th className="py-3 px-4">Transfer Number</th>
                 <th className="py-3 px-4">Transfer Date</th>
                 <th className="py-3 px-4">Source Warehouse</th>
@@ -397,12 +397,12 @@ export function StockInTransitPage() {
                       className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors"
                     >
                       {/* 1. Transfer Number */}
-                      <td className="py-3 px-4 font-mono font-bold text-blue-600 dark:text-blue-400">
+                      <td className="py-3 px-4 font-mono font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">
                         {transferNo}
                       </td>
 
                       {/* 2. Transfer Date */}
-                      <td className="py-3 px-4 font-mono text-slate-600 dark:text-zinc-400">
+                      <td className="py-3 px-4 font-mono text-slate-600 dark:text-zinc-400 whitespace-nowrap">
                         {date}
                       </td>
 
@@ -420,8 +420,8 @@ export function StockInTransitPage() {
                       </td>
 
                       {/* 5. Product */}
-                      <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white max-w-[200px] truncate" title={prod}>
-                        {prod}
+                      <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white" title={prod}>
+                        <div className="max-w-[200px] truncate">{prod}</div>
                       </td>
 
                       {/* 6. SKU */}
@@ -445,7 +445,7 @@ export function StockInTransitPage() {
                       </td>
 
                       {/* 10. Status */}
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
                         {getStatusBadge(status)}
                       </td>
 
@@ -544,7 +544,7 @@ export function StockInTransitPage() {
             <div className="pt-2 flex justify-end">
               <button
                 onClick={() => setViewRecord(null)}
-                className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 text-xs font-semibold text-slate-700 dark:text-zinc-300"
+                className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-xs font-semibold text-slate-700 dark:text-zinc-300"
               >
                 Close
               </button>

@@ -582,7 +582,7 @@ export function SettingsPage() {
                   type="checkbox"
                   checked={auditLogging}
                   onChange={(e) => setAuditLogging(e.target.checked)}
-                  className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 mt-1 cursor-pointer"
+                  className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-zinc-600 dark:bg-zinc-800 mt-1 cursor-pointer"
                 />
               </div>
 
@@ -597,7 +597,7 @@ export function SettingsPage() {
                   type="checkbox"
                   checked={eventBusSync}
                   onChange={(e) => setEventBusSync(e.target.checked)}
-                  className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 mt-1 cursor-pointer"
+                  className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-zinc-600 dark:bg-zinc-800 mt-1 cursor-pointer"
                 />
               </div>
             </div>

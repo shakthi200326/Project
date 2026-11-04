@@ -73,7 +73,7 @@ export function StockAgeingReportPage() {
       align: "right",
       cell: (r) => {
         const days = Number(r.age_in_days);
-        const colorClass = days > 90 ? "text-rose-600 font-bold" : days > 60 ? "text-amber-600 font-semibold" : "text-slate-700 dark:text-zinc-300";
+        const colorClass = days > 90 ? "text-rose-600 dark:text-rose-400 font-bold" : days > 60 ? "text-amber-600 dark:text-amber-400 font-semibold" : "text-slate-700 dark:text-zinc-300";
         return <span className={`font-mono ${colorClass}`}>{days} d</span>;
       },
     },
@@ -85,12 +85,12 @@ export function StockAgeingReportPage() {
         const bucket = r.ageing_bucket;
         const colorClass =
           bucket === "0–30 days"
-            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border-emerald-200"
+            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50"
             : bucket === "31–60 days"
-            ? "bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border-blue-200"
+            ? "bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border-blue-200 dark:border-blue-900/50"
             : bucket === "61–90 days"
-            ? "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border-amber-200"
-            : "bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border-rose-200";
+            ? "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border-amber-200 dark:border-amber-900/50"
+            : "bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border-rose-200 dark:border-rose-900/50";
         return (
           <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${colorClass}`}>
             {bucket}

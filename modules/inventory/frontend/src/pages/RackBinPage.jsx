@@ -757,7 +757,7 @@ export function RackBinPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50/75 dark:bg-zinc-800/50 text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider text-[10px]">
+                <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50/75 dark:bg-zinc-800/50 text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider text-[10px] whitespace-nowrap">
                   <th className="py-3 px-4">Rack Code</th>
                   <th className="py-3 px-4">Rack Name</th>
                   <th className="py-3 px-4">Warehouse</th>
@@ -867,7 +867,7 @@ export function RackBinPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50/75 dark:bg-zinc-800/50 text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider text-[10px]">
+                <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50/75 dark:bg-zinc-800/50 text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider text-[10px] whitespace-nowrap">
                   <th className="py-3 px-4">Bin Code</th>
                   <th className="py-3 px-4">Bin Name</th>
                   <th className="py-3 px-4">Warehouse</th>

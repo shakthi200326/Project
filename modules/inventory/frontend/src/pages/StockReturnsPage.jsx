@@ -255,7 +255,7 @@ export function StockReturnsPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-600 text-white font-bold shadow-md shadow-purple-500/20">
               <RotateCcw className="h-4 w-4" />
             </div>
@@ -317,7 +317,7 @@ export function StockReturnsPage() {
               Customer Returns (Restocked)
             </span>
             <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1 tabular-nums">
-              {metrics.restockedQty} <span className="text-sm font-normal text-slate-500">units</span>
+              {metrics.restockedQty} <span className="text-sm font-normal text-slate-500 dark:text-zinc-400">units</span>
             </div>
             <div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
               Restocked into active storage
@@ -334,7 +334,7 @@ export function StockReturnsPage() {
               Quarantined / Defective
             </span>
             <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1 tabular-nums">
-              {metrics.quarantinedQty} <span className="text-sm font-normal text-slate-500">units</span>
+              {metrics.quarantinedQty} <span className="text-sm font-normal text-slate-500 dark:text-zinc-400">units</span>
             </div>
             <div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
               Held in QA quarantine bay
@@ -351,7 +351,7 @@ export function StockReturnsPage() {
               Supplier Returns (RTV)
             </span>
             <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mt-1 tabular-nums">
-              {metrics.supplierReturns} <span className="text-sm font-normal text-slate-500">dispatches</span>
+              {metrics.supplierReturns} <span className="text-sm font-normal text-slate-500 dark:text-zinc-400">dispatches</span>
             </div>
             <div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
               Returned to vendor authorization
@@ -365,13 +365,13 @@ export function StockReturnsPage() {
 
       {/* Analytics Deck: Return Velocity & Disposition Distribution */}
       <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                 Weekly Return Disposition Flux & Condition Breakdown
               </h3>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+              <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                 Audited RMA Flux
               </span>
             </div>
@@ -379,7 +379,7 @@ export function StockReturnsPage() {
               Daily trend of restocked items, quarantined units, scrap disposals, and return to supplier shipments.
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs font-mono font-bold text-slate-600 dark:text-zinc-300">
+          <div className="flex flex-wrap items-center gap-2 shrink-0 text-xs font-mono font-bold text-slate-600 dark:text-zinc-300">
             <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Restock
             <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 ml-2"></span> Quarantine
             <span className="inline-block w-2.5 h-2.5 rounded-full bg-indigo-500 ml-2"></span> RTV
@@ -399,18 +399,18 @@ export function StockReturnsPage() {
                   return (
                     <div className="rounded-xl border border-slate-700/80 bg-slate-900/95 backdrop-blur-md px-3.5 py-2.5 text-white shadow-2xl text-xs space-y-1">
                       <div className="font-semibold text-slate-200">{d.day} Disposition Breakdown</div>
-                      <div className="text-emerald-400">Restocked: {d.restock} units</div>
-                      <div className="text-amber-400">Quarantined: {d.quarantine} units</div>
-                      <div className="text-indigo-400">Return to Supplier: {d.rtv} units</div>
-                      <div className="text-rose-400">Scrap / Defective: {d.scrap} units</div>
+                      <div className="flex justify-between gap-4 text-emerald-400"><span>Restocked:</span><span className="tabular-nums">{d.restock} units</span></div>
+                      <div className="flex justify-between gap-4 text-amber-400"><span>Quarantined:</span><span className="tabular-nums">{d.quarantine} units</span></div>
+                      <div className="flex justify-between gap-4 text-indigo-400"><span>Return to Supplier:</span><span className="tabular-nums">{d.rtv} units</span></div>
+                      <div className="flex justify-between gap-4 text-rose-400"><span>Scrap / Defective:</span><span className="tabular-nums">{d.scrap} units</span></div>
                     </div>
                   );
                 }}
               />
-              <Bar dataKey="restock" fill="#10b981" radius={[4, 4, 0, 0]} name="Restocked" />
-              <Bar dataKey="quarantine" fill="#f59e0b" radius={[4, 4, 0, 0]} name="Quarantined" />
-              <Bar dataKey="rtv" fill="#6366f1" radius={[4, 4, 0, 0]} name="RTV" />
-              <Line type="monotone" dataKey="restock" stroke="#34d399" strokeWidth={2} dot={false} />
+              <Bar dataKey="restock" fill="#10b981" radius={[4, 4, 0, 0]} name="Restocked" isAnimationActive={false} />
+              <Bar dataKey="quarantine" fill="#f59e0b" radius={[4, 4, 0, 0]} name="Quarantined" isAnimationActive={false} />
+              <Bar dataKey="rtv" fill="#6366f1" radius={[4, 4, 0, 0]} name="RTV" isAnimationActive={false} />
+              <Line type="monotone" dataKey="restock" stroke="#34d399" strokeWidth={2} dot={false} isAnimationActive={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -490,7 +490,7 @@ export function StockReturnsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+              <tr className="whitespace-nowrap border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
                 <th className="py-3.5 px-4 font-semibold">Return No.</th>
                 <th className="py-3.5 px-4 font-semibold">Date</th>
                 <th className="py-3.5 px-4 font-semibold">Return Type</th>
@@ -577,7 +577,7 @@ export function StockReturnsPage() {
                         </div>
                       </td>
 
-                      <td className="py-3.5 px-4 text-right font-mono font-bold text-purple-600 dark:text-purple-400 tabular-nums">
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono font-bold text-purple-600 dark:text-purple-400 tabular-nums">
                         {returnQty} {r.unit || "EA"}
                       </td>
 

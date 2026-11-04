@@ -302,7 +302,7 @@ export function CycleCountPage() {
             <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             <span>{successMsg}</span>
           </div>
-          <button onClick={() => setSuccessMsg("")} className="text-emerald-600 hover:text-emerald-800">
+          <button onClick={() => setSuccessMsg("")} className="text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-200">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -420,7 +420,7 @@ export function CycleCountPage() {
       <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-600 dark:text-zinc-400">
-            <thead className="bg-slate-50/80 dark:bg-zinc-800/50 uppercase tracking-wider text-[11px] font-semibold text-slate-500 dark:text-zinc-400 border-b border-slate-200 dark:border-zinc-800">
+            <thead className="bg-slate-50/80 dark:bg-zinc-800/50 uppercase tracking-wider text-[11px] font-semibold text-slate-500 dark:text-zinc-400 border-b border-slate-200 dark:border-zinc-800 whitespace-nowrap">
               <tr>
                 <th className="py-3.5 px-4">Count Number</th>
                 <th className="py-3.5 px-4">Date</th>
@@ -456,7 +456,7 @@ export function CycleCountPage() {
                     <td className="py-3.5 px-4 font-mono font-bold text-blue-600 dark:text-blue-400">
                       {c.count_number}
                     </td>
-                    <td className="py-3.5 px-4">{c.count_date}</td>
+                    <td className="py-3.5 px-4 whitespace-nowrap">{c.count_date}</td>
                     <td className="py-3.5 px-4 font-semibold text-slate-800 dark:text-zinc-200">
                       {c.warehouse_name}
                     </td>
@@ -473,7 +473,7 @@ export function CycleCountPage() {
                         </div>
                       )}
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300">
                         {c.count_frequency}
                       </span>
@@ -481,7 +481,7 @@ export function CycleCountPage() {
                     <td className="py-3.5 px-4 text-slate-700 dark:text-zinc-300 font-medium">
                       {c.assigned_to}
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                           c.status === "Scheduled"
@@ -496,7 +496,7 @@ export function CycleCountPage() {
                         {c.status}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-right">
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
                         {c.status !== "Completed" && (
                           <button

@@ -1,31 +1,85 @@
 import React, { useState, useEffect } from "react";
-import { X, Package, Layers, Tag, Ruler, Barcode, Shield, Save, AlertCircle, Sparkles } from "lucide-react";
-import { createProduct, fetchCategories, fetchBrands } from "../services/api";
+import {
+  X,
+  Package,
+  Layers,
+  Tag,
+  Ruler,
+  Barcode,
+  Shield,
+  Save,
+  AlertCircle,
+  Sparkles,
+  DollarSign,
+  Scale,
+  Sliders,
+  ChevronRight,
+  ChevronLeft,
+} from "lucide-react";
+import { createProduct, fetchCategories, fetchBrands, fetchUnits, generateEan13 } from "../services/api";
+
+// Blank form; also used to reset after a product is saved.
+const EMPTY_PRODUCT_FORM = {
+  code: "",
+  name: "",
+  display_name: "",
+  short_description: "",
+  description: "",
+  category: "",
+  category_id: null,
+  brand: "",
+  brand_id: null,
+  item_type: "STOCK",
+  status: "ACTIVE",
+  manufacturer: "",
+  model_number: "",
+  country_of_origin: "",
+  base_unit: "EA",
+  base_uom: null,
+  purchase_uom: null,
+  sales_uom: null,
+  track_inventory: true,
+  is_stockable: true,
+  is_purchasable: true,
+  is_salable: true,
+  allow_negative_stock: false,
+  tracking: "NONE",
+  batch_tracking_required: false,
+  serial_tracking_required: false,
+  expiry_tracking_required: false,
+  has_variants: false,
+  standard_cost: 0.0,
+  list_price: 0.0,
+  reorder_point: 50,
+  reorder_quantity: 100,
+  min_order_qty: 1,
+  lead_time_days: 3,
+  purchase_tax_code: "",
+  sales_tax_code: "",
+  net_weight: "",
+  gross_weight: "",
+  length: "",
+  width: "",
+  height: "",
+  barcode: "",
+};
 
 export function CreateProductModal({ isOpen, onClose, onCreated }) {
   const [tab, setTab] = useState("basic");
   const steps = [
-    { key: "basic", label: "1. Basic Details" },
-    { key: "tracking", label: "2. Unit & Tracking" },
-    { key: "reorder", label: "3. Reorder Parameters" },
+    { key: "basic", label: "1. Basic & Identity" },
+    { key: "tracking", label: "2. Policy & UOM" },
+    { key: "costing", label: "3. Costing & Reorder" },
+    { key: "specs", label: "4. Physical Specs & Barcode" },
   ];
   const currentStepIndex = steps.findIndex((step) => step.key === tab);
+
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
-  const [formData, setFormData] = useState({
-    code: "",
-    name: "",
-    description: "",
-    category: "Mechanical Components",
-    brand: "",
-    base_unit: "EA",
-    item_type: "STOCK",
-    tracking: "NONE",
-    barcode: "",
-    reorder_point: 50,
-    reorder_quantity: 100,
-    initial_cost: 0.0,
-  });
+  const [units, setUnits] = useState([]);
+
+  const [formData, setFormData] = useState(EMPTY_PRODUCT_FORM);
+
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -35,34 +89,24 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
       setError("");
       fetchCategories().then((res) => {
         const list = res.results || res || [];
-        if (list.length > 0) {
-          setCategories(list);
-          setFormData((prev) => {
-            const selectedCategory = list.find(
-              (category) =>
-                String(category.id) === prev.category ||
-                category.name === prev.category
-            );
-            return {
-              ...prev,
-              category: String(
-                selectedCategory?.id ?? list[0].id ?? list[0].name
-              ),
-            };
-          });
-        } else {
+        setCategories(list);
+        if (list.length > 0 && !formData.category_id) {
           setFormData((prev) => ({
             ...prev,
-            category: prev.category || "Mechanical Components",
+            category: list[0].name,
+            category_id: list[0].id,
           }));
         }
       });
 
       fetchBrands().then((res) => {
         const list = res.results || res || [];
-        if (list.length > 0) {
-          setBrands(list);
-        }
+        setBrands(list);
+      });
+
+      fetchUnits().then((res) => {
+        const list = res.results || res || [];
+        setUnits(list);
       });
     }
   }, [isOpen]);
@@ -70,26 +114,73 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
   if (!isOpen) return null;
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleCategoryChange = (e) => {
+    const catId = e.target.value;
+    const cat = categories.find((c) => String(c.id) === String(catId));
+    setFormData((prev) => ({
+      ...prev,
+      category_id: cat ? cat.id : null,
+      category: cat ? cat.name : "",
+    }));
+  };
 
+  const handleBrandChange = (e) => {
+    const brandId = e.target.value;
+    const b = brands.find((brand) => String(brand.id) === String(brandId));
+    setFormData((prev) => ({
+      ...prev,
+      brand_id: b ? b.id : null,
+      brand: b ? b.name : "",
+    }));
+  };
+
+  const handleTrackingChange = (e) => {
+    const val = e.target.value;
+    setFormData((prev) => ({
+      ...prev,
+      tracking: val,
+      batch_tracking_required: val === "BATCH",
+      serial_tracking_required: val === "SERIAL",
+      expiry_tracking_required: val === "BATCH" ? prev.expiry_tracking_required : false,
+    }));
+  };
+
+  const handleNext = () => {
     if (tab === "basic") {
       if (!formData.code.trim() || !formData.name.trim()) {
-        setError("Item code and product name are required.");
+        setError("Item Code and Product Name are required.");
         return;
       }
       setError("");
       setTab("tracking");
-      return;
-    }
-
-    if (tab === "tracking") {
+    } else if (tab === "tracking") {
       setError("");
-      setTab("reorder");
+      setTab("costing");
+    } else if (tab === "costing") {
+      setError("");
+      setTab("specs");
+    }
+  };
+
+  const handleBack = () => {
+    setError("");
+    if (tab === "specs") setTab("costing");
+    else if (tab === "costing") setTab("tracking");
+    else if (tab === "tracking") setTab("basic");
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.code.trim() || !formData.name.trim()) {
+      setError("Item Code and Product Name are required.");
+      setTab("basic");
       return;
     }
 
@@ -98,27 +189,68 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
 
     try {
       const selectedCategory = categories.find(
-        (category) =>
-          String(category.id) === formData.category ||
-          category.name === formData.category
+        (c) => String(c.id) === String(formData.category_id) || c.name === formData.category
       );
-      const created = await createProduct({
-        ...formData,
-        category_id: selectedCategory?.id,
-        category_name: selectedCategory?.name || formData.category,
+
+      const payload = {
         code: formData.code.trim().toUpperCase(),
         name: formData.name.trim(),
+        display_name: formData.display_name.trim() || formData.name.trim(),
+        short_description: formData.short_description.trim(),
+        description: formData.description.trim() || formData.short_description.trim(),
+        item_type: formData.item_type,
+        status: formData.status,
+        category: selectedCategory?.id || categories[0]?.id,
+        category_id: selectedCategory?.id || categories[0]?.id,
+        category_name: selectedCategory?.name || formData.category,
+        brand: formData.brand || "Preferred OEM",
+        brand_ref: formData.brand_id || null,
+        manufacturer: formData.manufacturer.trim(),
+        model_number: formData.model_number.trim(),
+        country_of_origin: formData.country_of_origin.trim().toUpperCase(),
+        base_unit: formData.base_unit || "EA",
+        base_uom: formData.base_uom || null,
+        purchase_uom: formData.purchase_uom || null,
+        sales_uom: formData.sales_uom || null,
+        track_inventory: formData.track_inventory,
+        is_stockable: formData.is_stockable,
+        is_purchasable: formData.is_purchasable,
+        is_salable: formData.is_salable,
+        allow_negative_stock: formData.allow_negative_stock,
+        tracking: formData.tracking,
+        batch_tracking_required: formData.batch_tracking_required,
+        serial_tracking_required: formData.serial_tracking_required,
+        expiry_tracking_required: formData.expiry_tracking_required,
+        has_variants: formData.has_variants,
+        standard_cost: Number(formData.standard_cost) || 0,
+        list_price: Number(formData.list_price) || 0,
         reorder_point: Number(formData.reorder_point) || 0,
         reorder_quantity: Number(formData.reorder_quantity) || 0,
-        initial_cost: Number(formData.initial_cost) || 0,
-      });
+        min_order_qty: Number(formData.min_order_qty) || 1,
+        lead_time_days: Number(formData.lead_time_days) || 0,
+        purchase_tax_code: formData.purchase_tax_code.trim(),
+        sales_tax_code: formData.sales_tax_code.trim(),
+        net_weight: formData.net_weight ? Number(formData.net_weight) : null,
+        gross_weight: formData.gross_weight ? Number(formData.gross_weight) : null,
+        length: formData.length ? Number(formData.length) : null,
+        width: formData.width ? Number(formData.width) : null,
+        height: formData.height ? Number(formData.height) : null,
+        barcode: formData.barcode?.trim() || generateEan13(),
+      };
 
+      const created = await createProduct(payload);
       if (onCreated) {
         onCreated(created);
       }
+      // Start the next product from a blank form (keep the default category).
+      setFormData((prev) => ({
+        ...EMPTY_PRODUCT_FORM,
+        category: prev.category,
+        category_id: prev.category_id,
+      }));
       onClose();
     } catch (err) {
-      setError("Failed to register item. Please check network and field validity.");
+      setError(err.message || "Failed to register item. Please check network and field validity.");
     } finally {
       setSubmitting(false);
     }
@@ -126,55 +258,50 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div className="w-full max-w-3xl bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/50">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-bold shadow-md shadow-blue-500/20">
+        <div className="p-5 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between gap-3 bg-slate-50/60 dark:bg-zinc-900/60">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-bold shadow-md shadow-blue-500/20">
               <Package className="h-5 w-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                  Create Catalog Product
+                  Create Master Item
                 </h2>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/50">
                   <Sparkles className="h-2.5 w-2.5" />
-                  Live Sync
+                  Enterprise ERP Master
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                Define item identity, tracking policies, UOM conversions & reorder boundaries.
+                Define master identity, multi-UOM conversions, tracking policies, and commercial specifications.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="shrink-0 p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Tab Buttons */}
-        <div className="flex items-center gap-2 px-6 border-b border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs">
+        <div className="flex items-center gap-2 px-6 border-b border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs overflow-x-auto">
           {steps.map((t, index) => (
             <button
               key={t.key}
               onClick={() => {
-                if (index <= currentStepIndex) {
-                  setError("");
-                  setTab(t.key);
-                }
+                setError("");
+                setTab(t.key);
               }}
-              disabled={index > currentStepIndex}
               type="button"
-              className={`py-3 font-semibold border-b-2 transition-colors ${
+              className={`py-3 font-semibold whitespace-nowrap border-b-2 transition-colors cursor-pointer ${
                 tab === t.key
                   ? "border-blue-600 text-blue-600 dark:text-blue-400"
-                  : index < currentStepIndex
-                  ? "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-zinc-200 cursor-pointer"
-                  : "border-transparent text-slate-400 cursor-not-allowed"
+                  : "border-transparent text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-200"
               }`}
             >
               {t.label}
@@ -182,9 +309,9 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
           ))}
         </div>
 
-        {/* Error message */}
+        {/* Error alert */}
         {error && (
-          <div className="m-6 mb-0 p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 flex items-center gap-2.5 text-xs text-rose-700 dark:text-rose-400">
+          <div className="m-5 mb-0 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 flex items-center gap-2.5 text-xs text-rose-700 dark:text-rose-400">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span className="font-medium">{error}</span>
           </div>
@@ -192,13 +319,14 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
 
         {/* Form Body */}
         <form onSubmit={handleSubmit}>
-          <div className="p-6 space-y-4 text-xs">
+          <div className="p-6 space-y-4 text-xs max-h-[62vh] overflow-y-auto">
+            {/* TAB 1: BASIC & IDENTITY */}
             {tab === "basic" && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
-                      Product SKU / Item Code <span className="text-rose-500">*</span>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Item Code / SKU <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -206,264 +334,573 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                       value={formData.code}
                       onChange={handleChange}
                       placeholder="e.g. BRG-6205-2RS"
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono transition-all"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white font-mono uppercase font-semibold text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
                       required
                     />
                   </div>
-
                   <div>
-                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
-                      Barcode Number
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Item Name <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
-                      name="barcode"
-                      value={formData.barcode}
+                      name="name"
+                      value={formData.name}
                       onChange={handleChange}
-                      placeholder="e.g. 890123984210 (encoded as Code 128)"
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono transition-all"
+                      placeholder="e.g. Industrial Ball Bearing 6205-2RS"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
+                      required
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
-                    Product Title / Name <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    placeholder="e.g. Industrial Deep Groove Ball Bearing"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
-                    required
-                  />
-                </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
-                      Category
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Display Name (Catalog / POS)
                     </label>
-                    <select
-                      name="category"
-                      value={formData.category}
+                    <input
+                      type="text"
+                      name="display_name"
+                      value={formData.display_name}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
-                    >
-                      {categories.length > 0 ? (
-                        categories.map((c) => (
-                          <option key={c.id || c.code} value={String(c.id ?? c.name)}>
-                            {c.name}
-                          </option>
-                        ))
-                      ) : (
-                        <>
-                          <option value="Mechanical Components">Mechanical Components</option>
-                          <option value="Hydraulics & Pneumatics">Hydraulics & Pneumatics</option>
-                          <option value="Power Transmission">Power Transmission</option>
-                          <option value="Sensors & Automation">Sensors & Automation</option>
-                          <option value="Chemicals & Fluids">Chemicals & Fluids</option>
-                        </>
-                      )}
-                    </select>
+                      placeholder="Commercial display label"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
+                    />
                   </div>
-
                   <div>
-                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
-                      Brand / Manufacturer
-                    </label>
-                    <select
-                      name="brand"
-                      value={formData.brand}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
-                    >
-                      <option value="">Select Brand / Manufacturer</option>
-                      {brands.length > 0 ? (
-                        brands.map((b) => (
-                          <option key={b.id || b.code} value={b.name}>
-                            {b.name} {b.code ? `(${b.code})` : ""}
-                          </option>
-                        ))
-                      ) : (
-                        <>
-                          <option value="SKF Precision">SKF Precision (SKF)</option>
-                          <option value="Bosch Rexroth">Bosch Rexroth (BOSCH)</option>
-                          <option value="Parker Hannifin">Parker Hannifin (PARKER)</option>
-                          <option value="Festo Pneumatics">Festo Pneumatics (FESTO)</option>
-                          <option value="Schneider Electric">Schneider Electric (SCHNEIDER)</option>
-                          <option value="Gates Industrial">Gates Industrial (GATES)</option>
-                        </>
-                      )}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
-                    Operational Description
-                  </label>
-                  <textarea
-                    name="description"
-                    rows={3}
-                    value={formData.description}
-                    onChange={handleChange}
-                    placeholder="Enter engineering notes, storage conditions or product specifications..."
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
-                  />
-                </div>
-              </div>
-            )}
-
-            {tab === "tracking" && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
                       Item Type
                     </label>
                     <select
                       name="item_type"
                       value={formData.item_type}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden cursor-pointer"
                     >
                       <option value="STOCK">Stockable Product</option>
                       <option value="RAW_MATERIAL">Raw Material</option>
+                      <option value="WIP">Work In Progress</option>
                       <option value="FINISHED_GOOD">Finished Good</option>
-                      <option value="CONSUMABLE">Consumable Supply</option>
+                      <option value="CONSUMABLE">Consumable / Supplies</option>
+                      <option value="NON_STOCK">Non-Stock Item</option>
+                      <option value="SERVICE">Service / Labor</option>
+                      <option value="ASSET">Capital Asset</option>
+                      <option value="MERCHANDISE">Retail Merchandise</option>
                     </select>
                   </div>
+                </div>
 
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
-                      Base Unit of Measure (UOM)
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Category <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      value={formData.category_id || ""}
+                      onChange={handleCategoryChange}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden cursor-pointer"
+                      required
+                    >
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.code} – {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Brand / OEM Manufacturer
+                    </label>
+                    <select
+                      value={formData.brand_id || ""}
+                      onChange={handleBrandChange}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden cursor-pointer"
+                    >
+                      <option value="">-- Select Brand --</option>
+                      {brands.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name} ({b.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Manufacturer
+                    </label>
+                    <input
+                      type="text"
+                      name="manufacturer"
+                      value={formData.manufacturer}
+                      onChange={handleChange}
+                      placeholder="e.g. SKF Group"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Model Number
+                    </label>
+                    <input
+                      type="text"
+                      name="model_number"
+                      value={formData.model_number}
+                      onChange={handleChange}
+                      placeholder="e.g. 6205-2RSH"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Country of Origin
+                    </label>
+                    <input
+                      type="text"
+                      name="country_of_origin"
+                      value={formData.country_of_origin}
+                      onChange={handleChange}
+                      placeholder="e.g. USA, DEU, SWE"
+                      maxLength={3}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs uppercase font-mono focus:ring-2 focus:ring-blue-500 outline-hidden"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                    Short Description (Invoices & PO lines)
+                  </label>
+                  <input
+                    type="text"
+                    name="short_description"
+                    value={formData.short_description}
+                    onChange={handleChange}
+                    placeholder="Brief 1-sentence product summary"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: POLICY & UOM */}
+            {tab === "tracking" && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Base Stock UOM <span className="text-rose-500">*</span>
                     </label>
                     <select
                       name="base_unit"
                       value={formData.base_unit}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono transition-all font-medium"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden cursor-pointer"
                     >
-                      <option value="EA">EA - Each / Piece</option>
-                      <option value="LTR">LTR - Liters</option>
-                      <option value="KG">KG - Kilograms</option>
-                      <option value="MTR">MTR - Meters</option>
-                      <option value="BOX">BOX - Standard Box</option>
+                      {units.map((u) => (
+                        <option key={u.id} value={u.code}>
+                          {u.code} – {u.name} ({u.dimension})
+                        </option>
+                      ))}
+                      {units.length === 0 && <option value="EA">EA – Each</option>}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Default Purchase UOM
+                    </label>
+                    <select
+                      name="purchase_uom"
+                      value={formData.purchase_uom || ""}
+                      onChange={(e) => setFormData({ ...formData, purchase_uom: e.target.value ? Number(e.target.value) : null })}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden cursor-pointer"
+                    >
+                      <option value="">Same as Base UOM</option>
+                      {units.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.code} – {u.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Default Sales UOM
+                    </label>
+                    <select
+                      name="sales_uom"
+                      value={formData.sales_uom || ""}
+                      onChange={(e) => setFormData({ ...formData, sales_uom: e.target.value ? Number(e.target.value) : null })}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden cursor-pointer"
+                    >
+                      <option value="">Same as Base UOM</option>
+                      {units.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.code} – {u.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
 
-                <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300">
-                    Inventory Tracking Control
-                  </label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { key: "NONE", label: "Standard (Aggregate)", desc: "Quantities tracked without lot separation" },
-                      { key: "BATCH", label: "Batch / Lot Tracked", desc: "Track manufacturing date, expiry & FEFO" },
-                      { key: "SERIAL", label: "Serial Numbered", desc: "Track unique individual units & warranty" },
-                    ].map((opt) => (
-                      <div
-                        key={opt.key}
-                        onClick={() => setFormData((p) => ({ ...p, tracking: opt.key }))}
-                        className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
-                          formData.tracking === opt.key
-                            ? "border-blue-600 bg-blue-50/60 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 shadow-xs"
-                            : "border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700"
-                        }`}
-                      >
-                        <div className="font-semibold text-xs">{opt.label}</div>
-                        <div className="text-[10px] text-slate-500 dark:text-zinc-400 mt-1">{opt.desc}</div>
-                      </div>
-                    ))}
+                <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40 space-y-3">
+                  <div className="font-semibold text-slate-800 dark:text-zinc-200 flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-blue-600" />
+                    Traceability & Inventory Governance
                   </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-medium text-slate-600 dark:text-zinc-400 mb-1">
+                        Tracking Policy
+                      </label>
+                      <select
+                        value={formData.tracking}
+                        onChange={handleTrackingChange}
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden cursor-pointer"
+                      >
+                        <option value="NONE">No Individual Tracking</option>
+                        <option value="BATCH">Batch / Lot Tracking</option>
+                        <option value="SERIAL">Serial Number Tracking</option>
+                      </select>
+                    </div>
+                    {formData.tracking === "BATCH" && (
+                      <div className="flex items-center gap-2 pt-5">
+                        <input
+                          type="checkbox"
+                          id="expiry_req"
+                          name="expiry_tracking_required"
+                          checked={formData.expiry_tracking_required}
+                          onChange={handleChange}
+                          className="rounded text-blue-600 h-4 w-4"
+                        />
+                        <label htmlFor="expiry_req" className="font-medium text-slate-700 dark:text-zinc-300">
+                          Mandate Expiration Date Tracking
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="track_inventory"
+                        checked={formData.track_inventory}
+                        onChange={handleChange}
+                        className="rounded text-blue-600 h-4 w-4"
+                      />
+                      <span className="text-slate-700 dark:text-zinc-300">Track Warehouse Stock</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="allow_negative_stock"
+                        checked={formData.allow_negative_stock}
+                        onChange={handleChange}
+                        className="rounded text-blue-600 h-4 w-4"
+                      />
+                      <span className="text-slate-700 dark:text-zinc-300">Allow Negative Stock</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="is_purchasable"
+                        checked={formData.is_purchasable}
+                        onChange={handleChange}
+                        className="rounded text-blue-600 h-4 w-4"
+                      />
+                      <span className="text-slate-700 dark:text-zinc-300">Allow on Purchase Orders</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="is_salable"
+                        checked={formData.is_salable}
+                        onChange={handleChange}
+                        className="rounded text-blue-600 h-4 w-4"
+                      />
+                      <span className="text-slate-700 dark:text-zinc-300">Allow on Sales Orders</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-xl border border-indigo-100 dark:border-indigo-950/60 bg-indigo-50/40 dark:bg-indigo-950/20">
+                  <div>
+                    <div className="font-semibold text-slate-900 dark:text-white">Has Product Variants</div>
+                    <div className="text-[11px] text-slate-500 dark:text-zinc-400">Enable if product has sizes, colors, or technical variations.</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    name="has_variants"
+                    checked={formData.has_variants}
+                    onChange={handleChange}
+                    className="rounded text-blue-600 h-5 w-5 cursor-pointer"
+                  />
                 </div>
               </div>
             )}
 
-            {tab === "reorder" && (
+            {/* TAB 3: COSTING & REORDER */}
+            {tab === "costing" && (
               <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
-                      Reorder Threshold (Min)
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Standard Cost ($)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="standard_cost"
+                      value={formData.standard_cost}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      List Price / MSRP ($)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="list_price"
+                      value={formData.list_price}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Reorder Threshold Point (Units)
                     </label>
                     <input
                       type="number"
                       name="reorder_point"
                       value={formData.reorder_point}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono transition-all"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
                     />
-                    <span className="text-[10px] text-slate-400 mt-1 block">Triggers low stock alert</span>
                   </div>
-
                   <div>
-                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
-                      Suggested Reorder Qty
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Target Reorder Quantity (Units)
                     </label>
                     <input
                       type="number"
                       name="reorder_quantity"
                       value={formData.reorder_quantity}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono transition-all"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
                     />
-                    <span className="text-[10px] text-slate-400 mt-1 block">Default order batch size</span>
                   </div>
+                </div>
 
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
-                      Initial Unit Cost ($)
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Minimum Order Quantity (MOQ)
                     </label>
                     <input
                       type="number"
-                      step="0.01"
-                      name="initial_cost"
-                      value={formData.initial_cost}
+                      name="min_order_qty"
+                      value={formData.min_order_qty}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono transition-all"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
                     />
-                    <span className="text-[10px] text-slate-400 mt-1 block">Baseline WAV valuation</span>
                   </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Supplier Lead Time (Days)
+                    </label>
+                    <input
+                      type="number"
+                      name="lead_time_days"
+                      value={formData.lead_time_days}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Purchase Tax Code
+                    </label>
+                    <input
+                      type="text"
+                      name="purchase_tax_code"
+                      value={formData.purchase_tax_code}
+                      onChange={handleChange}
+                      placeholder="e.g. TAX-PUR-STD-19"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Sales Tax Code
+                    </label>
+                    <input
+                      type="text"
+                      name="sales_tax_code"
+                      value={formData.sales_tax_code}
+                      onChange={handleChange}
+                      placeholder="e.g. TAX-SLS-STD-19"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: PHYSICAL SPECS & BARCODE */}
+            {tab === "specs" && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Net Weight (KG)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      name="net_weight"
+                      value={formData.net_weight}
+                      onChange={handleChange}
+                      placeholder="0.000"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Gross Weight (Packaging + Item KG)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      name="gross_weight"
+                      value={formData.gross_weight}
+                      onChange={handleChange}
+                      placeholder="0.000"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Length (CM)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      name="length"
+                      value={formData.length}
+                      onChange={handleChange}
+                      placeholder="0.0"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Width (CM)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      name="width"
+                      value={formData.width}
+                      onChange={handleChange}
+                      placeholder="0.0"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Height (CM)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      name="height"
+                      value={formData.height}
+                      onChange={handleChange}
+                      placeholder="0.0"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                    Primary Barcode / EAN-13 / UPC
+                  </label>
+                  <input
+                    type="text"
+                    name="barcode"
+                    value={formData.barcode}
+                    onChange={handleChange}
+                    placeholder="Leave empty to auto-generate valid 13-digit EAN"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
+                  />
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1">
+                    Additional packaging, case carton (ITF-14), and vendor barcodes can be registered in the Barcodes tab.
+                  </p>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Footer */}
-          <div className="p-4 px-6 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 flex items-center justify-between text-xs">
+          {/* Footer Controls */}
+          <div className="p-4 px-6 bg-slate-50/60 dark:bg-zinc-900/60 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between">
             <button
               type="button"
-              onClick={() => {
-                if (currentStepIndex === 0) {
-                  onClose();
-                } else {
-                  setError("");
-                  setTab(steps[currentStepIndex - 1].key);
-                }
-              }}
-              className="px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 font-semibold transition-colors cursor-pointer"
+              onClick={handleBack}
+              disabled={tab === "basic"}
+              className="px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 font-semibold hover:bg-slate-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5 cursor-pointer"
             >
-              {currentStepIndex === 0 ? "Cancel" : "Back"}
+              <ChevronLeft className="h-4 w-4" />
+              Back
             </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold shadow-xs hover:shadow-blue-500/25 disabled:opacity-50 transition-all cursor-pointer"
-            >
-              {currentStepIndex === steps.length - 1 ? (
-                <>
-                  <Save className="h-4 w-4" />
-                  <span>{submitting ? "Saving & Syncing..." : "Save & Register Item"}</span>
-                </>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-3.5 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-medium hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              {tab !== "specs" ? (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  Next Step
+                  <ChevronRight className="h-4 w-4" />
+                </button>
               ) : (
-                <span>Continue</span>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-500/20 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <Save className="h-4 w-4" />
+                  {submitting ? "Registering..." : "Save Product Master"}
+                </button>
               )}
-            </button>
+            </div>
           </div>
         </form>
       </div>

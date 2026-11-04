@@ -100,5 +100,6 @@ urlpatterns = [
     path("reports/warehouse/", WarehouseReportView.as_view(), name="report-warehouse"),
     path("configuration/global/", InventoryConfigurationView.as_view(), name="configuration-global"),
     path("configuration/audit-log/", ConfigurationAuditLogListView.as_view(), name="configuration-audit-log"),
+    path("integrations/", include("apps.integration.urls")),
     path("", include(router.urls)),
 ]

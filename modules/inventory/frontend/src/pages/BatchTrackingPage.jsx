@@ -189,7 +189,7 @@ export function BatchTrackingPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
               Batch & Lot Lifecycle Management
             </h1>
@@ -205,7 +205,7 @@ export function BatchTrackingPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={exportBatches}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 shadow-xs transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 shadow-xs transition-colors"
           >
             <Download className="h-3.5 w-3.5" />
             <span>Export Batch Register</span>
@@ -272,13 +272,13 @@ export function BatchTrackingPage() {
       {/* High-Configuration Chart: FEFO Expiry Horizon & Shelf-Life Risk Wave */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         <div className="lg:col-span-8 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                   FEFO Expiry Horizon & Shelf-Life Depletion Wave
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-400 border border-purple-200 dark:border-purple-900/40">
+                <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-400 border border-purple-200 dark:border-purple-900/40">
                   Area Wave Curve
                 </span>
               </div>
@@ -286,7 +286,7 @@ export function BatchTrackingPage() {
                 First-Expired, First-Out (FEFO) queue allocation across aging intervals with 30-day quarantine cut-off.
               </p>
             </div>
-            <div className="flex items-center gap-3 text-xs">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 shrink-0 text-xs">
               <span className="flex items-center gap-1.5 text-rose-500 font-medium text-[11px]">
                 <span className="h-2 w-2 rounded-full bg-rose-500" /> &lt;30d Critical
               </span>
@@ -301,7 +301,7 @@ export function BatchTrackingPage() {
 
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={fefoHorizonData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
+              <AreaChart data={fefoHorizonData} margin={{ top: 10, right: 15, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="fefoCriticalGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.4} />
@@ -324,7 +324,7 @@ export function BatchTrackingPage() {
                   tickLine={false}
                   axisLine={{ stroke: "#64748b", opacity: 0.2 }}
                 />
-                <YAxis
+                <YAxis width="auto"
                   stroke="#94a3b8"
                   fontSize={11}
                   tickLine={false}
@@ -357,7 +357,7 @@ export function BatchTrackingPage() {
                   x="< 30 Days"
                   stroke="#f43f5e"
                   strokeDasharray="4 4"
-                  label={{ value: "Quarantine Threshold", fill: "#f43f5e", fontSize: 10, position: "top" }}
+                  label={{ value: "Quarantine Threshold", fill: "#f43f5e", fontSize: 10, position: "insideTopLeft" }}
                 />
                 <Area
                   type="monotone"
@@ -366,7 +366,7 @@ export function BatchTrackingPage() {
                   stroke="#f43f5e"
                   strokeWidth={2}
                   fill="url(#fefoCriticalGrad)"
-                />
+                  isAnimationActive={false}/>
                 <Area
                   type="monotone"
                   dataKey="warning"
@@ -374,7 +374,7 @@ export function BatchTrackingPage() {
                   stroke="#f59e0b"
                   strokeWidth={2}
                   fill="url(#fefoWarningGrad)"
-                />
+                  isAnimationActive={false}/>
                 <Area
                   type="monotone"
                   dataKey="safe"
@@ -382,7 +382,7 @@ export function BatchTrackingPage() {
                   stroke="#10b981"
                   strokeWidth={2}
                   fill="url(#fefoSafeGrad)"
-                />
+                  isAnimationActive={false}/>
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -467,7 +467,7 @@ export function BatchTrackingPage() {
               className={`px-3 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap ${
                 statusFilter === tab.key
                   ? "bg-slate-900 text-white dark:bg-white dark:text-zinc-900"
-                  : "bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50"
+                  : "bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800"
               }`}
             >
               {tab.label}
@@ -481,7 +481,7 @@ export function BatchTrackingPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400 whitespace-nowrap">
                 <th className="py-3.5 px-4 font-semibold">Batch / Lot No.</th>
                 <th className="py-3.5 px-4 font-semibold">Product SKU & Title</th>
                 <th className="py-3.5 px-4 font-semibold">Facility</th>
@@ -489,7 +489,7 @@ export function BatchTrackingPage() {
                 <th className="py-3.5 px-4 font-semibold">Expiry Date</th>
                 <th className="py-3.5 px-4 font-semibold text-right">Remaining Stock</th>
                 <th className="py-3.5 px-4 font-semibold text-center">Status</th>
-                <th className="py-3.5 px-4 text-center">Actions</th>
+                <th className="py-3.5 px-4 font-semibold text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
@@ -517,7 +517,7 @@ export function BatchTrackingPage() {
                     <td className="py-3.5 px-4 font-mono text-slate-800 dark:text-zinc-200 font-medium">
                       {b.expiry_date}
                     </td>
-                    <td className="py-3.5 px-4 text-right font-bold tabular-nums text-slate-900 dark:text-white">
+                    <td className="py-3.5 px-4 text-right font-bold tabular-nums whitespace-nowrap text-slate-900 dark:text-white">
                       {parseFloat(b.quantity || 0).toLocaleString()} EA
                     </td>
                     <td className="py-3.5 px-4 text-center">
@@ -785,7 +785,7 @@ export function BatchTrackingPage() {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-medium hover:bg-slate-50"
+                  className="px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-medium hover:bg-slate-50 dark:hover:bg-zinc-800"
                 >
                   Cancel
                 </button>

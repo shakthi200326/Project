@@ -89,7 +89,7 @@ export function GeneralSettingsPage() {
               : "bg-rose-50 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800"
           }`}
         >
-          {toast.type === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+          {toast.type === "success" ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
           <span>{toast.message}</span>
         </div>
       )}
@@ -188,8 +188,8 @@ export function GeneralSettingsPage() {
           </div>
 
           {/* 5. Enable Multiple Warehouses */}
-          <div className="md:col-span-2 flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40">
-            <div>
+          <div className="md:col-span-2 flex items-center justify-between gap-4 p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40">
+            <div className="min-w-0">
               <span className="text-xs font-bold text-slate-900 dark:text-white block">
                 Enable Multiple Warehouses <span className="text-rose-500">*</span>
               </span>
@@ -197,7 +197,7 @@ export function GeneralSettingsPage() {
                 Permits multi-facility operations, inter-warehouse transfer orders, and multi-location balances.
               </span>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
               <input
                 type="checkbox"
                 checked={form.enable_multiple_warehouses}

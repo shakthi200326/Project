@@ -470,7 +470,7 @@ export function BatchManagementPage() {
       <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-zinc-800/50 text-slate-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-200 dark:border-zinc-800">
+            <thead className="bg-slate-50 dark:bg-zinc-800/50 text-slate-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-200 dark:border-zinc-800 whitespace-nowrap">
               <tr>
                 <th className="py-3 px-4">Batch Number</th>
                 <th className="py-3 px-4">Product & SKU</th>
@@ -519,7 +519,7 @@ export function BatchManagementPage() {
                         {b.location_name || b.location || "Default Location"}
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-right tabular-nums">
+                    <td className="py-3.5 px-4 text-right tabular-nums whitespace-nowrap">
                       <span className="font-bold text-slate-900 dark:text-white">
                         {Number(b.remaining_quantity || b.initial_quantity || 0)}
                       </span>

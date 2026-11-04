@@ -237,7 +237,7 @@ export function StockLedgerPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400 whitespace-nowrap">
                 <th className="py-3.5 px-4 font-semibold">Transaction Date</th>
                 <th className="py-3.5 px-3 font-semibold">Transaction Number</th>
                 <th className="py-3.5 px-3 font-semibold">Transaction Type</th>
@@ -261,10 +261,10 @@ export function StockLedgerPage() {
               ) : (
                 filtered.map((entry) => (
                   <tr key={entry.id || entry.transaction_number} className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors">
-                    <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600 dark:text-zinc-400">
+                    <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600 dark:text-zinc-400 whitespace-nowrap">
                       {entry.transaction_date}
                     </td>
-                    <td className="py-3.5 px-3 font-mono font-bold text-blue-600 dark:text-blue-400">
+                    <td className="py-3.5 px-3 font-mono font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">
                       {entry.transaction_number}
                     </td>
                     <td className="py-3.5 px-3">
@@ -301,13 +301,13 @@ export function StockLedgerPage() {
                     <td className="py-3.5 px-3 font-mono text-[11px] text-slate-500 dark:text-zinc-400">
                       {entry.location_name}
                     </td>
-                    <td className="py-3.5 px-3 text-right font-mono tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
+                    <td className="py-3.5 px-3 text-right font-mono tabular-nums whitespace-nowrap font-bold text-emerald-600 dark:text-emerald-400">
                       {entry.quantity_in > 0 ? `+${entry.quantity_in}` : "—"}
                     </td>
-                    <td className="py-3.5 px-3 text-right font-mono tabular-nums font-bold text-rose-600 dark:text-rose-400">
+                    <td className="py-3.5 px-3 text-right font-mono tabular-nums whitespace-nowrap font-bold text-rose-600 dark:text-rose-400">
                       {entry.quantity_out > 0 ? `-${entry.quantity_out}` : "—"}
                     </td>
-                    <td className="py-3.5 px-3 text-right font-mono tabular-nums font-bold text-slate-900 dark:text-white">
+                    <td className="py-3.5 px-3 text-right font-mono tabular-nums whitespace-nowrap font-bold text-slate-900 dark:text-white">
                       {entry.balance_quantity}
                     </td>
                     <td className="py-3.5 px-4 text-center font-mono text-[11px] text-slate-500 dark:text-zinc-400">

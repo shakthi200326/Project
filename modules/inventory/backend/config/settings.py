@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "apps.valuation",
     "apps.planning",
     "apps.configuration",
+    "apps.integration",
 ]
 
 MIDDLEWARE = [
@@ -70,28 +71,20 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 # Database Configuration: PostgreSQL 16 with fallback to SQLite for local tests
-DB_HOST = os.environ.get("DB_HOST")
-if DB_HOST:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.environ.get("DB_NAME", "ecosystem_db"),
-            "USER": os.environ.get("DB_USER", "postgres"),
-            "PASSWORD": os.environ.get("DB_PASSWORD", "postgres"),
-            "HOST": DB_HOST,
-            "PORT": os.environ.get("DB_PORT", "5432"),
-            "OPTIONS": {
-                "options": "-c search_path=inventory,shared,platform,public"
-            },
-        }
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("DB_NAME", "inventory_db"),
+        "USER": os.environ.get("DB_USER", "postgres"),
+        "PASSWORD": os.environ.get("DB_PASSWORD", "postgre"),
+        "HOST": os.environ.get("DB_HOST", "localhost"),
+        "PORT": os.environ.get("DB_PORT", "5432"),
+        "OPTIONS": {
+            "options": "-c search_path=inventory,shared,platform,public"
+        },
     }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+}
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -121,3 +114,24 @@ REST_FRAMEWORK = {
 # Storage
 LOCAL_STORAGE_ROOT = str(PROJECT_ROOT / "uploads")
 STORAGE_PROVIDER = os.environ.get("STORAGE_PROVIDER", "local")
+
+# Redis & Celery Configuration
+REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", REDIS_URL)
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", REDIS_URL)
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_BEAT_SCHEDULE = {
+    "drain-outbox-every-5-seconds": {
+        "task": "apps.integration.tasks.drain_outbox_events_task",
+        "schedule": 5.0,
+    },
+    "check-low-stock-every-5-minutes": {
+        "task": "apps.integration.tasks.check_low_stock_thresholds_task",
+        "schedule": 300.0,
+    },
+}
+

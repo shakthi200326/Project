@@ -401,14 +401,14 @@ export function WarehousesPage() {
       {/* High-Config Analytics Radar & Velocity Visualizations */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         <div className="lg:col-span-6 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-blue-500" />
                   Facility Operational Radar Performance
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200/60">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/40 shrink-0">
                   Radar Profile
                 </span>
               </div>
@@ -416,7 +416,7 @@ export function WarehousesPage() {
                 Multi-facility benchmark: Space Density, Pick SLA, Accuracy %, Buffer Safety & Dock Velocity.
               </p>
             </div>
-            <div className="flex items-center gap-2 text-[10px] font-bold">
+            <div className="flex items-center gap-2 text-[10px] font-bold shrink-0">
               <span className="text-blue-500">WH-MAIN</span>
               <span className="text-indigo-500">WH-EAST</span>
               <span className="text-emerald-500">WH-COLD</span>
@@ -444,23 +444,23 @@ export function WarehousesPage() {
                     );
                   }}
                 />
-                <Radar name="WH_MAIN" dataKey="WH_MAIN" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.25} />
-                <Radar name="WH_EAST" dataKey="WH_EAST" stroke="#6366F1" fill="#6366F1" fillOpacity={0.25} />
-                <Radar name="WH_COLD" dataKey="WH_COLD" stroke="#10B981" fill="#10B981" fillOpacity={0.25} />
+                <Radar name="WH_MAIN" dataKey="WH_MAIN" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.25} isAnimationActive={false} />
+                <Radar name="WH_EAST" dataKey="WH_EAST" stroke="#6366F1" fill="#6366F1" fillOpacity={0.25} isAnimationActive={false} />
+                <Radar name="WH_COLD" dataKey="WH_COLD" stroke="#10B981" fill="#10B981" fillOpacity={0.25} isAnimationActive={false} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="lg:col-span-6 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                   <Activity className="h-4 w-4 text-blue-500" />
                   Storage Utilization vs Dock Velocity
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200/60">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/40 shrink-0">
                   Dual-Axis Flow
                 </span>
               </div>
@@ -468,7 +468,7 @@ export function WarehousesPage() {
                 Active Storage Utilized (k m²) vs Carrier Dock Turnaround SLA (Hrs).
               </p>
             </div>
-            <div className="flex items-center gap-2.5 text-xs font-semibold">
+            <div className="flex items-center gap-2.5 text-xs font-semibold shrink-0">
               <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400 text-[11px]">
                 <span className="h-2 w-2 rounded-full bg-blue-500" /> Storage (k m²)
               </span>
@@ -482,12 +482,12 @@ export function WarehousesPage() {
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={FACILITY_VELOCITY_DATA}
-                margin={{ top: 10, right: 15, left: -10, bottom: 0 }}
+                margin={{ top: 10, right: 15, left: 0, bottom: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.15} vertical={false} />
                 <XAxis dataKey="facility" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                <YAxis yAxisId="left" stroke="#94a3b8" fontSize={10} tickLine={false} tickFormatter={(v) => `${v}k`} />
-                <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" fontSize={10} tickLine={false} tickFormatter={(v) => `${v}h`} />
+                <YAxis width="auto" yAxisId="left" stroke="#94a3b8" fontSize={10} tickLine={false} tickFormatter={(v) => `${v}k`} />
+                <YAxis width="auto" yAxisId="right" orientation="right" stroke="#f59e0b" fontSize={10} tickLine={false} tickFormatter={(v) => `${v}h`} />
                 <Tooltip
                   content={({ active, payload }) => {
                     if (!active || !payload || !payload.length) return null;
@@ -508,8 +508,8 @@ export function WarehousesPage() {
                   }}
                 />
                 <ReferenceLine yAxisId="left" y={35} stroke="#3b82f6" strokeDasharray="3 3" strokeOpacity={0.4} />
-                <Bar yAxisId="left" dataKey="utilizedM2" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={26} />
-                <Line yAxisId="right" type="monotone" dataKey="dockTurnaroundHrs" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 4, fill: "#f59e0b" }} />
+                <Bar yAxisId="left" dataKey="utilizedM2" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={26} isAnimationActive={false} />
+                <Line yAxisId="right" type="monotone" dataKey="dockTurnaroundHrs" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 4, fill: "#f59e0b" }} isAnimationActive={false} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -566,12 +566,12 @@ export function WarehousesPage() {
             >
               <div className="space-y-3">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     <div className="h-10 w-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
                       <Building2 className="h-5 w-5" />
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">
                           {wh.code}
                         </span>
@@ -585,7 +585,7 @@ export function WarehousesPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => handleOpenEditModal(wh)}
                       className="p-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 text-slate-400 hover:text-blue-600 hover:border-blue-200 dark:hover:border-blue-900/50 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors cursor-pointer"
@@ -627,13 +627,13 @@ export function WarehousesPage() {
                 {(wh.manager || wh.contact_number) && (
                   <div className="grid grid-cols-2 gap-2 text-[11px]">
                     {wh.manager && (
-                      <div className="flex items-center gap-1.5 text-slate-600 dark:text-zinc-300">
+                      <div className="flex items-center gap-1.5 min-w-0 text-slate-600 dark:text-zinc-300">
                         <User className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                         <span className="truncate">{wh.manager}</span>
                       </div>
                     )}
                     {wh.contact_number && (
-                      <div className="flex items-center gap-1.5 text-slate-600 dark:text-zinc-300">
+                      <div className="flex items-center gap-1.5 min-w-0 text-slate-600 dark:text-zinc-300">
                         <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                         <span className="truncate">{wh.contact_number}</span>
                       </div>

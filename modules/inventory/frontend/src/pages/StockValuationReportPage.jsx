@@ -82,7 +82,7 @@ export function StockValuationReportPage() {
       accessor: (r) => r.valuation_method,
       align: "center",
       cell: (r) => (
-        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-400 border-purple-200">
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-400 border-purple-200 dark:border-purple-900/50">
           {r.valuation_method}
         </span>
       ),

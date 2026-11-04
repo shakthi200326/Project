@@ -54,7 +54,7 @@ const transferFlowData = [
   { day: "Sun", initiated: 10, inTransit: 8, delivered: 10 },
 ];
 
-export function StockTransferPage() {
+export function StockTransferPage({ mode = 'ALL' }) {
   const [movements, setMovements] = useState([]);
   const [products, setProducts] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
@@ -117,12 +117,20 @@ export function StockTransferPage() {
     }
   };
 
-  // Filter only transfers
+  // Filter only transfers with mode support
   const transferMovements = useMemo(() => {
-    return movements.filter(
-      (m) => String(m.type || m.transaction_type || "").toUpperCase() === "TRANSFER"
-    );
-  }, [movements]);
+    return movements.filter((m) => {
+      const isTransfer = String(m.type || m.transaction_type || "").toUpperCase() === "TRANSFER";
+      if (!isTransfer) return false;
+      if (mode === "INTER_WAREHOUSE") {
+        return m.transfer_type === "INTER_WAREHOUSE" || (m.warehouse && m.destination_warehouse && m.warehouse !== m.destination_warehouse);
+      }
+      if (mode === "INTER_LOCATION") {
+        return m.transfer_type === "INTER_LOCATION" || !m.destination_warehouse || m.warehouse === m.destination_warehouse;
+      }
+      return true;
+    });
+  }, [movements, mode]);
 
   // Compute KPI metrics
   const metrics = useMemo(() => {
@@ -372,9 +380,9 @@ export function StockTransferPage() {
       <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex flex-wrap items-center gap-2">
               7-Day Inter-Facility Transfer Pipeline
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40">
+              <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40">
                 Logistics Pipeline
               </span>
             </h3>
@@ -385,10 +393,10 @@ export function StockTransferPage() {
         </div>
         <div className="h-[220px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={transferFlowData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <ComposedChart data={transferFlowData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.2} />
               <XAxis dataKey="day" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
+              <YAxis width="auto" tick={{ fontSize: 11 }} />
               <Tooltip
                 content={({ active, payload, label }) => {
                   if (!active || !payload?.length) return null;
@@ -406,9 +414,9 @@ export function StockTransferPage() {
                 }}
               />
               <Legend verticalAlign="top" align="right" height={30} iconType="circle" iconSize={8} />
-              <Bar dataKey="initiated" name="Transfer Orders" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="inTransit" name="In Transit" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-              <Line type="monotone" dataKey="delivered" name="Received at Destination" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+              <Bar dataKey="initiated" name="Transfer Orders" fill="#3b82f6" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+              <Bar dataKey="inTransit" name="In Transit" fill="#f59e0b" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+              <Line type="monotone" dataKey="delivered" name="Received at Destination" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -478,7 +486,7 @@ export function StockTransferPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+              <tr className="whitespace-nowrap border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
                 <th className="py-3.5 px-4 font-semibold">TRF No.</th>
                 <th className="py-3.5 px-4 font-semibold">Date</th>
                 <th className="py-3.5 px-4 font-semibold">Origin Warehouse (From)</th>
@@ -540,7 +548,7 @@ export function StockTransferPage() {
                           {r.item_code || "BRG-6205-2RS"}
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-right">
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
                         <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
                           {qty} {r.unit || "EA"}
                         </span>
@@ -607,3 +615,4 @@ export function StockTransferPage() {
     </div>
   );
 }
+

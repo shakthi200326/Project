@@ -273,11 +273,11 @@ export function ReplenishmentPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
               Replenishment & Reorder Planning
             </h1>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200/60">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200/60 dark:border-rose-900/50">
               <Sparkles className="h-2.5 w-2.5" />
               Safety Buffer Engine
             </span>
@@ -306,11 +306,11 @@ export function ReplenishmentPage() {
             <div className="text-2xl font-bold tabular-nums text-rose-800 dark:text-rose-300 mt-1">
               {criticalItems.length} SKUs
             </div>
-            <div className="text-[11px] text-rose-600/90 mt-0.5 font-medium flex items-center gap-1">
+            <div className="text-[11px] text-rose-600/90 dark:text-rose-400 mt-0.5 font-medium flex items-center gap-1">
               <AlertTriangle className="h-3 w-3" /> Reorder needed immediately
             </div>
           </div>
-          <div className="h-10 w-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400">
+          <div className="shrink-0 h-10 w-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400">
             <ShieldAlert className="h-6 w-6" />
           </div>
         </div>
@@ -325,7 +325,7 @@ export function ReplenishmentPage() {
               <TrendingUp className="h-3 w-3" /> Planned supplier procurement
             </div>
           </div>
-          <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
+          <div className="shrink-0 h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
             <DollarSign className="h-6 w-6" />
           </div>
         </div>
@@ -340,7 +340,7 @@ export function ReplenishmentPage() {
               <Clock className="h-3 w-3 text-amber-500" /> Procurement transit window
             </div>
           </div>
-          <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400">
+          <div className="shrink-0 h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400">
             <Truck className="h-6 w-6" />
           </div>
         </div>
@@ -351,11 +351,11 @@ export function ReplenishmentPage() {
             <div className="text-2xl font-bold tabular-nums text-emerald-800 dark:text-emerald-300 mt-1">
               94.2%
             </div>
-            <div className="text-[11px] text-emerald-600/90 mt-0.5 font-medium flex items-center gap-1">
+            <div className="text-[11px] text-emerald-600/90 dark:text-emerald-400 mt-0.5 font-medium flex items-center gap-1">
               <CheckCircle className="h-3 w-3" /> High catalog availability
             </div>
           </div>
-          <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+          <div className="shrink-0 h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="h-6 w-6" />
           </div>
         </div>
@@ -366,9 +366,9 @@ export function ReplenishmentPage() {
         {/* CHART 1: Stockout Runway Velocity & Lead-Time Burn-Down Horizon */}
         <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50">
+                <div className="shrink-0 p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-900/50">
                   <Calendar className="h-4 w-4" />
                 </div>
                 <h2 className="text-sm font-bold text-slate-900 dark:text-white">
@@ -381,7 +381,7 @@ export function ReplenishmentPage() {
             </div>
 
             {/* Interactive Horizon & SKU Controls */}
-            <div className="flex items-center gap-2 self-start sm:self-auto">
+            <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
               <select
                 value={selectedSku}
                 onChange={(e) => setSelectedSku(e.target.value)}
@@ -402,7 +402,7 @@ export function ReplenishmentPage() {
                   className={`px-2 py-0.5 rounded-md font-medium transition-all ${
                     horizonDays === 14
                       ? "bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-300 shadow-xs font-bold"
-                      : "text-slate-500 hover:text-slate-900 dark:text-zinc-400"
+                      : "text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-100"
                   }`}
                 >
                   14D
@@ -413,7 +413,7 @@ export function ReplenishmentPage() {
                   className={`px-2 py-0.5 rounded-md font-medium transition-all ${
                     horizonDays === 30
                       ? "bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-300 shadow-xs font-bold"
-                      : "text-slate-500 hover:text-slate-900 dark:text-zinc-400"
+                      : "text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-100"
                   }`}
                 >
                   30D
@@ -440,7 +440,7 @@ export function ReplenishmentPage() {
 
           <div className="h-64 w-full pt-1">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={burnDownData.data} margin={{ top: 15, right: 15, left: -20, bottom: 0 }}>
+              <ComposedChart data={burnDownData.data} margin={{ top: 15, right: 15, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="replenishAreaGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#6366f1" stopOpacity={0.45} />
@@ -449,7 +449,7 @@ export function ReplenishmentPage() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.6} />
                 <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} tickLine={false} axisLine={false} unit="u" />
+                <YAxis width="auto" tick={{ fontSize: 10, fill: "#94a3b8" }} tickLine={false} axisLine={false} unit="u" />
                 <Tooltip
                   cursor={{ stroke: "#6366f1", strokeWidth: 1, strokeDasharray: "2 2" }}
                   content={({ active, payload }) => {
@@ -458,7 +458,7 @@ export function ReplenishmentPage() {
                     const isBreach = d.projectedStock < d.safetyFloor;
                     return (
                       <div className="p-3.5 rounded-2xl bg-slate-900/95 dark:bg-zinc-800/95 backdrop-blur-md border border-slate-700/60 shadow-xl text-white text-xs space-y-2 min-w-[210px]">
-                        <div className="flex items-center justify-between border-b border-slate-700/60 pb-1.5">
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-700/60 pb-1.5">
                           <span className="font-bold text-indigo-300 font-mono">{d.day} Timeline</span>
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -473,23 +473,23 @@ export function ReplenishmentPage() {
                           </span>
                         </div>
                         <div className="space-y-1">
-                          <div className="flex justify-between items-center text-slate-300">
+                          <div className="flex justify-between items-center gap-4 text-slate-300">
                             <span className="flex items-center gap-1.5">
                               <span className="h-2 w-2 rounded-full bg-indigo-400" /> Projected Stock:
                             </span>
-                            <span className="font-mono font-bold text-white">{d.projectedStock} units</span>
+                            <span className="font-mono font-bold tabular-nums text-white">{d.projectedStock} units</span>
                           </div>
-                          <div className="flex justify-between items-center text-slate-400">
+                          <div className="flex justify-between items-center gap-4 text-slate-400">
                             <span className="flex items-center gap-1.5">
                               <span className="h-2 w-2 rounded-full bg-rose-400" /> Without PO:
                             </span>
-                            <span className="font-mono text-rose-300">{d.unmitigatedStock} units</span>
+                            <span className="font-mono tabular-nums text-rose-300">{d.unmitigatedStock} units</span>
                           </div>
-                          <div className="flex justify-between items-center text-slate-400">
+                          <div className="flex justify-between items-center gap-4 text-slate-400">
                             <span className="flex items-center gap-1.5">
                               <span className="h-2 w-2 rounded-full bg-amber-400" /> Safety Floor:
                             </span>
-                            <span className="font-mono text-amber-300">{d.safetyFloor} units</span>
+                            <span className="font-mono tabular-nums text-amber-300">{d.safetyFloor} units</span>
                           </div>
                           {d.isArrival && (
                             <div className="pt-1 border-t border-emerald-500/30 text-emerald-400 font-bold flex items-center gap-1 text-[11px]">
@@ -535,7 +535,7 @@ export function ReplenishmentPage() {
                   fill="url(#replenishAreaGrad)"
                   dot={{ r: 2.5, fill: "#6366f1", strokeWidth: 1.5, stroke: "#fff" }}
                   activeDot={{ r: 5, fill: "#4f46e5", stroke: "#fff", strokeWidth: 2 }}
-                />
+                  isAnimationActive={false}/>
                 <Line
                   type="monotone"
                   dataKey="unmitigatedStock"
@@ -543,7 +543,7 @@ export function ReplenishmentPage() {
                   strokeWidth={2}
                   strokeDasharray="4 4"
                   dot={{ r: 2, fill: "#f43f5e" }}
-                />
+                  isAnimationActive={false}/>
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -552,9 +552,9 @@ export function ReplenishmentPage() {
         {/* CHART 2: Replenishment Capital Allocation & OEM Vendor Outlay Matrix */}
         <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50">
+                <div className="shrink-0 p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-900/50">
                   <BarChart2 className="h-4 w-4" />
                 </div>
                 <h2 className="text-sm font-bold text-slate-900 dark:text-white">
@@ -566,7 +566,7 @@ export function ReplenishmentPage() {
               </p>
             </div>
 
-            <span className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60 font-semibold self-start sm:self-auto">
+            <span className="shrink-0 text-[11px] font-mono px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-900/50 font-semibold self-start sm:self-auto">
               5 Preferred OEMs
             </span>
           </div>
@@ -586,7 +586,7 @@ export function ReplenishmentPage() {
 
           <div className="h-64 w-full pt-1">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={vendorMatrixData} margin={{ top: 15, right: 15, left: -10, bottom: 0 }}>
+              <ComposedChart data={vendorMatrixData} margin={{ top: 15, right: 15, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="vendorCapitalGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#10b981" stopOpacity={0.9} />
@@ -595,14 +595,14 @@ export function ReplenishmentPage() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.6} />
                 <XAxis dataKey="vendorShort" tick={{ fontSize: 10, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-                <YAxis
+                <YAxis width="auto"
                   yAxisId="capital"
                   tick={{ fontSize: 10, fill: "#94a3b8" }}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(val) => `$${val >= 1000 ? (val / 1000).toFixed(1) + "k" : val}`}
                 />
-                <YAxis
+                <YAxis width="auto"
                   yAxisId="units"
                   orientation="right"
                   tick={{ fontSize: 10, fill: "#94a3b8" }}
@@ -618,34 +618,34 @@ export function ReplenishmentPage() {
                     const isMoqMet = d.suggestedUnits >= d.moqThreshold;
                     return (
                       <div className="p-3.5 rounded-2xl bg-slate-900/95 dark:bg-zinc-800/95 backdrop-blur-md border border-slate-700/60 shadow-xl text-white text-xs space-y-2 min-w-[220px]">
-                        <div className="flex items-center justify-between border-b border-slate-700/60 pb-1.5">
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-700/60 pb-1.5">
                           <span className="font-bold text-emerald-300">{d.vendor}</span>
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
                             {d.leadTime}d Lead Time
                           </span>
                         </div>
                         <div className="space-y-1">
-                          <div className="flex justify-between items-center text-slate-300">
+                          <div className="flex justify-between items-center gap-4 text-slate-300">
                             <span className="flex items-center gap-1.5">
                               <span className="h-2 w-2 rounded-full bg-emerald-400" /> Capital Outlay:
                             </span>
-                            <span className="font-mono font-bold text-white">
+                            <span className="font-mono font-bold tabular-nums text-white">
                               ${d.outlayCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           </div>
-                          <div className="flex justify-between items-center text-slate-300">
+                          <div className="flex justify-between items-center gap-4 text-slate-300">
                             <span className="flex items-center gap-1.5">
                               <span className="h-2 w-2 rounded-full bg-blue-400" /> Batch Requisition:
                             </span>
-                            <span className="font-mono font-bold text-blue-300">{d.suggestedUnits} units</span>
+                            <span className="font-mono font-bold tabular-nums text-blue-300">{d.suggestedUnits} units</span>
                           </div>
-                          <div className="flex justify-between items-center text-slate-400">
+                          <div className="flex justify-between items-center gap-4 text-slate-400">
                             <span className="flex items-center gap-1.5">
                               <span className="h-2 w-2 rounded-full bg-amber-400" /> Contract MOQ:
                             </span>
-                            <span className="font-mono text-amber-300">{d.moqThreshold} units</span>
+                            <span className="font-mono tabular-nums text-amber-300">{d.moqThreshold} units</span>
                           </div>
-                          <div className="pt-1 border-t border-slate-700/60 flex items-center justify-between text-[11px]">
+                          <div className="pt-1 border-t border-slate-700/60 flex items-center justify-between gap-4 text-[11px]">
                             <span className="text-slate-400">Contract Tier:</span>
                             <span className={`font-semibold ${isMoqMet ? "text-emerald-400" : "text-amber-400"}`}>
                               {isMoqMet ? "Tier 1 Qualified (MOQ Met)" : "Below Standard MOQ"}
@@ -669,7 +669,7 @@ export function ReplenishmentPage() {
                   fill="url(#vendorCapitalGrad)"
                   radius={[6, 6, 0, 0]}
                   maxBarSize={36}
-                />
+                  isAnimationActive={false}/>
                 <Line
                   yAxisId="units"
                   type="monotone"
@@ -677,7 +677,7 @@ export function ReplenishmentPage() {
                   stroke="#3b82f6"
                   strokeWidth={2.5}
                   dot={{ r: 4, fill: "#3b82f6", stroke: "#fff", strokeWidth: 1.5 }}
-                />
+                  isAnimationActive={false}/>
                 <Line
                   yAxisId="units"
                   type="stepAfter"
@@ -686,7 +686,7 @@ export function ReplenishmentPage() {
                   strokeWidth={2}
                   strokeDasharray="3 3"
                   dot={{ r: 3, fill: "#f59e0b" }}
-                />
+                  isAnimationActive={false}/>
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -735,7 +735,7 @@ export function ReplenishmentPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400 whitespace-nowrap">
                 <th className="py-3.5 px-4 font-semibold">SKU / Code</th>
                 <th className="py-3.5 px-4 font-semibold">Item Name</th>
                 <th className="py-3.5 px-4 font-semibold">Supplier OEM</th>
@@ -745,7 +745,7 @@ export function ReplenishmentPage() {
                 <th className="py-3.5 px-4 font-semibold text-right">Suggested Batch</th>
                 <th className="py-3.5 px-4 font-semibold text-right">Unit Cost</th>
                 <th className="py-3.5 px-4 font-semibold text-right">Est. Outlay</th>
-                <th className="py-3.5 px-4 text-right">Action</th>
+                <th className="py-3.5 px-4 font-semibold text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
@@ -770,22 +770,22 @@ export function ReplenishmentPage() {
                       <td className="py-3.5 px-4 text-slate-600 dark:text-zinc-300 font-medium">
                         {p.supplier}
                       </td>
-                      <td className={`py-3.5 px-4 text-right font-mono tabular-nums font-bold ${isUnder ? "text-rose-600 dark:text-rose-400" : "text-slate-900 dark:text-white"}`}>
+                      <td className={`py-3.5 px-4 text-right font-mono tabular-nums whitespace-nowrap font-bold ${isUnder ? "text-rose-600 dark:text-rose-400" : "text-slate-900 dark:text-white"}`}>
                         {p.available} {p.unit || p.base_unit}
                       </td>
-                      <td className="py-3.5 px-4 text-right font-mono tabular-nums text-slate-500">
+                      <td className="py-3.5 px-4 text-right font-mono tabular-nums whitespace-nowrap text-slate-500 dark:text-zinc-400">
                         {p.reorder_point} {p.unit || p.base_unit}
                       </td>
-                      <td className="py-3.5 px-4 text-right font-mono tabular-nums text-slate-600 dark:text-zinc-400">
+                      <td className="py-3.5 px-4 text-right font-mono tabular-nums whitespace-nowrap text-slate-600 dark:text-zinc-400">
                         {p.lead_time_days}d
                       </td>
-                      <td className="py-3.5 px-4 text-right font-mono tabular-nums font-bold text-blue-600 dark:text-blue-400">
+                      <td className="py-3.5 px-4 text-right font-mono tabular-nums whitespace-nowrap font-bold text-blue-600 dark:text-blue-400">
                         {p.suggested_reorder} {p.unit || p.base_unit}
                       </td>
-                      <td className="py-3.5 px-4 text-right font-mono tabular-nums text-slate-600 dark:text-zinc-400">
+                      <td className="py-3.5 px-4 text-right font-mono tabular-nums whitespace-nowrap text-slate-600 dark:text-zinc-400">
                         ${p.unit_cost?.toFixed(2)}
                       </td>
-                      <td className="py-3.5 px-4 text-right font-mono tabular-nums font-bold text-slate-900 dark:text-white">
+                      <td className="py-3.5 px-4 text-right font-mono tabular-nums whitespace-nowrap font-bold text-slate-900 dark:text-white">
                         ${itemOutlay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="py-3.5 px-4 text-right">

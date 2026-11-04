@@ -246,7 +246,7 @@ export function SerialTrackingPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
               Piece-Level Serial Number Registry
             </h1>
@@ -262,7 +262,7 @@ export function SerialTrackingPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={exportSerials}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 shadow-xs transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 shadow-xs transition-colors"
           >
             <Download className="h-3.5 w-3.5" />
             <span>Export Serials CSV</span>
@@ -328,13 +328,13 @@ export function SerialTrackingPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Chart 1: Model Series Custody & MTBF Reliability Benchmark */}
         <div className="lg:col-span-6 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2">
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                   Model Series Custody & MTBF Reliability
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/40">
+                <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/40">
                   Custody & MTBF
                 </span>
               </div>
@@ -342,7 +342,7 @@ export function SerialTrackingPage() {
                 Stacked piece custody (In-Stock, Dispatched, RMA) mapped with Field MTBF Reliability SLA.
               </p>
             </div>
-            <div className="text-right">
+            <div className="shrink-0 text-right">
               <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">98.8%</span>
               <span className="text-[10px] text-slate-400 block">Fleet MTBF SLA</span>
             </div>
@@ -352,7 +352,7 @@ export function SerialTrackingPage() {
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={modelSeriesCustodyData}
-                margin={{ top: 15, right: 10, left: -20, bottom: 25 }}
+                margin={{ top: 15, right: 10, left: 0, bottom: 25 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.15} vertical={false} />
                 <XAxis
@@ -365,7 +365,7 @@ export function SerialTrackingPage() {
                   textAnchor="end"
                   height={35}
                 />
-                <YAxis
+                <YAxis width="auto"
                   yAxisId="qty"
                   stroke="#94a3b8"
                   fontSize={11}
@@ -373,7 +373,7 @@ export function SerialTrackingPage() {
                   axisLine={{ stroke: "#64748b", opacity: 0.2 }}
                   tickFormatter={(v) => `${v}`}
                 />
-                <YAxis
+                <YAxis width="auto"
                   yAxisId="rel"
                   orientation="right"
                   stroke="#8b5cf6"
@@ -446,7 +446,7 @@ export function SerialTrackingPage() {
                   stackId="custody"
                   fill="#10b981"
                   radius={[0, 0, 0, 0]}
-                />
+                  isAnimationActive={false}/>
                 <Bar
                   yAxisId="qty"
                   dataKey="dispatched"
@@ -454,7 +454,7 @@ export function SerialTrackingPage() {
                   stackId="custody"
                   fill="#3b82f6"
                   radius={[0, 0, 0, 0]}
-                />
+                  isAnimationActive={false}/>
                 <Bar
                   yAxisId="qty"
                   dataKey="maintenance"
@@ -462,7 +462,7 @@ export function SerialTrackingPage() {
                   stackId="custody"
                   fill="#f59e0b"
                   radius={[4, 4, 0, 0]}
-                />
+                  isAnimationActive={false}/>
                 <Line
                   yAxisId="rel"
                   type="monotone"
@@ -472,7 +472,7 @@ export function SerialTrackingPage() {
                   strokeWidth={2.5}
                   dot={{ r: 3.5, fill: "#8b5cf6", strokeWidth: 1.5, stroke: "#2e1065" }}
                   activeDot={{ r: 6 }}
-                />
+                  isAnimationActive={false}/>
                 <ReferenceLine
                   yAxisId="rel"
                   y={98}
@@ -487,13 +487,13 @@ export function SerialTrackingPage() {
 
         {/* Chart 2: Serialized Warranty Protection Horizon & Aging Runway */}
         <div className="lg:col-span-6 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2">
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                   Warranty Protection Horizon & Aging Runway
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40">
+                <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40">
                   Coverage Stream
                 </span>
               </div>
@@ -501,7 +501,7 @@ export function SerialTrackingPage() {
                 Multi-year warranty aging distribution for OEM certified serialized components.
               </p>
             </div>
-            <div className="text-right">
+            <div className="shrink-0 text-right">
               <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">88.6%</span>
               <span className="text-[10px] text-slate-400 block">Warranty Active</span>
             </div>
@@ -511,7 +511,7 @@ export function SerialTrackingPage() {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
                 data={warrantyHorizonData}
-                margin={{ top: 15, right: 10, left: -20, bottom: 25 }}
+                margin={{ top: 15, right: 10, left: 0, bottom: 25 }}
               >
                 <defs>
                   <linearGradient id="warrantyActiveGrad" x1="0" y1="0" x2="0" y2="1">
@@ -533,8 +533,9 @@ export function SerialTrackingPage() {
                   angle={-15}
                   textAnchor="end"
                   height={35}
+                  padding={{ left: 32 }}
                 />
-                <YAxis
+                <YAxis width="auto"
                   stroke="#94a3b8"
                   fontSize={11}
                   tickLine={false}
@@ -602,7 +603,7 @@ export function SerialTrackingPage() {
                   fill="url(#warrantyActiveGrad)"
                   stroke="#6366f1"
                   strokeWidth={2.5}
-                />
+                  isAnimationActive={false}/>
                 <Area
                   type="monotone"
                   dataKey="serviceContract"
@@ -610,7 +611,7 @@ export function SerialTrackingPage() {
                   fill="url(#warrantyExtendedGrad)"
                   stroke="#10b981"
                   strokeWidth={2}
-                />
+                  isAnimationActive={false}/>
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -699,7 +700,7 @@ export function SerialTrackingPage() {
               className={`px-3 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap ${
                 statusFilter === tab.key
                   ? "bg-slate-900 text-white dark:bg-white dark:text-zinc-900"
-                  : "bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50"
+                  : "bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800"
               }`}
             >
               {tab.label}
@@ -713,13 +714,13 @@ export function SerialTrackingPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400 whitespace-nowrap">
                 <th className="py-3.5 px-4 font-semibold">Serial Number</th>
                 <th className="py-3.5 px-4 font-semibold">Item & SKU Code</th>
                 <th className="py-3.5 px-4 font-semibold">Facility & Bin Location</th>
                 <th className="py-3.5 px-4 font-semibold">Warranty Expiration</th>
                 <th className="py-3.5 px-4 font-semibold text-center">Status</th>
-                <th className="py-3.5 px-4 text-center">Traceability Action</th>
+                <th className="py-3.5 px-4 font-semibold text-center">Traceability Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
@@ -1027,7 +1028,7 @@ export function SerialTrackingPage() {
                 <button
                   type="button"
                   onClick={() => setShowRegisterModal(false)}
-                  className="px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-medium hover:bg-slate-50"
+                  className="px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-medium hover:bg-slate-50 dark:hover:bg-zinc-800"
                 >
                   Cancel
                 </button>

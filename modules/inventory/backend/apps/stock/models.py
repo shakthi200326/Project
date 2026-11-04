@@ -102,3 +102,41 @@ class DamagedStock(models.Model):
     def __str__(self):
         return f"{self.item.code} damaged x {self.damaged_qty} ({self.status})"
 
+
+class StockInTransit(models.Model):
+    class Status(models.TextChoices):
+        IN_TRANSIT = "IN_TRANSIT", "In Transit"
+        RECEIVED = "RECEIVED", "Received"
+        PARTIALLY_RECEIVED = "PARTIALLY_RECEIVED", "Partially Received"
+        LOST = "LOST", "Lost / Discrepant"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    transfer_number = models.CharField(max_length=100, db_index=True)
+    item = models.ForeignKey(InventoryItem, on_delete=models.PROTECT, related_name="transit_records")
+    variant = models.ForeignKey(InventoryItemVariant, on_delete=models.PROTECT, null=True, blank=True)
+    source_warehouse = models.ForeignKey(Warehouse, on_delete=models.PROTECT, related_name="outbound_transits")
+    destination_warehouse = models.ForeignKey(Warehouse, on_delete=models.PROTECT, related_name="inbound_transits")
+    quantity = models.DecimalField(
+        max_digits=20, decimal_places=4, validators=[MinValueValidator(Decimal("0.0001"))]
+    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.IN_TRANSIT, db_index=True)
+    batch_number = models.CharField(max_length=80, blank=True, default="")
+    serial_numbers = models.JSONField(default=list, blank=True)
+    carrier = models.CharField(max_length=120, blank=True, default="")
+    tracking_number = models.CharField(max_length=120, blank=True, default="")
+    dispatched_at = models.DateTimeField(default=timezone.now)
+    expected_delivery = models.DateTimeField(null=True, blank=True)
+    received_at = models.DateTimeField(null=True, blank=True)
+    tenant_id = models.CharField(max_length=100, default="default-tenant", db_index=True)
+    project_id = models.CharField(max_length=100, default="prj-default", db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "stock_in_transit"
+        ordering = ("-dispatched_at", "-id")
+
+    def __str__(self):
+        return f"Transit {self.transfer_number}: {self.item.code} ({self.quantity}) {self.source_warehouse.code} -> {self.destination_warehouse.code} [{self.status}]"
+
+

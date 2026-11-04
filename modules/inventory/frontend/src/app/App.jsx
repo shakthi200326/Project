@@ -8,6 +8,16 @@ import { ErrorBoundary } from "../components/ErrorBoundary.jsx";
 
 // Lazy-loaded page components for optimal production chunking and lightning-fast load times
 const DashboardPage = lazy(() => import("../pages/DashboardPage.jsx").then(m => ({ default: m.DashboardPage })));
+
+const ProductOverviewPage = lazy(() => import("../pages/ProductOverviewPage.jsx").then(m => ({ default: m.ProductOverviewPage || m.default })));
+const ProductVariantsPage = lazy(() => import("../pages/ProductVariantsPage.jsx").then(m => ({ default: m.ProductVariantsPage || m.default })));
+const ProductAttributesPage = lazy(() => import("../pages/ProductAttributesPage.jsx").then(m => ({ default: m.ProductAttributesPage || m.default })));
+const SkuManagementPage = lazy(() => import("../pages/SkuManagementPage.jsx").then(m => ({ default: m.SkuManagementPage || m.default })));
+const ProductMediaPage = lazy(() => import("../pages/ProductMediaPage.jsx").then(m => ({ default: m.ProductMediaPage || m.default })));
+const ProductImportPage = lazy(() => import("../pages/ProductImportPage.jsx").then(m => ({ default: m.ProductImportPage || m.default })));
+const ProductExportPage = lazy(() => import("../pages/ProductExportPage.jsx").then(m => ({ default: m.ProductExportPage || m.default })));
+const ProductImportHistoryPage = lazy(() => import("../pages/ProductImportHistoryPage.jsx").then(m => ({ default: m.ProductImportHistoryPage || m.default })));
+
 const ProductsPage = lazy(() => import("../pages/ProductsPage.jsx").then(m => ({ default: m.ProductsPage })));
 const CategoriesPage = lazy(() => import("../pages/CategoriesPage.jsx").then(m => ({ default: m.CategoriesPage })));
 const BrandsPage = lazy(() => import("../pages/BrandsPage.jsx").then(m => ({ default: m.BrandsPage })));
@@ -16,11 +26,34 @@ const BarcodesPage = lazy(() => import("../pages/BarcodesPage.jsx").then(m => ({
 const WarehousesPage = lazy(() => import("../pages/WarehousesPage.jsx").then(m => ({ default: m.WarehousesPage })));
 const LocationsPage = lazy(() => import("../pages/LocationsPage.jsx").then(m => ({ default: m.LocationsPage })));
 const RackBinPage = lazy(() => import("../pages/RackBinPage.jsx").then(m => ({ default: m.RackBinPage })));
+const WarehouseOverviewPage = lazy(() => import("../pages/WarehouseOverviewPage.jsx").then(m => ({ default: m.WarehouseOverviewPage || m.default })));
+const WarehouseMappingPage = lazy(() => import("../pages/WarehouseMappingPage.jsx").then(m => ({ default: m.WarehouseMappingPage || m.default })));
+const WarehouseZonesPage = lazy(() => import("../pages/WarehouseZonesPage.jsx").then(m => ({ default: m.WarehouseZonesPage || m.default })));
+const WarehouseRacksPage = lazy(() => import("../pages/WarehouseRacksPage.jsx").then(m => ({ default: m.WarehouseRacksPage || m.default })));
+const WarehouseBinsPage = lazy(() => import("../pages/WarehouseBinsPage.jsx").then(m => ({ default: m.WarehouseBinsPage || m.default })));
+const WarehouseCapacityPage = lazy(() => import("../pages/WarehouseCapacityPage.jsx").then(m => ({ default: m.WarehouseCapacityPage || m.default })));
+const LocationUtilizationPage = lazy(() => import("../pages/LocationUtilizationPage.jsx").then(m => ({ default: m.LocationUtilizationPage || m.default })));
+const WarehouseConfigPage = lazy(() => import("../pages/WarehouseConfigPage.jsx").then(m => ({ default: m.WarehouseConfigPage || m.default })));
 const StockMovementsPage = lazy(() => import("../pages/StockMovementsPage.jsx").then(m => ({ default: m.StockMovementsPage })));
-const GoodsReceiptPage = lazy(() => import("../pages/GoodsReceiptPage.jsx").then(m => ({ default: m.GoodsReceiptPage || m.default })));
+const ReceiptRegisterPage = lazy(() => import("../pages/goods-receipt/ReceiptRegisterPage.jsx").then(m => ({ default: m.ReceiptRegisterPage })));
+const ReceiptFormPage = lazy(() => import("../pages/goods-receipt/ReceiptFormPage.jsx").then(m => ({ default: m.ReceiptFormPage })));
+const ReceiptDetailPage = lazy(() => import("../pages/goods-receipt/ReceiptDetailPage.jsx").then(m => ({ default: m.ReceiptDetailPage })));
+const ReceiptInspectionPage = lazy(() => import("../pages/goods-receipt/ReceiptInspectionPage.jsx").then(m => ({ default: m.ReceiptInspectionPage })));
+const QualityInspectionPage = lazy(() => import("../pages/goods-receipt/QualityInspectionPage.jsx").then(m => ({ default: m.QualityInspectionPage })));
+const AcceptedGoodsPage = lazy(() => import("../pages/goods-receipt/ReceiptOutcomePages.jsx").then(m => ({ default: m.AcceptedGoodsPage })));
+const RejectedGoodsPage = lazy(() => import("../pages/goods-receipt/ReceiptOutcomePages.jsx").then(m => ({ default: m.RejectedGoodsPage })));
+const PartialAcceptancePage = lazy(() => import("../pages/goods-receipt/ReceiptOutcomePages.jsx").then(m => ({ default: m.PartialAcceptancePage })));
+const PutawayManagementPage = lazy(() => import("../pages/goods-receipt/PutawayManagementPage.jsx").then(m => ({ default: m.PutawayManagementPage })));
+const ReceiptDiscrepancyPage = lazy(() => import("../pages/goods-receipt/ReceiptDiscrepancyPage.jsx").then(m => ({ default: m.ReceiptDiscrepancyPage })));
+const GoodsReceiptSettingsPage = lazy(() => import("../pages/goods-receipt/GoodsReceiptSettingsPage.jsx").then(m => ({ default: m.GoodsReceiptSettingsPage })));
+const StockInPage = lazy(() => import("../pages/StockInPage.jsx").then(m => ({ default: m.StockInPage || m.default })));
 const StockIssuePage = lazy(() => import("../pages/StockIssuePage.jsx").then(m => ({ default: m.StockIssuePage || m.default })));
 const StockTransferPage = lazy(() => import("../pages/StockTransferPage.jsx").then(m => ({ default: m.StockTransferPage || m.default })));
 const StockAdjustmentPage = lazy(() => import("../pages/StockAdjustmentPage.jsx").then(m => ({ default: m.StockAdjustmentPage || m.default })));
+const OpeningStockPage = lazy(() => import("../pages/OpeningStockPage.jsx").then(m => ({ default: m.OpeningStockPage || m.default })));
+const StockReleasePage = lazy(() => import("../pages/StockReleasePage.jsx").then(m => ({ default: m.StockReleasePage || m.default })));
+const StockReclassificationPage = lazy(() => import("../pages/StockReclassificationPage.jsx").then(m => ({ default: m.StockReclassificationPage || m.default })));
+const StockOutPage = lazy(() => import("../pages/StockOutPage.jsx").then(m => ({ default: m.StockOutPage || m.default })));
 const StockOverviewPage = lazy(() => import("../pages/StockOverviewPage.jsx").then(m => ({ default: m.StockOverviewPage || m.default })));
 const StockLedgerPage = lazy(() => import("../pages/StockLedgerPage.jsx").then(m => ({ default: m.StockLedgerPage })));
 const StockInHistoryPage = lazy(() => import("../pages/StockInHistoryPage.jsx").then(m => ({ default: m.StockInHistoryPage })));
@@ -68,6 +101,12 @@ const ProductTrackingSettingsPage = lazy(() => import("../pages/ProductTrackingS
 const ValuationSettingsPage = lazy(() => import("../pages/ValuationSettingsPage.jsx").then(m => ({ default: m.ValuationSettingsPage || m.default })));
 const DocumentNumberingPage = lazy(() => import("../pages/DocumentNumberingPage.jsx").then(m => ({ default: m.DocumentNumberingPage || m.default })));
 const ApprovalSettingsPage = lazy(() => import("../pages/ApprovalSettingsPage.jsx").then(m => ({ default: m.ApprovalSettingsPage || m.default })));
+const IntegrationDashboardPage = lazy(() => import("../pages/integrations/IntegrationDashboardPage.jsx").then(m => ({ default: m.IntegrationDashboardPage || m.default })));
+const IncomingEventsPage = lazy(() => import("../pages/integrations/IncomingEventsPage.jsx").then(m => ({ default: m.IncomingEventsPage || m.default })));
+const OutgoingEventsPage = lazy(() => import("../pages/integrations/OutgoingEventsPage.jsx").then(m => ({ default: m.OutgoingEventsPage || m.default })));
+const FailedEventsPage = lazy(() => import("../pages/integrations/FailedEventsPage.jsx").then(m => ({ default: m.FailedEventsPage || m.default })));
+const EventHistoryPage = lazy(() => import("../pages/integrations/EventHistoryPage.jsx").then(m => ({ default: m.EventHistoryPage || m.default })));
+const IntegrationSettingsPage = lazy(() => import("../pages/integrations/IntegrationSettingsPage.jsx").then(m => ({ default: m.IntegrationSettingsPage || m.default })));
 
 export default function App() {
   return (
@@ -87,34 +126,87 @@ export default function App() {
                 <Route path="/" element={<Navigate to="/inventory" replace />} />
                 <Route path="/inventory" element={<DashboardPage />} />
                 
-                {/* Products & Catalog */}
+                {/* A. Product Overview */}
+                <Route path="/inventory/products/overview" element={<ProductOverviewPage />} />
+
+                {/* B. Product Management */}
                 <Route path="/inventory/products" element={<ProductsPage />} />
+                <Route path="/inventory/products/variants" element={<ProductVariantsPage />} />
+                <Route path="/inventory/variants" element={<ProductVariantsPage />} />
+
+                {/* C. Product Classification */}
                 <Route path="/inventory/categories" element={<CategoriesPage />} />
                 <Route path="/inventory/brands" element={<BrandsPage />} />
-                <Route path="/inventory/variants" element={<ProductsPage />} />
                 <Route path="/inventory/units" element={<UnitsPage />} />
-                <Route path="/inventory/barcodes" element={<BarcodesPage />} />
-                
-                {/* Warehouses */}
-                <Route path="/inventory/warehouses" element={<WarehousesPage />} />
-                <Route path="/inventory/warehouses/overview" element={<WarehousesPage />} />
-                <Route path="/inventory/locations" element={<LocationsPage />} />
-                <Route path="/inventory/racks-bins" element={<RackBinPage />} />
-                <Route path="/inventory/racks" element={<RackBinPage />} />
-                <Route path="/inventory/bins" element={<RackBinPage />} />
+                <Route path="/inventory/attributes" element={<ProductAttributesPage />} />
 
-                {/* Stock Operations — Dedicated Process Pages */}
-                <Route path="/inventory/operations/stock-in" element={<GoodsReceiptPage />} />
-                <Route path="/inventory/operations/goods-receipt" element={<GoodsReceiptPage />} />
-                <Route path="/inventory/operations/stock-out" element={<StockIssuePage />} />
+                {/* D. Product Identification */}
+                <Route path="/inventory/skus" element={<SkuManagementPage />} />
+                <Route path="/inventory/barcodes" element={<BarcodesPage />} />
+
+                {/* E. Product Media */}
+                <Route path="/inventory/products/media" element={<ProductMediaPage />} />
+
+                {/* F. Data Management */}
+                <Route path="/inventory/products/import" element={<ProductImportPage />} />
+                <Route path="/inventory/products/export" element={<ProductExportPage />} />
+                <Route path="/inventory/products/import-history" element={<ProductImportHistoryPage />} />
+                
+                {/* A. Warehouse Overview */}
+                <Route path="/inventory/warehouses/overview" element={<WarehouseOverviewPage />} />
+
+                {/* B. Warehouse Management */}
+                <Route path="/inventory/warehouses" element={<WarehousesPage />} />
+                <Route path="/inventory/warehouses/mapping" element={<WarehouseMappingPage />} />
+
+                {/* C. Storage Structure */}
+                <Route path="/inventory/locations" element={<LocationsPage />} />
+                <Route path="/inventory/zones" element={<WarehouseZonesPage />} />
+                <Route path="/inventory/racks" element={<WarehouseRacksPage />} />
+                <Route path="/inventory/bins" element={<WarehouseBinsPage />} />
+                <Route path="/inventory/racks-bins" element={<WarehouseRacksPage />} />
+
+                {/* D. Capacity Management */}
+                <Route path="/inventory/warehouses/capacity" element={<WarehouseCapacityPage />} />
+                <Route path="/inventory/locations/utilization" element={<LocationUtilizationPage />} />
+
+                {/* E. Warehouse Configuration */}
+                <Route path="/inventory/warehouses/configuration" element={<WarehouseConfigPage />} />
+
+                {/* Goods Receipt & Inspection */}
+                <Route path="/inventory/goods-receipt" element={<Navigate to="/inventory/goods-receipt/register" replace />} />
+                <Route path="/inventory/goods-receipt/register" element={<ReceiptRegisterPage key="register" view="register" />} />
+                <Route path="/inventory/goods-receipt/create" element={<ReceiptFormPage />} />
+                <Route path="/inventory/goods-receipt/receipts/:id" element={<ReceiptDetailPage />} />
+                <Route path="/inventory/goods-receipt/receipts/:id/edit" element={<ReceiptFormPage />} />
+                <Route path="/inventory/goods-receipt/inspection" element={<ReceiptInspectionPage />} />
+                <Route path="/inventory/goods-receipt/quality" element={<QualityInspectionPage />} />
+                <Route path="/inventory/goods-receipt/accepted" element={<AcceptedGoodsPage />} />
+                <Route path="/inventory/goods-receipt/rejected" element={<RejectedGoodsPage />} />
+                <Route path="/inventory/goods-receipt/partial" element={<PartialAcceptancePage />} />
+                <Route path="/inventory/goods-receipt/putaway" element={<PutawayManagementPage />} />
+                <Route path="/inventory/goods-receipt/discrepancies" element={<ReceiptDiscrepancyPage />} />
+                <Route path="/inventory/goods-receipt/history" element={<ReceiptRegisterPage key="history" view="history" />} />
+
+                {/* Stock Operations — Complete 12 Submodules */}
+                <Route path="/inventory/operations/stock-in" element={<StockInPage />} />
+                <Route path="/inventory/operations/goods-receipt" element={<Navigate to="/inventory/goods-receipt/register" replace />} />
                 <Route path="/inventory/operations/stock-issue" element={<StockIssuePage />} />
-                <Route path="/inventory/operations/transfers" element={<StockTransferPage />} />
-                <Route path="/inventory/operations/stock-transfer" element={<StockTransferPage />} />
-                <Route path="/inventory/operations/adjustments" element={<StockAdjustmentPage />} />
+                <Route path="/inventory/operations/stock-transfer" element={<StockTransferPage mode="ALL" />} />
+                <Route path="/inventory/operations/transfers" element={<StockTransferPage mode="ALL" />} />
+                <Route path="/inventory/operations/inter-warehouse-transfer" element={<StockTransferPage mode="INTER_WAREHOUSE" />} />
+                <Route path="/inventory/operations/inter-location-transfer" element={<StockTransferPage mode="INTER_LOCATION" />} />
                 <Route path="/inventory/operations/stock-adjustment" element={<StockAdjustmentPage />} />
+                <Route path="/inventory/operations/adjustments" element={<StockAdjustmentPage />} />
+                <Route path="/inventory/operations/stock-return" element={<StockReturnsPage />} />
                 <Route path="/inventory/operations/returns" element={<StockReturnsPage />} />
-                <Route path="/inventory/operations/movements" element={<StockMovementsPage initialType="ALL" />} />
+                <Route path="/inventory/operations/opening-stock" element={<OpeningStockPage />} />
+                <Route path="/inventory/operations/stock-reservation" element={<StockReservationsPage />} />
                 <Route path="/inventory/operations/reservations" element={<StockReservationsPage />} />
+                <Route path="/inventory/operations/stock-release" element={<StockReleasePage />} />
+                <Route path="/inventory/operations/stock-reclassification" element={<StockReclassificationPage />} />
+                <Route path="/inventory/operations/stock-out" element={<StockOutPage />} />
+                <Route path="/inventory/operations/movements" element={<StockMovementsPage initialType="ALL" />} />
                 <Route path="/inventory/operations/reconciliation" element={<ReconciliationPage />} />
 
                 {/* Stock Control — Exact 8 Modules */}
@@ -174,8 +266,27 @@ export default function App() {
                 <Route path="/inventory/configuration/valuation" element={<ValuationSettingsPage />} />
                 <Route path="/inventory/configuration/numbering" element={<DocumentNumberingPage />} />
                 <Route path="/inventory/configuration/approvals" element={<ApprovalSettingsPage />} />
+                <Route path="/inventory/configuration/goods-receipt" element={<GoodsReceiptSettingsPage />} />
                 <Route path="/inventory/configuration" element={<Navigate to="/inventory/configuration/general" replace />} />
                 <Route path="/inventory/settings" element={<Navigate to="/inventory/configuration/general" replace />} />
+
+                {/* Integration & Events — Exact 6 Modules */}
+                <Route path="/inventory/integrations/dashboard" element={<IntegrationDashboardPage />} />
+                <Route path="/inventory/integrations/incoming" element={<IncomingEventsPage />} />
+                <Route path="/inventory/integrations/outgoing" element={<OutgoingEventsPage />} />
+                <Route path="/inventory/integrations/failed" element={<FailedEventsPage />} />
+                <Route path="/inventory/integrations/history" element={<EventHistoryPage />} />
+                <Route path="/inventory/integrations/settings" element={<IntegrationSettingsPage />} />
+                <Route path="/inventory/integrations" element={<Navigate to="/inventory/integrations/dashboard" replace />} />
+
+                {/* Direct & Convenience Route Aliases */}
+                <Route path="/integrations/dashboard" element={<Navigate to="/inventory/integrations/dashboard" replace />} />
+                <Route path="/integrations/incoming" element={<Navigate to="/inventory/integrations/incoming" replace />} />
+                <Route path="/integrations/outgoing" element={<Navigate to="/inventory/integrations/outgoing" replace />} />
+                <Route path="/integrations/failed" element={<Navigate to="/inventory/integrations/failed" replace />} />
+                <Route path="/integrations/history" element={<Navigate to="/inventory/integrations/history" replace />} />
+                <Route path="/integrations/settings" element={<Navigate to="/inventory/integrations/settings" replace />} />
+                <Route path="/integrations" element={<Navigate to="/inventory/integrations/dashboard" replace />} />
 
                 {/* Direct & Convenience Route Aliases */}
                 <Route path="/products" element={<Navigate to="/inventory/products" replace />} />
@@ -184,8 +295,8 @@ export default function App() {
                 <Route path="/variants" element={<Navigate to="/inventory/products" replace />} />
                 <Route path="/units" element={<Navigate to="/inventory/units" replace />} />
                 <Route path="/barcodes" element={<Navigate to="/inventory/barcodes" replace />} />
-                <Route path="/goods-receipt" element={<Navigate to="/inventory/operations/stock-in" replace />} />
-                <Route path="/stock-in" element={<Navigate to="/inventory/operations/stock-in" replace />} />
+                <Route path="/goods-receipt" element={<Navigate to="/inventory/goods-receipt/register" replace />} />
+                <Route path="/stock-in" element={<Navigate to="/inventory/goods-receipt/register" replace />} />
                 <Route path="/stock-issue" element={<Navigate to="/inventory/operations/stock-out" replace />} />
                 <Route path="/stock-out" element={<Navigate to="/inventory/operations/stock-out" replace />} />
                 <Route path="/stock-transfer" element={<Navigate to="/inventory/operations/transfers" replace />} />
@@ -242,6 +353,13 @@ export default function App() {
                 <Route path="/configuration/approvals" element={<Navigate to="/inventory/configuration/approvals" replace />} />
                 <Route path="/returns" element={<Navigate to="/inventory/operations/returns" replace />} />
                 <Route path="/inventory/returns" element={<Navigate to="/inventory/operations/returns" replace />} />
+                <Route path="/inter-warehouse-transfer" element={<Navigate to="/inventory/operations/inter-warehouse-transfer" replace />} />
+                <Route path="/inter-location-transfer" element={<Navigate to="/inventory/operations/inter-location-transfer" replace />} />
+                <Route path="/opening-stock" element={<Navigate to="/inventory/operations/opening-stock" replace />} />
+                <Route path="/stock-reservation" element={<Navigate to="/inventory/operations/stock-reservation" replace />} />
+                <Route path="/stock-release" element={<Navigate to="/inventory/operations/stock-release" replace />} />
+                <Route path="/stock-reclassification" element={<Navigate to="/inventory/operations/stock-reclassification" replace />} />
+                <Route path="/stock-return" element={<Navigate to="/inventory/operations/stock-return" replace />} />
 
                 <Route path="*" element={<Navigate to="/inventory" replace />} />
               </Routes>

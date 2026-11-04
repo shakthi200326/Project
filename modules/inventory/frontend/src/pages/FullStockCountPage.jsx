@@ -292,7 +292,7 @@ export function FullStockCountPage() {
             <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             <span>{successMsg}</span>
           </div>
-          <button onClick={() => setSuccessMsg("")} className="text-emerald-600 hover:text-emerald-800">
+          <button onClick={() => setSuccessMsg("")} className="text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-200">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -398,7 +398,7 @@ export function FullStockCountPage() {
       <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-600 dark:text-zinc-400">
-            <thead className="bg-slate-50/80 dark:bg-zinc-800/50 uppercase tracking-wider text-[11px] font-semibold text-slate-500 dark:text-zinc-400 border-b border-slate-200 dark:border-zinc-800">
+            <thead className="bg-slate-50/80 dark:bg-zinc-800/50 uppercase tracking-wider text-[11px] font-semibold text-slate-500 dark:text-zinc-400 border-b border-slate-200 dark:border-zinc-800 whitespace-nowrap">
               <tr>
                 <th className="py-3.5 px-4">Count Number</th>
                 <th className="py-3.5 px-4">Date</th>
@@ -432,11 +432,11 @@ export function FullStockCountPage() {
                     <td className="py-3.5 px-4 font-mono font-bold text-blue-600 dark:text-blue-400">
                       {c.count_number}
                     </td>
-                    <td className="py-3.5 px-4">{c.count_date}</td>
+                    <td className="py-3.5 px-4 whitespace-nowrap">{c.count_date}</td>
                     <td className="py-3.5 px-4 font-semibold text-slate-800 dark:text-zinc-200">
                       {c.warehouse_name}
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 whitespace-nowrap">
                       {c.include_all_locations ? (
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded">
                           <CheckCircle className="h-3 w-3" /> All Storage Locations
@@ -450,7 +450,7 @@ export function FullStockCountPage() {
                     <td className="py-3.5 px-4 text-slate-700 dark:text-zinc-300 font-medium">
                       {c.assigned_to}
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                           c.status === "Initiated"
@@ -465,7 +465,7 @@ export function FullStockCountPage() {
                         {c.status}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-right">
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
                         {c.status !== "Completed" && (
                           <button
@@ -577,8 +577,8 @@ export function FullStockCountPage() {
               </div>
 
               {/* 4. Include All Locations (Toggle, Required) */}
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700 flex items-center justify-between">
-                <div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700 flex items-center justify-between gap-3">
+                <div className="min-w-0">
                   <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200 block">
                     Include All Locations
                   </span>
@@ -594,7 +594,7 @@ export function FullStockCountPage() {
                       include_all_locations: !prev.include_all_locations,
                     }))
                   }
-                  className="cursor-pointer text-blue-600 dark:text-blue-400"
+                  className="shrink-0 cursor-pointer text-blue-600 dark:text-blue-400"
                 >
                   {formData.include_all_locations ? (
                     <ToggleRight className="h-7 w-7 text-blue-600 dark:text-blue-400" />
@@ -627,7 +627,7 @@ export function FullStockCountPage() {
                               type="checkbox"
                               checked={isChecked}
                               onChange={() => handleLocationToggle(loc.id)}
-                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                              className="rounded border-slate-300 dark:border-zinc-600 dark:bg-zinc-800 text-blue-600 focus:ring-blue-500"
                             />
                             <span>
                               {loc.name} ({loc.code})

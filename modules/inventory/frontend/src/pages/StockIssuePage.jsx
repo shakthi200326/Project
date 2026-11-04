@@ -385,9 +385,9 @@ export function StockIssuePage() {
       <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex flex-wrap items-center gap-2">
               7-Day Outbound Issue Velocity by Channel
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40">
+              <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40">
                 Outflow Trends
               </span>
             </h3>
@@ -398,10 +398,10 @@ export function StockIssuePage() {
         </div>
         <div className="h-[220px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={outboundVelocityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <ComposedChart data={outboundVelocityData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.2} />
               <XAxis dataKey="day" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
+              <YAxis width="auto" tick={{ fontSize: 11 }} />
               <Tooltip
                 content={({ active, payload, label }) => {
                   if (!active || !payload?.length) return null;
@@ -419,9 +419,9 @@ export function StockIssuePage() {
                 }}
               />
               <Legend verticalAlign="top" align="right" height={30} iconType="circle" iconSize={8} />
-              <Bar dataKey="sales" name="Sales Dispatch" fill="#f43f5e" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="production" name="Production Staging" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              <Line type="monotone" dataKey="internal" name="Internal Consumption" stroke="#eab308" strokeWidth={2} dot={{ r: 3 }} />
+              <Bar dataKey="sales" name="Sales Dispatch" fill="#f43f5e" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+              <Bar dataKey="production" name="Production Staging" fill="#3b82f6" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+              <Line type="monotone" dataKey="internal" name="Internal Consumption" stroke="#eab308" strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -490,7 +490,7 @@ export function StockIssuePage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+              <tr className="whitespace-nowrap border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
                 <th className="py-3.5 px-4 font-semibold">GIN No.</th>
                 <th className="py-3.5 px-4 font-semibold">Date</th>
                 <th className="py-3.5 px-4 font-semibold">Purpose & Type</th>
@@ -561,15 +561,15 @@ export function StockIssuePage() {
                           {r.location || "Aisle 2 - Shelf 4"}
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-right">
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
                         <span className="font-mono font-bold text-rose-600 dark:text-rose-400">
                           -{qty} {r.unit || "EA"}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right font-mono text-slate-600 dark:text-zinc-400">
+                      <td className="py-3 px-4 text-right whitespace-nowrap font-mono text-slate-600 dark:text-zinc-400">
                         ${cost.toFixed(2)}
                       </td>
-                      <td className="py-3 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">
+                      <td className="py-3 px-4 text-right whitespace-nowrap font-mono font-bold text-slate-900 dark:text-white">
                         ${total.toFixed(2)}
                       </td>
                       <td className="py-3 px-4 text-center">
@@ -626,3 +626,4 @@ export function StockIssuePage() {
     </div>
   );
 }
+

@@ -245,7 +245,7 @@ export function AuditHistoryPage() {
       <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-600 dark:text-zinc-400">
-            <thead className="bg-slate-50/80 dark:bg-zinc-800/50 uppercase tracking-wider text-[11px] font-semibold text-slate-500 dark:text-zinc-400 border-b border-slate-200 dark:border-zinc-800">
+            <thead className="bg-slate-50/80 dark:bg-zinc-800/50 uppercase tracking-wider text-[11px] font-semibold text-slate-500 dark:text-zinc-400 border-b border-slate-200 dark:border-zinc-800 whitespace-nowrap">
               <tr>
                 <th className="py-3.5 px-4">Audit Number</th>
                 <th className="py-3.5 px-4">Count Number</th>
@@ -294,7 +294,7 @@ export function AuditHistoryPage() {
                     </td>
 
                     {/* 4. Count Date */}
-                    <td className="py-3.5 px-4">{a.count_date}</td>
+                    <td className="py-3.5 px-4 whitespace-nowrap">{a.count_date}</td>
 
                     {/* 5. Counted By */}
                     <td className="py-3.5 px-4 text-slate-700 dark:text-zinc-300">
@@ -325,7 +325,7 @@ export function AuditHistoryPage() {
                     </td>
 
                     {/* 9. Status */}
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                           a.status === "Approved"

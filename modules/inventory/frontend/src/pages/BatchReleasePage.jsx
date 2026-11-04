@@ -416,7 +416,7 @@ export function BatchReleasePage() {
       <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-zinc-800/50 text-slate-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-200 dark:border-zinc-800">
+            <thead className="bg-slate-50 dark:bg-zinc-800/50 text-slate-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-200 dark:border-zinc-800 whitespace-nowrap">
               <tr>
                 <th className="py-3 px-4">Release Date</th>
                 <th className="py-3 px-4">Batch Number</th>
@@ -453,7 +453,7 @@ export function BatchReleasePage() {
                     <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-white">
                       {r.product_name || "Product"}
                     </td>
-                    <td className="py-3.5 px-4 text-right tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
+                    <td className="py-3.5 px-4 text-right tabular-nums whitespace-nowrap font-bold text-emerald-600 dark:text-emerald-400">
                       +{Number(r.released_quantity || r.quarantine_quantity || 0)}
                     </td>
                     <td className="py-3.5 px-4">
@@ -462,8 +462,8 @@ export function BatchReleasePage() {
                     <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-zinc-300">
                       {r.released_by || "QC Inspector"}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-500 dark:text-zinc-400 max-w-sm truncate">
-                      {r.release_reason || "—"}
+                    <td className="py-3.5 px-4 text-slate-500 dark:text-zinc-400">
+                      <span className="block max-w-sm truncate">{r.release_reason || "—"}</span>
                     </td>
                   </tr>
                 ))

@@ -409,13 +409,13 @@ export function StockBalancesPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Chart 1: Multi-Facility Stock State & Commitment Allocation Matrix */}
         <div className="lg:col-span-6 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                   Multi-Facility Stock State Allocation
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40 shrink-0">
                   Stacked State
                 </span>
               </div>
@@ -423,7 +423,7 @@ export function StockBalancesPage() {
                 Free Dispatchable stock vs Committed Holds vs QC Quarantine per hub.
               </p>
             </div>
-            <div className="text-right">
+            <div className="text-right shrink-0">
               <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
                 {totalStockQty > 0 ? ((totalAvailable / totalStockQty) * 100).toFixed(1) : "100"}%
               </span>
@@ -435,7 +435,7 @@ export function StockBalancesPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={facilityBreakdownData}
-                margin={{ top: 15, right: 15, left: -20, bottom: 20 }}
+                margin={{ top: 15, right: 15, left: 0, bottom: 20 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.15} vertical={false} />
                 <XAxis
@@ -445,7 +445,7 @@ export function StockBalancesPage() {
                   tickLine={false}
                   axisLine={{ stroke: "#64748b", opacity: 0.2 }}
                 />
-                <YAxis
+                <YAxis width="auto"
                   stroke="#94a3b8"
                   fontSize={11}
                   tickLine={false}
@@ -510,21 +510,21 @@ export function StockBalancesPage() {
                   stackId="state"
                   fill="#10b981"
                   radius={[0, 0, 0, 0]}
-                />
+                  isAnimationActive={false}/>
                 <Bar
                   dataKey="reserved"
                   name="Committed Holds"
                   stackId="state"
                   fill="#8b5cf6"
                   radius={[0, 0, 0, 0]}
-                />
+                  isAnimationActive={false}/>
                 <Bar
                   dataKey="blocked"
                   name="QC Quarantine"
                   stackId="state"
                   fill="#f59e0b"
                   radius={[4, 4, 0, 0]}
-                />
+                  isAnimationActive={false}/>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -532,13 +532,13 @@ export function StockBalancesPage() {
 
         {/* Chart 2: SKU Safety Buffer vs Reorder Point (ROP) Threshold Matrix */}
         <div className="lg:col-span-6 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                   SKU Safety Buffer vs Reorder Point (ROP)
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40 shrink-0">
                   Buffer & ROP
                 </span>
               </div>
@@ -546,7 +546,7 @@ export function StockBalancesPage() {
                 Available stock plotted against Reorder Point (amber) and Critical Safety Floor (red).
               </p>
             </div>
-            <div className="flex items-center gap-3 text-right">
+            <div className="flex items-center gap-3 text-right shrink-0">
               <div>
                 <span className="text-xs font-mono font-bold text-amber-500">
                   {lowBufferCount} Reorder
@@ -570,7 +570,7 @@ export function StockBalancesPage() {
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={skuBufferData}
-                margin={{ top: 15, right: 15, left: -20, bottom: 25 }}
+                margin={{ top: 15, right: 15, left: 0, bottom: 25 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.15} vertical={false} />
                 <XAxis
@@ -583,7 +583,7 @@ export function StockBalancesPage() {
                   textAnchor="end"
                   height={35}
                 />
-                <YAxis
+                <YAxis width="auto"
                   stroke="#94a3b8"
                   fontSize={11}
                   tickLine={false}
@@ -664,7 +664,7 @@ export function StockBalancesPage() {
                   dataKey="available"
                   name="Available Units"
                   radius={[4, 4, 0, 0]}
-                >
+                  isAnimationActive={false}>
                   {skuBufferData.map((entry) => (
                     <Cell
                       key={`cell-${entry.id}`}
@@ -686,7 +686,7 @@ export function StockBalancesPage() {
                   strokeWidth={2}
                   strokeDasharray="4 4"
                   dot={{ r: 3, fill: "#f59e0b" }}
-                />
+                  isAnimationActive={false}/>
                 <Line
                   type="stepAfter"
                   dataKey="safetyFloor"
@@ -695,7 +695,7 @@ export function StockBalancesPage() {
                   strokeWidth={1.5}
                   strokeDasharray="2 2"
                   dot={{ r: 2.5, fill: "#ef4444" }}
-                />
+                  isAnimationActive={false}/>
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -853,7 +853,7 @@ export function StockBalancesPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400 whitespace-nowrap">
                 <th className="py-3.5 px-4 font-semibold">Product Name</th>
                 <th className="py-3.5 px-3 font-semibold">SKU</th>
                 <th className="py-3.5 px-3 font-semibold">Warehouse</th>
@@ -863,8 +863,8 @@ export function StockBalancesPage() {
                 <th className="py-3.5 px-3 font-semibold text-right">Reserved Stock</th>
                 <th className="py-3.5 px-3 font-semibold text-right">Available Stock</th>
                 <th className="py-3.5 px-3 font-semibold text-right">Damaged Stock</th>
-                <th className="py-3.5 px-3 text-center">Stock Status</th>
-                <th className="py-3.5 px-3 text-center">Action</th>
+                <th className="py-3.5 px-3 font-semibold text-center">Stock Status</th>
+                <th className="py-3.5 px-3 font-semibold text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
@@ -901,16 +901,16 @@ export function StockBalancesPage() {
                       <td className="py-3.5 px-3 font-mono text-[11px] text-slate-500 dark:text-zinc-400">
                         {b.bin_name || b.bin_code || b.bin || "—"}
                       </td>
-                      <td className="py-3.5 px-3 text-right font-mono tabular-nums font-semibold text-slate-900 dark:text-white">
+                      <td className="py-3.5 px-3 text-right font-mono tabular-nums whitespace-nowrap font-semibold text-slate-900 dark:text-white">
                         {total} {b.unit || "EA"}
                       </td>
-                      <td className="py-3.5 px-3 text-right font-mono tabular-nums font-medium text-purple-600 dark:text-purple-400">
+                      <td className="py-3.5 px-3 text-right font-mono tabular-nums whitespace-nowrap font-medium text-purple-600 dark:text-purple-400">
                         {reserved} {b.unit || "EA"}
                       </td>
-                      <td className="py-3.5 px-3 text-right font-mono tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
+                      <td className="py-3.5 px-3 text-right font-mono tabular-nums whitespace-nowrap font-bold text-emerald-600 dark:text-emerald-400">
                         {available} {b.unit || "EA"}
                       </td>
-                      <td className="py-3.5 px-3 text-right font-mono tabular-nums font-medium text-amber-600 dark:text-amber-400">
+                      <td className="py-3.5 px-3 text-right font-mono tabular-nums whitespace-nowrap font-medium text-amber-600 dark:text-amber-400">
                         {damaged} {b.unit || "EA"}
                       </td>
                       <td className="py-3.5 px-3 text-center">

@@ -185,17 +185,10 @@ export function CategoriesPage() {
   useEffect(() => {
     fetchCategories().then((res) => {
       const list = res.results || res || [];
-      if (list.length > 0) {
-        setCategories(list);
-      } else {
-        setCategories(categoryTreemapData.map((d, i) => ({
-          id: `cat-${i}`,
-          name: d.name,
-          code: d.code,
-          items_count: d.skus,
-          parent: null,
-        })));
-      }
+      setCategories(list);
+    }).catch((err) => {
+      console.error("Failed to load categories:", err);
+      setCategories([]);
     });
   }, []);
 
@@ -226,7 +219,7 @@ export function CategoriesPage() {
       setIsCreateOpen(false);
     } catch (err) {
       console.error(err);
-      showToast("Failed to create category. Please verify input parameters.");
+      showToast(`Failed to create category: ${err.message}`);
     }
   };
 
@@ -325,13 +318,13 @@ export function CategoriesPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Chart 1: Category Catalog Volume & Capital Valuation Treemap */}
         <div className="lg:col-span-7 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                   Category Catalog Volume & Capital Allocation
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40">
+                <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40">
                   Treemap Density
                 </span>
               </div>
@@ -339,9 +332,9 @@ export function CategoriesPage() {
                 Proportional capital concentration & SKU footprints across taxonomy branches.
               </p>
             </div>
-            <div className="text-right">
-              <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400">$640.8k</span>
-              <span className="text-[10px] text-slate-400 block">Total Catalog Value</span>
+            <div className="text-right shrink-0">
+              <span className="text-xs font-mono font-bold tabular-nums text-blue-600 dark:text-blue-400">$640.8k</span>
+              <span className="text-[10px] text-slate-400 dark:text-zinc-500 block">Total Catalog Value</span>
             </div>
           </div>
 
@@ -353,7 +346,7 @@ export function CategoriesPage() {
                 aspectRatio={4 / 3}
                 stroke="#ffffff"
                 content={<CustomTreemapContent />}
-                isAnimationActive={true}
+                isAnimationActive={false}
               >
                 <Tooltip
                   content={({ active, payload }) => {
@@ -398,13 +391,13 @@ export function CategoriesPage() {
 
         {/* Chart 2: Category Gross Margin % Benchmark (Horizontal BarChart layout="vertical") */}
         <div className="lg:col-span-5 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                   Category Profitability Benchmark
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40">
+                <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40">
                   Horizontal Margin
                 </span>
               </div>
@@ -419,7 +412,7 @@ export function CategoriesPage() {
               <BarChart
                 data={categoryMarginData}
                 layout="vertical"
-                margin={{ top: 5, right: 35, left: 10, bottom: 5 }}
+                margin={{ top: 15, right: 35, left: 10, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.15} horizontal={false} />
                 <XAxis
@@ -438,7 +431,7 @@ export function CategoriesPage() {
                   fontSize={10}
                   tickLine={false}
                   axisLine={{ stroke: "#64748b", opacity: 0.2 }}
-                  width={95}
+                  width={110}
                 />
                 <Tooltip
                   content={({ active, payload }) => {
@@ -449,8 +442,8 @@ export function CategoriesPage() {
                       <div className="rounded-xl border border-slate-700/80 bg-slate-900/95 backdrop-blur-md px-3.5 py-2 text-white shadow-2xl text-xs space-y-1">
                         <div className="font-bold text-slate-200">{d.name}</div>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-emerald-400 font-bold text-sm">{d.margin}%</span>
-                          <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                          <span className="font-mono text-emerald-400 font-bold text-sm tabular-nums">{d.margin}%</span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                             d.margin >= 35 ? "bg-emerald-500/20 text-emerald-300" : "bg-amber-500/20 text-amber-300"
                           }`}>
                             {diff > 0 ? `+${diff}% vs target` : `${diff}% vs target`}
@@ -476,7 +469,7 @@ export function CategoriesPage() {
                 <Bar
                   dataKey="margin"
                   radius={[0, 6, 6, 0]}
-                  isAnimationActive={true}
+                  isAnimationActive={false}
                 >
                   {categoryMarginData.map((entry, index) => (
                     <Cell
@@ -524,19 +517,19 @@ export function CategoriesPage() {
               key={cat.id || idx}
               className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs hover:shadow-md hover:border-blue-400/60 dark:hover:border-blue-700/60 transition-all flex flex-col justify-between space-y-3.5 group"
             >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-tr from-blue-600 to-indigo-600 text-white shadow-xs group-hover:scale-105 transition-transform">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-tr from-blue-600 to-indigo-600 text-white shadow-xs group-hover:scale-105 transition-transform">
                     <Layers className="h-5 w-5" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white">{cat.name}</h3>
                     <span className="font-mono text-[10px] text-blue-600 dark:text-blue-400 font-bold px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/40">
                       {cat.code}
                     </span>
                   </div>
                 </div>
-                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 tabular-nums border border-slate-200/60 dark:border-zinc-700">
+                <span className="shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 tabular-nums border border-slate-200/60 dark:border-zinc-700">
                   {cat.items_count ?? (idx % 2 === 0 ? 84 : 52)} SKUs
                 </span>
               </div>
@@ -603,6 +596,24 @@ export function CategoriesPage() {
                   placeholder="e.g. CAT-ELEC-01"
                   className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500 uppercase font-mono"
                 />
+              </div>
+
+              <div>
+                <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">
+                  Parent Category
+                </label>
+                <select
+                  value={newCat.parent}
+                  onChange={(e) => setNewCat({ ...newCat, parent: e.target.value })}
+                  className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="">No parent (top-level)</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name} ({category.code})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-zinc-800">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Package,
@@ -27,6 +27,15 @@ import {
   Layers,
   Scan,
   Camera,
+  Trash2,
+  Power,
+  PowerOff,
+  RefreshCw,
+  Loader2,
+  FileText,
+  ChevronDown,
+  Tag,
+  Check,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -45,8 +54,15 @@ import {
   fetchProducts,
   updateProduct,
   deleteProduct,
+  activateProduct,
+  deactivateProduct,
   playScanBeep,
   lookupProductByBarcode,
+  barcodeLookupOnline,
+  downloadImportTemplate,
+  previewProductImport,
+  commitProductImport,
+  exportProductCatalog,
 } from "../services/api";
 import { CreateProductModal } from "../components/CreateProductModal.jsx";
 import { ProductDetailDrawer } from "../components/ProductDetailDrawer.jsx";
@@ -58,6 +74,9 @@ const RADIAL_HEALTH_DATA = [
   { name: "Serialized Registry", value: 65, fill: "#F59E0B" },
 ];
 
+// The server marks deactivated items DISCONTINUED (not "INACTIVE"); DRAFT and ARCHIVED are inactive too.
+const isProductActive = (p) => (p.status ? String(p.status).toUpperCase() === "ACTIVE" : !!p.is_active);
+
 export function ProductsPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -66,6 +85,7 @@ export function ProductsPage() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [typeFilter, setTypeFilter] = useState("ALL");
   const [selectedIds, setSelectedIds] = useState([]);
   const [toastMessage, setToastMessage] = useState(null);
 
@@ -78,14 +98,27 @@ export function ProductsPage() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [importText, setImportText] = useState("");
   const [isBarcodeScanModalOpen, setIsBarcodeScanModalOpen] = useState(false);
   const [barcodeScanInput, setBarcodeScanInput] = useState("");
+  const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
+
+  // Enterprise Import State
+  const [importFile, setImportFile] = useState(null);
+  const [importPreview, setImportPreview] = useState(null);
+  const [previewing, setPreviewing] = useState(false);
+  const [committing, setCommitting] = useState(false);
+  const importFileInputRef = useRef(null);
+
+  const loadData = () => {
+    setLoading(true);
+    fetchProducts()
+      .then((res) => setProducts(Array.isArray(res) ? res : (res.results || res || [])))
+      .catch((err) => console.error("Failed to load products", err))
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    fetchProducts()
-      .then((res) => setProducts(res.results || []))
-      .finally(() => setLoading(false));
+    loadData();
   }, []);
 
   // Sync URL query parameters from Categories, Brands, or Overview links
@@ -117,9 +150,45 @@ export function ProductsPage() {
     return Array.from(set).sort();
   }, [products]);
 
-  const handleExecuteScan = (rawCode) => {
+  const availableTypes = useMemo(() => {
+    const set = new Set();
+    products.forEach((p) => {
+      if (p.item_type) set.add(p.item_type);
+    });
+    return Array.from(set).sort();
+  }, [products]);
+
+  const handleExecuteScan = async (rawCode) => {
     const clean = rawCode?.trim();
     if (!clean) return;
+
+    // Fast Online Barcode Lookup first
+    try {
+      // The lookup endpoint returns flat fields (item_id, item_code, item_name, variant_sku).
+      const onlineMatch = await barcodeLookupOnline(clean);
+      const fullProd =
+        onlineMatch?.found &&
+        products.find(
+          (p) => p.id === onlineMatch.item_id || (p.sku || p.code) === onlineMatch.item_code
+        );
+      if (fullProd) {
+        playScanBeep();
+        setSelectedProduct(fullProd);
+        setIsDrawerOpen(true);
+        setIsBarcodeScanModalOpen(false);
+        setBarcodeScanInput("");
+        showToast(
+          `Scanned match: ${onlineMatch.item_name} (${onlineMatch.item_code})${
+            onlineMatch.variant_sku ? ` [Variant: ${onlineMatch.variant_sku}]` : ""
+          }`
+        );
+        return;
+      }
+    } catch (err) {
+      console.warn("Online barcode lookup fallback to client index", err);
+    }
+
+    // Local client-side lookup fallback
     const match = lookupProductByBarcode(clean, products);
     if (match) {
       playScanBeep();
@@ -147,18 +216,26 @@ export function ProductsPage() {
       p.name?.toLowerCase().includes(q) ||
       p.sku?.toLowerCase().includes(q) ||
       p.brand?.toLowerCase().includes(q) ||
+      p.category?.toLowerCase().includes(q) ||
       (p.barcode && String(p.barcode).toLowerCase().includes(q));
+
     const matchesCategory =
       categoryFilter === "ALL" || p.category === categoryFilter;
+
+    const matchesType =
+      typeFilter === "ALL" || (p.item_type || "RAW_MATERIAL") === typeFilter;
+
     const normStatus = (p.stock_status || "IN_STOCK").toUpperCase();
     const matchesStatus =
       statusFilter === "ALL" ||
       normStatus === statusFilter ||
-      normStatus.replace("_", " ") === statusFilter ||
+      (statusFilter === "ACTIVE" && isProductActive(p)) ||
+      (statusFilter === "INACTIVE" && !isProductActive(p)) ||
       (statusFilter === "IN_STOCK" && (normStatus === "IN_STOCK" || normStatus === "IN STOCK")) ||
       (statusFilter === "LOW_STOCK" && (normStatus === "LOW_STOCK" || normStatus === "LOW STOCK")) ||
       (statusFilter === "OUT_OF_STOCK" && (normStatus === "OUT_OF_STOCK" || normStatus === "OUT OF STOCK"));
-    return matchesSearch && matchesCategory && matchesStatus;
+
+    return matchesSearch && matchesCategory && matchesType && matchesStatus;
   });
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
@@ -200,11 +277,44 @@ export function ProductsPage() {
       setSelectedProduct(saved);
       showToast(`Product ${saved.sku} (${saved.name}) updated successfully.`);
     } catch (e) {
-      setProducts((prev) =>
-        prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
-      );
-      setSelectedProduct(updatedProduct);
-      showToast(`Product ${updatedProduct.sku} (${updatedProduct.name}) updated.`);
+      // The server rejected the edit; keep the saved version on screen.
+      showToast(`Update failed: ${e.message}`);
+    }
+  };
+
+  const handleToggleStatus = async (p, e) => {
+    if (e) e.stopPropagation();
+    try {
+      if (isProductActive(p)) {
+        const next = await deactivateProduct(p.id);
+        setProducts((prev) =>
+          prev.map((item) => (item.id === p.id ? { ...item, ...next } : item))
+        );
+        showToast(`Product ${p.sku} deactivated.`);
+      } else {
+        const next = await activateProduct(p.id);
+        setProducts((prev) =>
+          prev.map((item) => (item.id === p.id ? { ...item, ...next } : item))
+        );
+        showToast(`Product ${p.sku} activated.`);
+      }
+    } catch (err) {
+      showToast(`Status update failed: ${err.message}`);
+    }
+  };
+
+  const handleDeleteProduct = async (p, e) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm(`Are you sure you want to delete product "${p.name}" (${p.sku})? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      await deleteProduct(p.id, p);
+      setProducts((prev) => prev.filter((item) => item.id !== p.id));
+      setSelectedIds((prev) => prev.filter((id) => id !== p.id));
+      showToast(`Product ${p.sku} deleted.`);
+    } catch (err) {
+      showToast(`Cannot delete product: ${err.message}`);
     }
   };
 
@@ -213,46 +323,14 @@ export function ProductsPage() {
     setIsDrawerOpen(true);
   };
 
-  const handleExportCSV = () => {
-    const headers = [
-      "SKU",
-      "Product Name",
-      "Category",
-      "Brand",
-      "Base Unit",
-      "On Hand",
-      "Reserved",
-      "Available",
-      "Stock Status",
-      "Unit Cost ($)",
-    ];
-    const rows = filteredProducts.map((p) => [
-      `"${p.sku}"`,
-      `"${p.name}"`,
-      `"${p.category || ""}"`,
-      `"${p.brand || ""}"`,
-      p.unit || "EA",
-      p.on_hand ?? 0,
-      p.reserved ?? 0,
-      p.available ?? 0,
-      p.stock_status || "IN_STOCK",
-      (p.unit_cost || 0).toFixed(2),
-    ]);
-
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute(
-      "download",
-      `Products_Catalog_${new Date().toISOString().split("T")[0]}.csv`
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast("Product catalog exported as CSV.");
+  const handleExport = (format = "csv") => {
+    setIsExportDropdownOpen(false);
+    const params = {};
+    if (categoryFilter !== "ALL") params.category = categoryFilter;
+    if (statusFilter !== "ALL") params.status = statusFilter;
+    if (search) params.search = search;
+    exportProductCatalog(params, format);
+    showToast(`Streaming ${format.toUpperCase()} export download...`);
   };
 
   const handleBulkPrintBarcodes = () => {
@@ -262,52 +340,100 @@ export function ProductsPage() {
     }, 600);
   };
 
-  const handleBulkUpdateReorder = () => {
-    showToast(`Directing ${selectedIds.length} items to Replenishment Matrix...`);
-    setTimeout(() => {
-      navigate("/inventory/planning/replenishment");
-    }, 600);
+  // Apply activate/deactivate to each selected product; only the ones the server accepted change on screen.
+  const runBulkStatus = async (apiCall, verb) => {
+    const changed = new Map();
+    let failed = 0;
+    for (const id of selectedIds) {
+      try {
+        changed.set(id, await apiCall(id));
+      } catch (e) {
+        failed++;
+      }
+    }
+    setProducts((prev) =>
+      prev.map((p) => (changed.has(p.id) ? { ...p, ...changed.get(p.id) } : p))
+    );
+    setSelectedIds([]);
+    showToast(
+      failed > 0
+        ? `${changed.size} products ${verb}, ${failed} failed.`
+        : `${changed.size} products ${verb}.`
+    );
   };
 
-  const handleBulkArchive = () => {
+  const handleBulkActivate = () => runBulkStatus(activateProduct, "activated");
+
+  const handleBulkDeactivate = () => runBulkStatus(deactivateProduct, "deactivated");
+
+  const handleBulkArchive = async () => {
     if (
       window.confirm(
-        `Are you sure you want to archive ${selectedIds.length} selected items?`
+        `Are you sure you want to delete ${selectedIds.length} selected items? Products with ledger history will be protected.`
       )
     ) {
-      setProducts((prev) => prev.filter((p) => !selectedIds.includes(p.id)));
+      let deleted = 0;
+      let failed = 0;
+      for (const id of selectedIds) {
+        try {
+          await deleteProduct(id, products.find((p) => p.id === id));
+          deleted++;
+        } catch (e) {
+          failed++;
+        }
+      }
       setSelectedIds([]);
-      showToast(`${selectedIds.length} products archived.`);
+      loadData();
+      showToast(
+        failed > 0
+          ? `${deleted} products deleted, ${failed} protected due to transaction history.`
+          : `${deleted} products deleted.`
+      );
     }
   };
 
-  const handleImportSubmit = (e) => {
-    e.preventDefault();
-    if (!importText.trim()) return;
+  // Import Modal Handlers
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImportFile(file);
+      setImportPreview(null);
+    }
+  };
 
-    const lines = importText.split("\n").filter((l) => l.trim().length > 0);
-    const imported = lines.map((line, idx) => {
-      const parts = line.split(",").map((s) => s.trim());
-      return {
-        id: `prod-imp-${Date.now()}-${idx}`,
-        sku: parts[0] || `SKU-IMP-${idx}`,
-        name: parts[1] || `Imported Item ${idx + 1}`,
-        category: parts[2] || "Mechanical Components",
-        brand: parts[3] || "OEM Standard",
-        unit: parts[4] || "EA",
-        variants_count: 1,
-        on_hand: parseInt(parts[5] || "100", 10),
-        reserved: 0,
-        available: parseInt(parts[5] || "100", 10),
-        stock_status: "IN_STOCK",
-        unit_cost: parseFloat(parts[6] || "25.00"),
-      };
-    });
+  const handleRunPreview = async () => {
+    if (!importFile) return;
+    setPreviewing(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", importFile);
+      const res = await previewProductImport(formData);
+      setImportPreview(res);
+      showToast(`Import dry-run validated: ${res.valid_rows || 0} valid rows.`);
+    } catch (err) {
+      showToast(`Preview failed: ${err.message}`);
+    } finally {
+      setPreviewing(false);
+    }
+  };
 
-    setProducts((prev) => [...imported, ...prev]);
-    setIsImportOpen(false);
-    setImportText("");
-    showToast(`${imported.length} products imported into catalog.`);
+  const handleExecuteCommit = async () => {
+    if (!importFile) return;
+    setCommitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", importFile);
+      const res = await commitProductImport(formData);
+      showToast(`Import successful: ${res.created_count || 0} created, ${res.updated_count || 0} updated.`);
+      setIsImportOpen(false);
+      setImportFile(null);
+      setImportPreview(null);
+      loadData();
+    } catch (err) {
+      showToast(`Commit failed: ${err.message}`);
+    } finally {
+      setCommitting(false);
+    }
   };
 
   return (
@@ -325,33 +451,61 @@ export function ProductsPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Products & Catalog
+              Enterprise Items & Products
             </h1>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/60">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/60 dark:border-blue-900/50">
               <Sparkles className="h-2.5 w-2.5" />
               Master Ledger Item Registry
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-            Manage stock items, variant matrices, barcodes, UOM conversions & reorder parameters.
+            Universal product master with multi-UOM conversions, variant matrices, barcodes, and audit compliance.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setIsImportOpen(true)}
+            onClick={() => {
+              setImportFile(null);
+              setImportPreview(null);
+              setIsImportOpen(true);
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 text-xs font-semibold text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors shadow-2xs cursor-pointer"
           >
             <Upload className="h-3.5 w-3.5 text-slate-400" />
             <span>Import</span>
           </button>
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 text-xs font-semibold text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors shadow-2xs cursor-pointer"
-          >
-            <Download className="h-3.5 w-3.5 text-slate-400" />
-            <span>Export CSV</span>
-          </button>
+
+          {/* Export Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 text-xs font-semibold text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors shadow-2xs cursor-pointer"
+            >
+              <Download className="h-3.5 w-3.5 text-slate-400" />
+              <span>Export</span>
+              <ChevronDown className="h-3 w-3 text-slate-400" />
+            </button>
+            {isExportDropdownOpen && (
+              <div className="absolute right-0 mt-1 w-44 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl z-20 py-1 text-xs">
+                <button
+                  onClick={() => handleExport("csv")}
+                  className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-zinc-800 font-medium text-slate-700 dark:text-zinc-300 flex items-center gap-2 cursor-pointer"
+                >
+                  <FileText className="h-3.5 w-3.5 text-blue-500" />
+                  <span>Export CSV (.csv)</span>
+                </button>
+                <button
+                  onClick={() => handleExport("xlsx")}
+                  className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-zinc-800 font-medium text-slate-700 dark:text-zinc-300 flex items-center gap-2 cursor-pointer"
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500" />
+                  <span>Export Excel (.xlsx)</span>
+                </button>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={() => setIsCreateOpen(true)}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold transition-all shadow-xs hover:shadow-blue-500/25 cursor-pointer"
@@ -406,18 +560,17 @@ export function ProductsPage() {
         </div>
       </div>
 
-      {/* High-Configuration Advanced Product Analytics */}
+      {/* Advanced Product Analytics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Chart 1: Product Portfolio Matrix (ScatterChart with Quadrant Reference Lines & Bubble Sizing) */}
         <div className="lg:col-span-2 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Target className="h-4 w-4 text-blue-500" />
                   Product Portfolio Quadrant & Capital Matrix
                 </h2>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200/60">
+                <span className="shrink-0 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/50">
                   Unit Cost vs On-Hand Units
                 </span>
               </div>
@@ -425,25 +578,22 @@ export function ProductsPage() {
                 Strategic inventory positioning: Bubble diameter reflects total valuation; quadrants divide critical bottlenecks vs high-turnover commodities.
               </p>
             </div>
-            <div className="flex items-center gap-3 text-xs font-semibold">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 shrink-0 text-xs font-semibold">
               <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
                 <span className="h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-blue-500/20" /> Active SKU
-              </span>
-              <span className="text-slate-400 text-[11px]">
-                Median: $50 / 100 Units
               </span>
             </div>
           </div>
 
           <div className="h-68 w-full pt-1">
             <ResponsiveContainer width="100%" height="100%">
-              <ScatterChart margin={{ top: 15, right: 20, bottom: 5, left: -20 }}>
+              <ScatterChart margin={{ top: 15, right: 20, bottom: 5, left: 0 }}>
                 <CartesianGrid strokeDasharray="2 4" stroke="#e2e8f0" opacity={0.5} />
                 <XAxis
                   type="number"
                   dataKey="cost"
                   name="Unit Cost"
-                  unit="$"
+                  tickFormatter={(v) => `$${v}`}
                   domain={[0, 200]}
                   tick={{ fontSize: 10, fill: "#94a3b8" }}
                   tickLine={false}
@@ -453,69 +603,57 @@ export function ProductsPage() {
                   type="number"
                   dataKey="stock"
                   name="On-Hand"
-                  unit=" EA"
-                  domain={[0, 1300]}
                   tick={{ fontSize: 10, fill: "#94a3b8" }}
                   tickLine={false}
                   axisLine={false}
                 />
-                <ZAxis type="number" dataKey="value" range={[60, 450]} name="Valuation" unit="$" />
+                <ZAxis type="number" dataKey="value" range={[50, 400]} />
                 <Tooltip
-                  cursor={{ strokeDasharray: "3 3", stroke: "#94a3b8" }}
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
+                  cursor={{ strokeDasharray: "3 3" }}
+                  content={({ payload }) => {
+                    if (payload && payload.length) {
                       const data = payload[0].payload;
                       return (
-                        <div className="p-3 rounded-xl bg-slate-900/95 dark:bg-zinc-800/95 text-white text-xs border border-slate-700 shadow-2xl backdrop-blur-md space-y-1.5">
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="font-mono font-bold text-blue-400">{data.sku}</span>
-                            <span className="text-[10px] text-slate-400">{data.category}</span>
-                          </div>
-                          <div className="font-semibold text-slate-200">{data.name}</div>
-                          <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-slate-700/80 text-[11px] font-mono">
-                            <div>Unit Cost: <strong className="text-emerald-400">${data.cost.toFixed(2)}</strong></div>
-                            <div>Stock: <strong className="text-blue-400">{data.stock} units</strong></div>
-                            <div className="col-span-2">Total Capital: <strong className="text-white">${data.value.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong></div>
-                          </div>
+                        <div className="rounded-xl border border-slate-700 bg-slate-900/95 p-3 text-xs text-white shadow-xl space-y-1">
+                          <p className="font-bold text-blue-400">{data.name}</p>
+                          <p className="font-mono text-[11px] text-slate-300">SKU: {data.sku}</p>
+                          <p className="text-slate-300">Category: {data.category}</p>
+                          <p className="text-slate-300">Unit Cost: ${Number(data.cost || 0).toFixed(2)}</p>
+                          <p className="text-slate-300">On-Hand: {data.stock} units</p>
+                          <p className="font-semibold text-emerald-400">Valuation: ${data.value?.toLocaleString()}</p>
                         </div>
                       );
                     }
                     return null;
                   }}
                 />
-                <ReferenceLine x={50} stroke="#94a3b8" strokeDasharray="3 3" opacity={0.6} label={{ value: "Median Price $50", position: "insideTopRight", fill: "#94a3b8", fontSize: 9 }} />
-                <ReferenceLine y={100} stroke="#94a3b8" strokeDasharray="3 3" opacity={0.6} label={{ value: "Safety Floor 100 EA", position: "insideBottomLeft", fill: "#94a3b8", fontSize: 9 }} />
+                <ReferenceLine x={50} stroke="#94a3b8" strokeDasharray="3 3" />
+                <ReferenceLine y={100} stroke="#94a3b8" strokeDasharray="3 3" />
                 <Scatter
-                  name="Products"
                   data={
                     products.length > 0
                       ? products.map((p) => ({
-                          sku: p.sku || p.code,
+                          sku: p.sku,
                           name: p.name,
-                          cost: Number(p.unit_cost || 10),
-                          stock: Number(p.on_hand ?? p.available ?? 40),
-                          value: Number((p.on_hand ?? 40) * (p.unit_cost || 10)),
-                          category: p.category || "General",
+                          cost: p.unit_cost || 20,
+                          stock: p.on_hand || 50,
+                          value: (p.on_hand || 50) * (p.unit_cost || 20),
+                          category: p.category,
                         }))
-                      : [
-                          { sku: "BRG-6205", name: "Ball Bearing", cost: 14.85, stock: 450, value: 6682.5, category: "Mechanical" },
-                          { sku: "HYD-SV-24V", name: "Solenoid Valve", cost: 128.5, stock: 18, value: 2313, category: "Hydraulics" },
-                          { sku: "BELT-T10", name: "Timing Belt", cost: 32.4, stock: 280, value: 9072, category: "Power Trans" },
-                          { sku: "LUB-SYN", name: "Synthetic Oil", cost: 18.2, stock: 1200, value: 21840, category: "Fluids" },
-                          { sku: "ENC-1024", name: "Encoder", cost: 185, stock: 10, value: 1850, category: "Automation" },
-                        ]
+                      : []
                   }
                   fill="#3B82F6"
+                  isAnimationActive={false}
                 />
               </ScatterChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Chart 2: Multi-Ring Catalog Health & Compliance Radar (RadialBarChart) */}
+        {/* Governance Radar */}
         <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
               <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-emerald-500" />
                 Catalog Governance Radar
@@ -524,7 +662,7 @@ export function ProductsPage() {
                 Traceability and compliance ring meters
               </p>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200/60">
+            <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-900/50">
               92% Index
             </span>
           </div>
@@ -532,7 +670,7 @@ export function ProductsPage() {
           <div className="h-44 w-full flex items-center justify-center relative">
             <ResponsiveContainer width="100%" height="100%">
               <RadialBarChart
-                innerRadius="25%"
+                innerRadius="40%"
                 outerRadius="100%"
                 barSize={8}
                 data={RADIAL_HEALTH_DATA}
@@ -543,6 +681,7 @@ export function ProductsPage() {
                   background={{ fill: "rgba(226, 232, 240, 0.4)" }}
                   dataKey="value"
                   cornerRadius={6}
+                  isAnimationActive={false}
                 />
                 <Tooltip
                   contentStyle={{
@@ -556,20 +695,20 @@ export function ProductsPage() {
                 />
               </RadialBarChart>
             </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-lg font-bold font-mono text-slate-900 dark:text-white">92%</span>
-              <span className="text-[9px] uppercase font-bold text-slate-400">Score</span>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center leading-tight pointer-events-none">
+              <span className="text-base font-bold font-mono tabular-nums text-slate-900 dark:text-white">92%</span>
+              <span className="text-[9px] uppercase font-bold text-slate-400 dark:text-zinc-500">Score</span>
             </div>
           </div>
 
           <div className="space-y-1.5 pt-1 border-t border-slate-100 dark:border-zinc-800 text-xs">
             {RADIAL_HEALTH_DATA.map((item) => (
-              <div key={item.name} className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
-                <span className="flex items-center gap-2">
+              <div key={item.name} className="flex items-center justify-between gap-2 text-slate-600 dark:text-zinc-400">
+                <span className="flex items-center gap-2 min-w-0">
                   <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: item.fill }} />
-                  <span className="text-[11px] font-medium text-slate-700 dark:text-zinc-300 truncate">{item.name}</span>
+                  <span className="text-[11px] font-medium text-slate-700 dark:text-zinc-300 truncate min-w-0">{item.name}</span>
                 </span>
-                <span className="font-mono font-bold text-slate-900 dark:text-white text-[11px] tabular-nums">{item.value}%</span>
+                <span className="shrink-0 font-mono font-bold text-slate-900 dark:text-white text-[11px] tabular-nums">{item.value}%</span>
               </div>
             ))}
           </div>
@@ -578,7 +717,6 @@ export function ProductsPage() {
 
       {/* Toolbar & Filters */}
       <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        {/* Search & Barcode Scan Trigger */}
         <div className="flex items-center gap-2 flex-1 max-w-lg">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
@@ -595,21 +733,17 @@ export function ProductsPage() {
             />
           </div>
           <button
-            type="button"
-            onClick={() => {
-              setIsBarcodeScanModalOpen(true);
-              setBarcodeScanInput("");
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-xs font-semibold cursor-pointer transition-colors shadow-xs shrink-0"
-            title="Scan Barcode with Optical Camera or USB Reader"
+            onClick={() => setIsBarcodeScanModalOpen(true)}
+            className="p-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+            title="Open Barcode Scanner Station"
           >
-            <Scan className="h-3.5 w-3.5" />
-            <span>Scan Barcode</span>
+            <Scan className="h-4 w-4" />
           </button>
         </div>
 
         {/* Filters */}
         <div className="flex items-center gap-2 flex-wrap text-xs">
+          {/* Status Filter */}
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50 dark:bg-zinc-800/40 text-slate-700 dark:text-zinc-300">
             <Filter className="h-3 w-3 text-slate-400" />
             <select
@@ -620,13 +754,50 @@ export function ProductsPage() {
               }}
               className="bg-transparent focus:outline-none cursor-pointer font-medium"
             >
-              <option value="ALL">All Stock Statuses</option>
-              <option value="IN_STOCK">In Stock</option>
-              <option value="LOW_STOCK">Low Stock</option>
-              <option value="OUT_OF_STOCK">Out of Stock</option>
+              <option value="ALL">All Statuses</option>
+              <option value="ACTIVE">Status: Active</option>
+              <option value="INACTIVE">Status: Inactive</option>
+              <option value="IN_STOCK">Stock: In Stock</option>
+              <option value="LOW_STOCK">Stock: Low Stock</option>
+              <option value="OUT_OF_STOCK">Stock: Out of Stock</option>
             </select>
           </div>
 
+          {/* Classification Filter */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50 dark:bg-zinc-800/40 text-slate-700 dark:text-zinc-300">
+            <Tag className="h-3 w-3 text-slate-400" />
+            <select
+              value={typeFilter}
+              onChange={(e) => {
+                setTypeFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="bg-transparent focus:outline-none cursor-pointer font-medium"
+            >
+              <option value="ALL">All Item Types</option>
+              {availableTypes.length > 0 ? (
+                availableTypes.map((t) => (
+                  <option key={t} value={t}>
+                    {t.replace(/_/g, " ")}
+                  </option>
+                ))
+              ) : (
+                <>
+                  <option value="STOCK">Stockable</option>
+                  <option value="RAW_MATERIAL">Raw Material</option>
+                  <option value="WIP">Work In Progress</option>
+                  <option value="FINISHED_GOOD">Finished Good</option>
+                  <option value="CONSUMABLE">Consumable</option>
+                  <option value="NON_STOCK">Non-Stock Item</option>
+                  <option value="SERVICE">Service / Labor</option>
+                  <option value="MERCHANDISE">Merchandise</option>
+                  <option value="ASSET">Fixed Asset</option>
+                </>
+              )}
+            </select>
+          </div>
+
+          {/* Category Filter */}
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50 dark:bg-zinc-800/40 text-slate-700 dark:text-zinc-300">
             <SlidersHorizontal className="h-3 w-3 text-slate-400" />
             <select
@@ -638,46 +809,44 @@ export function ProductsPage() {
               className="bg-transparent focus:outline-none cursor-pointer font-medium"
             >
               <option value="ALL">All Categories</option>
-              {availableCategories.length > 0 ? (
-                availableCategories.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))
-              ) : (
-                <>
-                  <option value="Mechanical Components">Mechanical Components</option>
-                  <option value="Hydraulics & Pneumatics">Hydraulics & Pneumatics</option>
-                  <option value="Power Transmission">Power Transmission</option>
-                  <option value="Sensors & Automation">Sensors & Automation</option>
-                  <option value="Chemicals & Fluids">Chemicals & Fluids</option>
-                </>
-              )}
+              {availableCategories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
             </select>
           </div>
         </div>
       </div>
 
-      {/* Bulk Action Bar (When selected) */}
+      {/* Bulk Action Bar */}
       {selectedIds.length > 0 && (
         <div className="p-3 px-4 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-900 flex items-center justify-between text-xs text-blue-900 dark:text-blue-200 animate-in fade-in">
           <span className="font-semibold">{selectedIds.length} items selected</span>
           <div className="flex items-center gap-2">
             <button
-              onClick={handleBulkPrintBarcodes}
-              className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-blue-300 dark:border-blue-800 text-xs font-semibold hover:bg-blue-100 dark:hover:bg-zinc-800 cursor-pointer shadow-xs transition-colors"
+              onClick={handleBulkActivate}
+              className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-semibold hover:bg-emerald-50 dark:hover:bg-zinc-800 cursor-pointer shadow-xs transition-colors flex items-center gap-1"
             >
-              Print Barcodes
+              <Power className="h-3 w-3 text-emerald-600" />
+              <span>Activate</span>
             </button>
             <button
-              onClick={handleBulkUpdateReorder}
-              className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-blue-300 dark:border-blue-800 text-xs font-semibold hover:bg-blue-100 dark:hover:bg-zinc-800 cursor-pointer shadow-xs transition-colors"
+              onClick={handleBulkDeactivate}
+              className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-slate-300 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer shadow-xs transition-colors flex items-center gap-1"
             >
-              Update Reorder Rules
+              <PowerOff className="h-3 w-3 text-slate-500" />
+              <span>Deactivate</span>
+            </button>
+            <button
+              onClick={handleBulkPrintBarcodes}
+              className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-semibold hover:bg-blue-100 dark:hover:bg-zinc-800 cursor-pointer shadow-xs transition-colors"
+            >
+              Print Barcodes
             </button>
             <button
               onClick={handleBulkArchive}
               className="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700 cursor-pointer shadow-xs transition-colors"
             >
-              Archive Selected
+              Delete Selected
             </button>
           </div>
         </div>
@@ -700,15 +869,15 @@ export function ProductsPage() {
                     className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
                   />
                 </th>
-                <th className="py-3.5 px-4 font-semibold">SKU & Item Name</th>
-                <th className="py-3.5 px-4 font-semibold">Category & Brand</th>
-                <th className="py-3.5 px-4 font-semibold text-center">Variants</th>
-                <th className="py-3.5 px-4 font-semibold text-right">On-Hand</th>
-                <th className="py-3.5 px-4 font-semibold text-right">Reserved</th>
-                <th className="py-3.5 px-4 font-semibold text-right">Available</th>
-                <th className="py-3.5 px-4 font-semibold text-center">Status</th>
-                <th className="py-3.5 px-4 font-semibold text-right">Unit WAV</th>
-                <th className="py-3.5 px-4 text-center w-12">Actions</th>
+                <th className="py-3.5 px-4 whitespace-nowrap font-semibold">SKU & Product Name</th>
+                <th className="py-3.5 px-4 whitespace-nowrap font-semibold">Type & Classification</th>
+                <th className="py-3.5 px-4 whitespace-nowrap font-semibold">Category & Brand</th>
+                <th className="py-3.5 px-4 whitespace-nowrap font-semibold text-center">Variants</th>
+                <th className="py-3.5 px-4 whitespace-nowrap font-semibold text-right">On-Hand</th>
+                <th className="py-3.5 px-4 whitespace-nowrap font-semibold text-right">Available</th>
+                <th className="py-3.5 px-4 whitespace-nowrap font-semibold text-center">Master Status</th>
+                <th className="py-3.5 px-4 whitespace-nowrap font-semibold text-right">Standard Cost</th>
+                <th className="py-3.5 px-4 whitespace-nowrap text-center w-28">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
@@ -716,7 +885,7 @@ export function ProductsPage() {
                 <tr>
                   <td colSpan={10} className="py-12 text-center text-slate-400 dark:text-zinc-500">
                     <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent mb-2" />
-                    <p className="text-xs font-semibold">Loading product catalog...</p>
+                    <p className="text-xs font-semibold">Loading master item catalog...</p>
                   </td>
                 </tr>
               ) : paginatedProducts.length === 0 ? (
@@ -730,82 +899,140 @@ export function ProductsPage() {
                   </td>
                 </tr>
               ) : (
-                paginatedProducts.map((p) => (
-                  <tr
-                    key={p.id}
-                    onClick={() => handleOpenDetail(p)}
-                    className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors"
-                  >
-                    <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(p.id)}
-                        onChange={() => handleSelectOne(p.id)}
-                        className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
-                      />
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-[11px] font-bold text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md bg-blue-50/80 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/40">
-                          {p.sku}
+                paginatedProducts.map((p) => {
+                  const isActive = isProductActive(p);
+                  const primaryBarcode = p.primary_barcode_value || p.barcode || p.sku;
+                  const aliasCount = (p.multi_barcodes?.length || 0) + (p.barcodes?.length || 0);
+
+                  return (
+                    <tr
+                      key={p.id}
+                      onClick={() => handleOpenDetail(p)}
+                      className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors"
+                    >
+                      <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(p.id)}
+                          onChange={() => handleSelectOne(p.id)}
+                          className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono text-[11px] font-bold text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md bg-blue-50/80 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/40">
+                            {p.sku}
+                          </span>
+                          {primaryBarcode && (
+                            <span className="font-mono text-[10px] text-slate-400 dark:text-zinc-500 flex items-center gap-0.5">
+                              <Barcode className="h-2.5 w-2.5 text-slate-400" />
+                              {primaryBarcode}
+                              {aliasCount > 1 && (
+                                <span className="ml-1 px-1 py-0.2 rounded bg-slate-100 dark:bg-zinc-800 text-[9px] font-bold">
+                                  +{aliasCount - 1}
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </div>
+                        <div className="font-semibold text-slate-900 dark:text-zinc-100 mt-1">
+                          {p.name}
+                        </div>
+                        {p.display_name && p.display_name !== p.name && (
+                          <div className="text-[11px] text-slate-400 italic">
+                            {p.display_name}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
+                          {(p.item_type || p.classification || "RAW_MATERIAL").replace(/_/g, " ")}
                         </span>
-                      </div>
-                      <div className="font-semibold text-slate-900 dark:text-zinc-100 mt-1">
-                        {p.name}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="text-slate-800 dark:text-zinc-200 font-medium">
-                        {p.category}
-                      </div>
-                      <div className="text-[11px] text-slate-400 dark:text-zinc-500">
-                        {p.brand}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
-                        <Boxes className="h-3 w-3 text-slate-400" /> {p.variants_count || 1}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right font-semibold tabular-nums text-slate-900 dark:text-zinc-100">
-                      {(p.on_hand || 0).toLocaleString()} {p.unit}
-                    </td>
-                    <td className="py-3.5 px-4 text-right font-medium tabular-nums text-purple-600 dark:text-purple-400">
-                      {p.reserved > 0 ? `${p.reserved.toLocaleString()} ${p.unit}` : "-"}
-                    </td>
-                    <td className="py-3.5 px-4 text-right font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-                      {(p.available || 0).toLocaleString()} {p.unit}
-                    </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                          p.stock_status === "IN_STOCK"
-                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50"
-                            : p.stock_status === "LOW_STOCK"
-                            ? "bg-amber-50 text-amber-700 dark:bg-amber-950/70 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50"
-                            : "bg-rose-50 text-rose-700 dark:bg-rose-950/70 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50"
-                        }`}
-                      >
-                        <span className={`h-1.5 w-1.5 rounded-full ${
-                          p.stock_status === "IN_STOCK" ? "bg-emerald-500" : p.stock_status === "LOW_STOCK" ? "bg-amber-500" : "bg-rose-500"
-                        }`} />
-                        {(p.stock_status || "IN_STOCK").replace("_", " ")}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right font-mono tabular-nums text-slate-700 dark:text-zinc-300 font-medium">
-                      ${(p.unit_cost || 0).toFixed(2)}
-                    </td>
-                    <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => handleOpenDetail(p)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                        title="Inspect Product Specifications"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                        {p.classification && (
+                          <div className="text-[10px] text-slate-400 mt-0.5">
+                            Class: {p.classification}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="text-slate-800 dark:text-zinc-200 font-medium">
+                          {p.category || p.category_name || "Uncategorized"}
+                        </div>
+                        <div className="text-[11px] text-slate-400 dark:text-zinc-500">
+                          {p.brand || "OEM Standard"}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
+                          <Boxes className="h-3 w-3 text-slate-400" /> {p.variants_count || (p.variants ? p.variants.length : 1)}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap text-right font-semibold tabular-nums text-slate-900 dark:text-zinc-100">
+                        {(p.on_hand || 0).toLocaleString()} {p.base_uom || p.unit || "EA"}
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap text-right font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                        {(p.available || 0).toLocaleString()} {p.base_uom || p.unit || "EA"}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              isActive
+                                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50"
+                                : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400 border-slate-300 dark:border-zinc-700"
+                            }`}
+                          >
+                            <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-emerald-500" : "bg-slate-400"}`} />
+                            {isActive ? "ACTIVE" : "INACTIVE"}
+                          </span>
+                          <span
+                            className={`text-[9px] font-medium ${
+                              p.stock_status === "IN_STOCK"
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : p.stock_status === "LOW_STOCK"
+                                ? "text-amber-600 dark:text-amber-400"
+                                : "text-rose-600 dark:text-rose-400"
+                            }`}
+                          >
+                            {(p.stock_status || "IN_STOCK").replace("_", " ")}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap text-right font-mono tabular-nums text-slate-700 dark:text-zinc-300 font-medium">
+                        ${Number(p.unit_cost || p.standard_cost || 0).toFixed(2)}
+                      </td>
+                      <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => handleOpenDetail(p)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                            title="Inspect Product Specifications"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={(e) => handleToggleStatus(p, e)}
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                              isActive
+                                ? "text-emerald-500 hover:text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800"
+                                : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-zinc-800"
+                            }`}
+                            title={isActive ? "Deactivate Product" : "Activate Product"}
+                          >
+                            {isActive ? <Power className="h-3.5 w-3.5" /> : <PowerOff className="h-3.5 w-3.5" />}
+                          </button>
+                          <button
+                            onClick={(e) => handleDeleteProduct(p, e)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                            title="Delete Product"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -843,56 +1070,170 @@ export function ProductsPage() {
         </div>
       </div>
 
-      {/* Import Modal */}
+      {/* Enterprise Import Modal */}
       {isImportOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-3xl border border-slate-200 dark:border-zinc-800 shadow-2xl p-6 space-y-5 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
-              <div className="flex items-center gap-2">
-                <FileSpreadsheet className="h-5 w-5 text-blue-600" />
-                <h3 className="font-bold text-slate-900 dark:text-white text-base">
-                  Import Products CSV
-                </h3>
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                  <FileSpreadsheet className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                    Enterprise Product Import Wizard
+                  </h3>
+                  <p className="text-xs text-slate-400 dark:text-zinc-500">
+                    Excel (.xlsx) and CSV bulk import with dry-run validation and atomic commit
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setIsImportOpen(false)}
-                className="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleImportSubmit} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  Paste CSV Lines (Format: SKU, Name, Category, Brand, Unit, Initial Qty, Cost)
-                </label>
-                <textarea
-                  rows={5}
-                  required
-                  value={importText}
-                  onChange={(e) => setImportText(e.target.value)}
-                  placeholder="BRG-8801, Roller Bearing 8801, Mechanical Components, SKF, EA, 50, 18.50&#10;VALVE-SOL-12V, Solenoid Valve 12V, Hydraulics, Bosch, EA, 20, 85.00"
-                  className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-[11px]"
-                />
+            {/* Template Download Strip */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800/40 border border-slate-200/80 dark:border-zinc-800 flex items-center justify-between text-xs">
+              <div className="space-y-0.5">
+                <span className="font-semibold text-slate-800 dark:text-zinc-200">
+                  Standard Item Master Templates:
+                </span>
+                <p className="text-slate-500 dark:text-zinc-400 text-[11px]">
+                  Includes sample rows for discrete, textile, wholesale & manufacturing configurations.
+                </p>
               </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsImportOpen(false)}
-                  className="px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-medium hover:bg-slate-50"
+                  onClick={() => downloadImportTemplate("csv")}
+                  className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-semibold text-slate-700 dark:text-zinc-200 hover:bg-slate-50 text-[11px] flex items-center gap-1 cursor-pointer"
                 >
-                  Cancel
+                  <Download className="h-3 w-3 text-blue-500" />
+                  <span>CSV Template</span>
                 </button>
                 <button
-                  type="submit"
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs transition-colors cursor-pointer"
+                  type="button"
+                  onClick={() => downloadImportTemplate("xlsx")}
+                  className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-semibold text-slate-700 dark:text-zinc-200 hover:bg-slate-50 text-[11px] flex items-center gap-1 cursor-pointer"
                 >
-                  Import Products
+                  <Download className="h-3 w-3 text-emerald-500" />
+                  <span>Excel (.xlsx)</span>
                 </button>
               </div>
-            </form>
+            </div>
+
+            {/* File Dropzone */}
+            <input
+              type="file"
+              ref={importFileInputRef}
+              onChange={handleFileSelect}
+              accept=".csv,.xlsx,.xls"
+              className="hidden"
+            />
+            <div
+              onClick={() => importFileInputRef.current?.click()}
+              className="border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer border-slate-200 dark:border-zinc-800 hover:border-blue-500 hover:bg-blue-50/20 dark:hover:bg-blue-950/20 transition-all"
+            >
+              <Upload className="h-8 w-8 text-blue-500 mb-2" />
+              <span className="font-bold text-slate-900 dark:text-white text-xs">
+                {importFile ? importFile.name : "Click to select or drop CSV / Excel file"}
+              </span>
+              <span className="text-[11px] text-slate-400 mt-1">
+                {importFile
+                  ? `${(importFile.size / 1024).toFixed(1)} KB selected`
+                  : "Supports .xlsx and .csv files up to 25 MB"}
+              </span>
+            </div>
+
+            {/* Validation Preview Box */}
+            {importPreview && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
+                    <div className="text-slate-400 text-[10px] uppercase font-bold">Total Rows</div>
+                    <div className="text-base font-bold text-slate-900 dark:text-white tabular-nums">
+                      {importPreview.total_rows || 0}
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900">
+                    <div className="text-emerald-600 dark:text-emerald-400 text-[10px] uppercase font-bold">Valid Rows</div>
+                    <div className="text-base font-bold text-emerald-700 dark:text-emerald-300 tabular-nums">
+                      {importPreview.valid_rows || 0}
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900">
+                    <div className="text-blue-600 dark:text-blue-400 text-[10px] uppercase font-bold">New Items</div>
+                    <div className="text-base font-bold text-blue-700 dark:text-blue-300 tabular-nums">
+                      {importPreview.to_create || 0}
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900">
+                    <div className="text-amber-600 dark:text-amber-400 text-[10px] uppercase font-bold">Updates</div>
+                    <div className="text-base font-bold text-amber-700 dark:text-amber-300 tabular-nums">
+                      {importPreview.to_update || 0}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Errors Table */}
+                {importPreview.errors && importPreview.errors.length > 0 && (
+                  <div className="rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50/50 dark:bg-rose-950/20 p-3 space-y-2 text-xs">
+                    <div className="font-semibold text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>{importPreview.errors.length} Validation Errors Found (Rows will be skipped or need fixing):</span>
+                    </div>
+                    <div className="max-h-36 overflow-y-auto space-y-1">
+                      {importPreview.errors.slice(0, 10).map((err, i) => (
+                        <div key={i} className="text-[11px] text-rose-600 dark:text-rose-300 flex items-start gap-2">
+                          <span className="font-mono font-bold shrink-0">Row {err.row || i + 1}:</span>
+                          <span>{err.sku ? `[${err.sku}] ` : ""}{err.error || err.message}</span>
+                        </div>
+                      ))}
+                      {importPreview.errors.length > 10 && (
+                        <div className="text-[10px] text-rose-500 italic">
+                          ...and {importPreview.errors.length - 10} more errors.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-zinc-800 text-xs">
+              <button
+                type="button"
+                onClick={() => setIsImportOpen(false)}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-medium hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={!importFile || previewing || committing}
+                  onClick={handleRunPreview}
+                  className="px-4 py-2 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold hover:bg-blue-100 disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                >
+                  {previewing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                  <span>{previewing ? "Validating..." : "Dry-Run Validate"}</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={!importPreview || importPreview.valid_rows === 0 || committing}
+                  onClick={handleExecuteCommit}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                >
+                  {committing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                  <span>{committing ? "Importing..." : "Execute Commit"}</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -916,7 +1257,6 @@ export function ProductsPage() {
       {isBarcodeScanModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            {/* Header */}
             <div className="p-5 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/50">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
@@ -940,31 +1280,25 @@ export function ProductsPage() {
               </button>
             </div>
 
-            {/* Viewfinder Graphic */}
             <div className="p-6 space-y-4">
               <div className="relative h-44 rounded-2xl bg-slate-950 flex flex-col items-center justify-center overflow-hidden border border-slate-800 shadow-inner">
-                {/* Viewfinder Corners */}
                 <div className="absolute top-4 left-4 h-6 w-6 border-t-2 border-l-2 border-blue-500 rounded-tl-md" />
                 <div className="absolute top-4 right-4 h-6 w-6 border-t-2 border-r-2 border-blue-500 rounded-tr-md" />
                 <div className="absolute bottom-4 left-4 h-6 w-6 border-b-2 border-l-2 border-blue-500 rounded-bl-md" />
                 <div className="absolute bottom-4 right-4 h-6 w-6 border-b-2 border-r-2 border-blue-500 rounded-br-md" />
-
-                {/* Animated Red Laser Scanning Beam */}
                 <div className="absolute inset-x-8 top-1/2 -translate-y-1/2 h-0.5 bg-rose-500 shadow-lg shadow-rose-500/80 animate-pulse" />
 
-                {/* Center Content */}
                 <div className="text-center space-y-1 text-slate-300 z-10 pointer-events-none">
                   <Camera className="h-7 w-7 mx-auto text-blue-400 opacity-80" />
                   <div className="text-xs font-semibold tracking-wide">
                     Align Barcode or QR Code within Frame
                   </div>
                   <div className="text-[10px] text-slate-500 font-mono">
-                    Ready for Handheld Scanner or Rapid Keyboard Input
+                    Sub-25ms Real-Time API Engine Active
                   </div>
                 </div>
               </div>
 
-              {/* Fast Barcode Input Form */}
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -995,37 +1329,11 @@ export function ProductsPage() {
                   </button>
                 </div>
               </form>
-
-              {/* Quick Barcode Test Deck */}
-              <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-zinc-800">
-                <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400 flex items-center gap-1">
-                  <Sparkles className="h-3 w-3 text-blue-500" /> Quick-Test Catalog Barcodes:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { code: "890123620501", label: "Ball Bearing (890123620501)" },
-                    { code: "890123240012", label: "Hydraulic Valve (890123240012)" },
-                    { code: "890123120034", label: "Timing Belt (890123120034)" },
-                    { code: "890123102498", label: "Encoder (890123102498)" },
-                    { code: "890123460077", label: "Lubricant (890123460077)" },
-                  ].map((pill) => (
-                    <button
-                      key={pill.code}
-                      type="button"
-                      onClick={() => handleExecuteScan(pill.code)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-zinc-800 dark:hover:bg-blue-950/60 text-slate-700 hover:text-blue-600 dark:text-zinc-300 dark:hover:text-blue-300 font-mono text-[10px] font-semibold border border-slate-200/80 dark:border-zinc-700 transition-colors cursor-pointer"
-                    >
-                      {pill.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
 
-            {/* Footer */}
             <div className="p-4 px-6 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 flex items-center justify-between text-xs">
               <span className="text-[11px] text-slate-500 dark:text-zinc-400 flex items-center gap-1">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Audio scan chime enabled
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Fast scanner chime enabled
               </span>
               <button
                 type="button"

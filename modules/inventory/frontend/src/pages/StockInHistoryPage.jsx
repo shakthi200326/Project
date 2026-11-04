@@ -274,7 +274,7 @@ export function StockInHistoryPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400 whitespace-nowrap">
                 <th className="py-3.5 px-4 font-semibold">Receipt Number</th>
                 <th className="py-3.5 px-3 font-semibold">Receipt Date</th>
                 <th className="py-3.5 px-3 font-semibold">Product</th>
@@ -296,10 +296,10 @@ export function StockInHistoryPage() {
               ) : (
                 filtered.map((entry) => (
                   <tr key={entry.id || entry.receipt_number} className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-blue-600 dark:text-blue-400">
+                    <td className="py-3.5 px-4 font-mono font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">
                       {entry.receipt_number}
                     </td>
-                    <td className="py-3.5 px-3 font-mono text-[11px] text-slate-600 dark:text-zinc-400">
+                    <td className="py-3.5 px-3 font-mono text-[11px] text-slate-600 dark:text-zinc-400 whitespace-nowrap">
                       {entry.receipt_date}
                     </td>
                     <td className="py-3.5 px-3 font-semibold text-slate-900 dark:text-white">
@@ -314,7 +314,7 @@ export function StockInHistoryPage() {
                     <td className="py-3.5 px-3 font-mono text-[11px] text-slate-500 dark:text-zinc-400">
                       {entry.location_name}
                     </td>
-                    <td className="py-3.5 px-3 text-right font-mono tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
+                    <td className="py-3.5 px-3 text-right font-mono tabular-nums whitespace-nowrap font-bold text-emerald-600 dark:text-emerald-400">
                       +{entry.quantity_received} EA
                     </td>
                     <td className="py-3.5 px-3 text-center font-mono text-[11px] text-slate-500 dark:text-zinc-400">

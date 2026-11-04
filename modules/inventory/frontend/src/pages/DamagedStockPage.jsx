@@ -323,7 +323,7 @@ export function DamagedStockPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400 whitespace-nowrap">
                 <th className="py-3.5 px-4 font-semibold">Product</th>
                 <th className="py-3.5 px-3 font-semibold">SKU</th>
                 <th className="py-3.5 px-3 font-semibold">Warehouse</th>
@@ -332,8 +332,8 @@ export function DamagedStockPage() {
                 <th className="py-3.5 px-3 font-semibold text-right">Damaged Qty</th>
                 <th className="py-3.5 px-3 font-semibold">Damage Reason</th>
                 <th className="py-3.5 px-3 font-semibold">Damage Date</th>
-                <th className="py-3.5 px-3 text-center">Status</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
+                <th className="py-3.5 px-3 font-semibold text-center">Status</th>
+                <th className="py-3.5 px-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
@@ -350,7 +350,7 @@ export function DamagedStockPage() {
                       {d.product_name || d.item_name}
                     </td>
                     <td className="py-3.5 px-3">
-                      <span className="font-mono text-[11px] font-bold text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md bg-blue-50/80 dark:bg-blue-950/60 border border-blue-200/60">
+                      <span className="font-mono text-[11px] font-bold text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md bg-blue-50/80 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/40">
                         {d.sku || d.item_code}
                       </span>
                     </td>
@@ -360,34 +360,34 @@ export function DamagedStockPage() {
                     <td className="py-3.5 px-3 font-mono text-[11px] text-slate-500 dark:text-zinc-400">
                       {d.location_name || d.location || "General Storage"}
                     </td>
-                    <td className="py-3.5 px-3 text-center font-mono text-[11px] text-slate-500">
+                    <td className="py-3.5 px-3 text-center font-mono text-[11px] text-slate-500 dark:text-zinc-400">
                       {d.batch_number || "—"}
                     </td>
-                    <td className="py-3.5 px-3 text-right font-mono tabular-nums font-bold text-rose-600 dark:text-rose-400">
+                    <td className="py-3.5 px-3 text-right font-mono tabular-nums whitespace-nowrap font-bold text-rose-600 dark:text-rose-400">
                       {d.damaged_qty} EA
                     </td>
                     <td className="py-3.5 px-3 text-slate-600 dark:text-zinc-300">
                       {d.damage_reason}
                     </td>
-                    <td className="py-3.5 px-3 font-mono text-[11px] text-slate-600 dark:text-zinc-400">
+                    <td className="py-3.5 px-3 font-mono text-[11px] text-slate-600 dark:text-zinc-400 whitespace-nowrap">
                       {d.damage_date || "2026-10-27"}
                     </td>
                     <td className="py-3.5 px-3 text-center">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                           d.status === "PENDING"
-                            ? "bg-slate-100 text-slate-700 border-slate-300 dark:bg-zinc-800 dark:text-zinc-300"
+                            ? "bg-slate-100 text-slate-700 border-slate-300 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700"
                             : d.status === "QUARANTINED"
-                            ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-400"
+                            ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-900/50"
                             : d.status === "WRITTEN_OFF"
-                            ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/60 dark:text-purple-400"
-                            : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-400"
+                            ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/60 dark:text-purple-400 dark:border-purple-900/50"
+                            : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-400 dark:border-rose-900/50"
                         }`}
                       >
                         {d.status}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-right">
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
@@ -596,7 +596,7 @@ export function DamagedStockPage() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-50 text-xs font-medium transition-colors cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 text-xs font-medium transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -630,41 +630,41 @@ export function DamagedStockPage() {
             </div>
 
             <div className="space-y-2.5 text-xs">
-              <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-zinc-800">
-                <span className="text-slate-400">Product:</span>
-                <span className="font-semibold text-slate-900 dark:text-white">{viewRecord.product_name || viewRecord.item_name}</span>
+              <div className="flex justify-between gap-4 py-1.5 border-b border-slate-100 dark:border-zinc-800">
+                <span className="text-slate-400 shrink-0">Product:</span>
+                <span className="font-semibold text-slate-900 dark:text-white text-right">{viewRecord.product_name || viewRecord.item_name}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-zinc-800">
-                <span className="text-slate-400">SKU:</span>
-                <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{viewRecord.sku || viewRecord.item_code}</span>
+              <div className="flex justify-between gap-4 py-1.5 border-b border-slate-100 dark:border-zinc-800">
+                <span className="text-slate-400 shrink-0">SKU:</span>
+                <span className="font-mono font-bold text-blue-600 dark:text-blue-400 text-right">{viewRecord.sku || viewRecord.item_code}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-zinc-800">
-                <span className="text-slate-400">Warehouse:</span>
-                <span className="font-medium text-slate-900 dark:text-white">{viewRecord.warehouse_name || viewRecord.warehouse}</span>
+              <div className="flex justify-between gap-4 py-1.5 border-b border-slate-100 dark:border-zinc-800">
+                <span className="text-slate-400 shrink-0">Warehouse:</span>
+                <span className="font-medium text-slate-900 dark:text-white text-right">{viewRecord.warehouse_name || viewRecord.warehouse}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-zinc-800">
-                <span className="text-slate-400">Storage Location:</span>
-                <span className="font-mono text-slate-700 dark:text-zinc-300">{viewRecord.location_name || viewRecord.location || "General Storage"}</span>
+              <div className="flex justify-between gap-4 py-1.5 border-b border-slate-100 dark:border-zinc-800">
+                <span className="text-slate-400 shrink-0">Storage Location:</span>
+                <span className="font-mono text-slate-700 dark:text-zinc-300 text-right">{viewRecord.location_name || viewRecord.location || "General Storage"}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-zinc-800">
-                <span className="text-slate-400">Batch Number:</span>
-                <span className="font-mono text-slate-700 dark:text-zinc-300">{viewRecord.batch_number || "—"}</span>
+              <div className="flex justify-between gap-4 py-1.5 border-b border-slate-100 dark:border-zinc-800">
+                <span className="text-slate-400 shrink-0">Batch Number:</span>
+                <span className="font-mono text-slate-700 dark:text-zinc-300 text-right">{viewRecord.batch_number || "—"}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-zinc-800">
-                <span className="text-slate-400">Damaged Quantity:</span>
-                <span className="font-mono font-bold text-rose-600 dark:text-rose-400">{viewRecord.damaged_qty} EA</span>
+              <div className="flex justify-between gap-4 py-1.5 border-b border-slate-100 dark:border-zinc-800">
+                <span className="text-slate-400 shrink-0">Damaged Quantity:</span>
+                <span className="font-mono font-bold text-rose-600 dark:text-rose-400 text-right">{viewRecord.damaged_qty} EA</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-zinc-800">
-                <span className="text-slate-400">Damage Reason:</span>
-                <span className="text-slate-900 dark:text-white">{viewRecord.damage_reason}</span>
+              <div className="flex justify-between gap-4 py-1.5 border-b border-slate-100 dark:border-zinc-800">
+                <span className="text-slate-400 shrink-0">Damage Reason:</span>
+                <span className="text-slate-900 dark:text-white text-right">{viewRecord.damage_reason}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-zinc-800">
-                <span className="text-slate-400">Damage Date:</span>
-                <span className="font-mono text-slate-700 dark:text-zinc-300">{viewRecord.damage_date}</span>
+              <div className="flex justify-between gap-4 py-1.5 border-b border-slate-100 dark:border-zinc-800">
+                <span className="text-slate-400 shrink-0">Damage Date:</span>
+                <span className="font-mono text-slate-700 dark:text-zinc-300 text-right">{viewRecord.damage_date}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-zinc-800">
-                <span className="text-slate-400">Status:</span>
-                <span className="font-bold text-amber-600 dark:text-amber-400">{viewRecord.status}</span>
+              <div className="flex justify-between gap-4 py-1.5 border-b border-slate-100 dark:border-zinc-800">
+                <span className="text-slate-400 shrink-0">Status:</span>
+                <span className="font-bold text-amber-600 dark:text-amber-400 text-right">{viewRecord.status}</span>
               </div>
               {viewRecord.remarks && (
                 <div className="pt-2">

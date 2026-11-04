@@ -94,7 +94,7 @@ export function ProductTrackingSettingsPage() {
 
       {/* Critical Rule Callout */}
       <div className="flex items-start gap-3 p-4 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/60 dark:bg-blue-950/40 text-blue-900 dark:text-blue-300 text-xs">
-        <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
         <div className="space-y-1">
           <strong className="font-semibold block">Global Capability Switch & Hierarchy Rule</strong>
           <p className="text-slate-600 dark:text-zinc-300 leading-relaxed">
@@ -111,7 +111,7 @@ export function ProductTrackingSettingsPage() {
               : "bg-rose-50 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800"
           }`}
         >
-          {toast.type === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+          {toast.type === "success" ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
           <span>{toast.message}</span>
         </div>
       )}
@@ -134,11 +134,11 @@ export function ProductTrackingSettingsPage() {
                 key={item.key}
                 className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40 hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition-colors"
               >
-                <div className="flex items-start gap-3 pr-4">
-                  <div className="p-2 rounded-lg bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 mt-0.5">
+                <div className="flex min-w-0 items-start gap-3 pr-4">
+                  <div className="shrink-0 p-2 rounded-lg bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 mt-0.5">
                     <ItemIcon className="h-4 w-4" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs font-bold text-slate-900 dark:text-white">
                         {item.label}

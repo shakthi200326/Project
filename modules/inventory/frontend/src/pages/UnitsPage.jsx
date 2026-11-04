@@ -30,7 +30,7 @@ import {
   PieChart,
   Pie,
 } from "recharts";
-import { fetchUnits, createUnit, DEMO_UNITS } from "../services/api";
+import { fetchUnits, createUnit } from "../services/api";
 
 const conversionLadderData = [
   {
@@ -93,7 +93,7 @@ const dimensionDistributionData = [
 ];
 
 export function UnitsPage() {
-  const [units, setUnits] = useState(DEMO_UNITS);
+  const [units, setUnits] = useState([]);
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
@@ -102,17 +102,17 @@ export function UnitsPage() {
     name: "",
     symbol: "",
     decimal_places: 0,
+    dimension: "COUNT",
     is_base: true,
     conversion_factor: 1,
-    base_unit: "EA",
+    base_unit: "",
+    allow_fractional_quantity: false,
   });
 
   useEffect(() => {
     fetchUnits().then((res) => {
       const list = res.results || res || [];
-      if (list.length > 0) {
-        setUnits(list);
-      }
+      setUnits(list);
     });
   }, []);
 
@@ -136,9 +136,11 @@ export function UnitsPage() {
         name: newUnit.name.trim(),
         symbol: newUnit.symbol || newUnit.code.toLowerCase(),
         decimal_places: Number(newUnit.decimal_places) || 0,
+        dimension: newUnit.dimension,
         is_base: newUnit.is_base,
         conversion_factor: newUnit.is_base ? 1 : Number(newUnit.conversion_factor) || 1,
         base_unit: newUnit.is_base ? null : newUnit.base_unit,
+        allow_fractional_quantity: newUnit.allow_fractional_quantity,
       });
       setUnits((prev) => [
         created,
@@ -151,9 +153,11 @@ export function UnitsPage() {
         name: "",
         symbol: "",
         decimal_places: 0,
+        dimension: "COUNT",
         is_base: true,
         conversion_factor: 1,
-        base_unit: "EA",
+        base_unit: "",
+        allow_fractional_quantity: false,
       });
     } catch (err) {
       console.error(err);
@@ -256,13 +260,13 @@ export function UnitsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Chart 1: Packaging Multipack & Conversion Hierarchy Ladder */}
         <div className="lg:col-span-7 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                   Packaging Multipack & Conversion Hierarchy Ladder
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/40">
+                <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/40">
                   Multiplier Cascade
                 </span>
               </div>
@@ -270,9 +274,9 @@ export function UnitsPage() {
                 Conversion factor scaling relative to 1.0 Base Reference Unit (EA).
               </p>
             </div>
-            <div className="text-right">
-              <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">1:500 Max</span>
-              <span className="text-[10px] text-slate-400 block">Freight Ratio</span>
+            <div className="text-right shrink-0">
+              <span className="text-xs font-mono font-bold tabular-nums text-indigo-600 dark:text-indigo-400">1:500 Max</span>
+              <span className="text-[10px] text-slate-400 dark:text-zinc-500 block">Freight Ratio</span>
             </div>
           </div>
 
@@ -280,7 +284,7 @@ export function UnitsPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={conversionLadderData}
-                margin={{ top: 10, right: 20, left: -10, bottom: 0 }}
+                margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.15} vertical={false} />
                 <XAxis
@@ -290,7 +294,7 @@ export function UnitsPage() {
                   tickLine={false}
                   axisLine={{ stroke: "#64748b", opacity: 0.2 }}
                 />
-                <YAxis
+                <YAxis width="auto"
                   stroke="#94a3b8"
                   fontSize={10}
                   tickLine={false}
@@ -312,7 +316,7 @@ export function UnitsPage() {
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] pt-0.5">
                           <div>
                             <span className="text-slate-400 text-[10px]">Multiplier:</span>
-                            <div className="font-mono font-bold text-emerald-400">{d.factor}x Base EA</div>
+                            <div className="font-mono font-bold tabular-nums text-emerald-400">{d.factor}x Base EA</div>
                           </div>
                           <div>
                             <span className="text-slate-400 text-[10px]">Packaging Tier:</span>
@@ -330,7 +334,7 @@ export function UnitsPage() {
                 <Bar
                   dataKey="factor"
                   radius={[6, 6, 0, 0]}
-                  isAnimationActive={true}
+                  isAnimationActive={false}
                 >
                   {conversionLadderData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -343,13 +347,13 @@ export function UnitsPage() {
 
         {/* Chart 2: 180° Conversion Precision Arc Speedometer & Dimension Share */}
         <div className="lg:col-span-5 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                   Conversion Precision & Dimensional Share
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40">
+                <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40">
                   180° Arc Gauge
                 </span>
               </div>
@@ -373,7 +377,7 @@ export function UnitsPage() {
                   outerRadius={95}
                   paddingAngle={2}
                   dataKey="value"
-                  isAnimationActive={true}
+                  isAnimationActive={false}
                 >
                   <Cell fill="#10b981" />
                   <Cell fill="#334155" />
@@ -381,8 +385,8 @@ export function UnitsPage() {
               </PieChart>
             </ResponsiveContainer>
             {/* Center Speedometer Metric */}
-            <div className="absolute bottom-2 text-center pointer-events-none">
-              <span className="text-2xl font-black font-mono text-slate-900 dark:text-white tracking-tight">
+            <div className="absolute bottom-3 text-center leading-tight pointer-events-none">
+              <span className="text-xl font-black font-mono tabular-nums text-slate-900 dark:text-white tracking-tight">
                 99.98%
               </span>
               <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block uppercase tracking-wider">
@@ -398,11 +402,11 @@ export function UnitsPage() {
                 key={i}
                 className="p-2 rounded-xl border border-slate-100 dark:border-zinc-800/60 bg-slate-50/60 dark:bg-zinc-800/40"
               >
-                <div className="flex items-center gap-1.5">
-                  <span className={`h-2 w-2 rounded-full ${d.color}`} />
-                  <span className="text-[10px] text-slate-500 dark:text-zinc-400 truncate">{d.name}</span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className={`h-2 w-2 rounded-full shrink-0 ${d.color}`} />
+                  <span className="text-[10px] text-slate-500 dark:text-zinc-400 truncate min-w-0">{d.name}</span>
                 </div>
-                <div className="font-mono font-bold text-xs text-slate-900 dark:text-white mt-1">
+                <div className="font-mono font-bold text-xs tabular-nums text-slate-900 dark:text-white mt-1">
                   {d.share}
                 </div>
               </div>
@@ -434,12 +438,12 @@ export function UnitsPage() {
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
-                <th className="py-3.5 px-4 font-semibold">Unit Code</th>
-                <th className="py-3.5 px-4 font-semibold">Unit Name</th>
-                <th className="py-3.5 px-4 font-semibold">Symbol</th>
-                <th className="py-3.5 px-4 font-semibold">Type</th>
-                <th className="py-3.5 px-4 font-semibold">Conversion Ratio</th>
-                <th className="py-3.5 px-4 font-semibold text-right">Precision</th>
+                <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Unit Code</th>
+                <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Unit Name</th>
+                <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Symbol</th>
+                <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Type</th>
+                <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Conversion Ratio</th>
+                <th className="py-3.5 px-4 font-semibold text-right whitespace-nowrap">Precision</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
@@ -488,7 +492,7 @@ export function UnitsPage() {
                         </span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-right font-mono tabular-nums text-slate-500">
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono tabular-nums text-slate-500 dark:text-zinc-400">
                       {u.decimal_places} decimal places
                     </td>
                   </tr>
@@ -545,6 +549,78 @@ export function UnitsPage() {
                 />
               </div>
 
+              <div>
+                <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">
+                  Dimension *
+                </label>
+                <select
+                  required
+                  value={newUnit.dimension}
+                  onChange={(e) => setNewUnit({ ...newUnit, dimension: e.target.value, base_unit: "" })}
+                  className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                >
+                  {[
+                    ["COUNT", "Count / Discrete"],
+                    ["WEIGHT", "Weight / Mass"],
+                    ["LENGTH", "Length / Distance"],
+                    ["VOLUME", "Volume / Liquid"],
+                    ["AREA", "Area / Surface"],
+                    ["TIME", "Time / Duration"],
+                  ].map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <label className="flex items-center gap-2 text-slate-700 dark:text-zinc-300">
+                <input
+                  type="checkbox"
+                  checked={newUnit.is_base}
+                  onChange={(e) => setNewUnit({
+                    ...newUnit,
+                    is_base: e.target.checked,
+                    base_unit: e.target.checked ? "" : newUnit.base_unit,
+                  })}
+                  className="rounded text-blue-600"
+                />
+                This is a base unit
+              </label>
+
+              {!newUnit.is_base && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">
+                      Base Unit *
+                    </label>
+                    <select
+                      required
+                      value={newUnit.base_unit}
+                      onChange={(e) => setNewUnit({ ...newUnit, base_unit: e.target.value })}
+                      className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="">Select a registered base unit</option>
+                      {units.filter((unit) => unit.is_base && unit.dimension === newUnit.dimension).map((unit) => (
+                        <option key={unit.id} value={unit.id}>{unit.code} ({unit.name})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">
+                      Conversion Factor *
+                    </label>
+                    <input
+                      type="number"
+                      min="0.000001"
+                      step="0.0001"
+                      required
+                      value={newUnit.conversion_factor}
+                      onChange={(e) => setNewUnit({ ...newUnit, conversion_factor: e.target.value })}
+                      className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white tabular-nums focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">
@@ -572,6 +648,16 @@ export function UnitsPage() {
                   />
                 </div>
               </div>
+
+              <label className="flex items-center gap-2 text-slate-700 dark:text-zinc-300">
+                <input
+                  type="checkbox"
+                  checked={newUnit.allow_fractional_quantity}
+                  onChange={(e) => setNewUnit({ ...newUnit, allow_fractional_quantity: e.target.checked })}
+                  className="rounded text-blue-600"
+                />
+                Allow fractional quantities
+              </label>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-zinc-800">
                 <button

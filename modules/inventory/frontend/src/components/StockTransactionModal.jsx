@@ -29,6 +29,7 @@ import {
   fetchProducts,
   fetchWarehouses,
   fetchLocations,
+  fetchUnits,
   playScanBeep,
   lookupProductByBarcode,
 } from "../services/api";
@@ -69,6 +70,14 @@ const RETURN_DISPOSITIONS = [
   "Return to Supplier",
 ];
 
+function getProductUnit(product, units) {
+  const productUnit = product?.unit || product?.base_unit;
+  const matchingUnit = units.find(
+    (unit) => unit.code?.toLowerCase() === productUnit?.toLowerCase()
+  );
+  return matchingUnit?.code || units[0]?.code || "";
+}
+
 function generateDocNumber(type) {
   const year = new Date().getFullYear();
   const rand = Math.floor(1000 + Math.random() * 9000);
@@ -99,6 +108,7 @@ export function StockTransactionModal({
   const [products, setProducts] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [units, setUnits] = useState([]);
   const [barcodeInput, setBarcodeInput] = useState("");
   const [verifiedProduct, setVerifiedProduct] = useState(null);
   const [decodedProduct, setDecodedProduct] = useState(null);
@@ -113,6 +123,7 @@ export function StockTransactionModal({
   const [destWarehouse, setDestWarehouse] = useState("");
   const [destLocation, setDestLocation] = useState("");
   const [selectedSku, setSelectedSku] = useState("");
+  const [selectedUnit, setSelectedUnit] = useState("");
   const [quantity, setQuantity] = useState(10);
   const [unitCost, setUnitCost] = useState(14.85);
   const [batchNumber, setBatchNumber] = useState("BATCH-2026-X1");
@@ -146,18 +157,21 @@ export function StockTransactionModal({
   useEffect(() => {
     async function loadMasterData() {
       try {
-        const [prodRes, whRes, locRes] = await Promise.all([
+        const [prodRes, whRes, locRes, unitRes] = await Promise.all([
           fetchProducts(),
           fetchWarehouses(),
           fetchLocations(),
+          fetchUnits(),
         ]);
         const prodList = prodRes.results || prodRes || [];
         const whList = Array.isArray(whRes) ? whRes : whRes.results || [];
         const locList = Array.isArray(locRes) ? locRes : locRes.results || [];
+        const unitList = Array.isArray(unitRes) ? unitRes : unitRes.results || [];
 
         setProducts(prodList);
         setWarehouses(whList);
         setLocations(locList);
+        setUnits(unitList);
 
         if (whList.length > 0 && !warehouse) {
           setWarehouse(whList[0].code || whList[0].name);
@@ -172,6 +186,7 @@ export function StockTransactionModal({
           const initProd = prodList[0];
           setSelectedSku(initProd.sku || initProd.code);
           setVerifiedProduct(initProd);
+          setSelectedUnit(getProductUnit(initProd, unitList));
           setUnitCost(initProd.unit_cost !== undefined ? Number(initProd.unit_cost) : 14.85);
           const avail = initProd.available ?? initProd.on_hand ?? 50;
           setSystemQuantity(avail);
@@ -235,6 +250,7 @@ export function StockTransactionModal({
     playScanBeep();
     setVerifiedProduct(product);
     setSelectedSku(product.sku || product.code);
+    setSelectedUnit(getProductUnit(product, units));
     setUnitCost(product.unit_cost !== undefined ? Number(product.unit_cost) : 14.85);
     const avail = product.available ?? product.on_hand ?? 50;
     setSystemQuantity(avail);
@@ -436,7 +452,7 @@ export function StockTransactionModal({
         item_code: selectedSku,
         item_id: verifiedProduct?.id || 1,
         quantity: txType === "ADJUSTMENT" ? Math.abs(differenceQuantity) : Number(quantity),
-        unit: verifiedProduct?.unit || verifiedProduct?.base_unit || "EA",
+        unit: selectedUnit,
         unit_cost: Number(unitCost) || 0,
         supplier: txType === "RECEIPT" ? supplier : "",
         reference_number: referenceNumber,
@@ -542,14 +558,14 @@ export function StockTransactionModal({
                 key={t.key}
                 type="button"
                 onClick={() => handleTabChange(t.key)}
-                className={`py-2 px-1 rounded-xl font-semibold flex items-center justify-center gap-1.5 transition-all text-center cursor-pointer ${
+                className={`min-w-0 py-2 px-1 rounded-xl font-semibold flex items-center justify-center gap-1.5 transition-all text-center cursor-pointer ${
                   isSelected
                     ? `bg-white dark:bg-zinc-900 ${t.activeColor} shadow-xs font-bold border border-slate-200/60 dark:border-zinc-800`
                     : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100"
                 }`}
               >
                 <Icon className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{t.label}</span>
+                <span className="min-w-0 truncate">{t.label}</span>
               </button>
             );
           })}
@@ -567,7 +583,7 @@ export function StockTransactionModal({
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-6 text-xs space-y-4">
             {/* Barcode Scanner Deck */}
             <div className="p-3.5 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/80 dark:border-blue-900/60 space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                 <label className="font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
                   <Scan className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   Barcode / SKU Fast-Lookup
@@ -613,7 +629,7 @@ export function StockTransactionModal({
                     <div>
                       <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <span>{decodedProduct.name}</span>
-                        <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
+                        <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
                           {decodedProduct.sku || decodedProduct.code}
                         </span>
                       </div>
@@ -1032,10 +1048,10 @@ export function StockTransactionModal({
                     readOnly
                     className={`w-full px-3 py-2 rounded-xl border font-mono font-bold text-xs ${
                       differenceQuantity > 0
-                        ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
+                        ? "border-emerald-300 dark:border-emerald-800 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
                         : differenceQuantity < 0
-                        ? "border-rose-300 bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400"
-                        : "border-slate-300 bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300"
+                        ? "border-rose-300 dark:border-rose-800 bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400"
+                        : "border-slate-300 dark:border-zinc-700 bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300"
                     }`}
                   />
                 </div>
@@ -1078,12 +1094,23 @@ export function StockTransactionModal({
                   <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
                     Unit of Measure <span className="text-rose-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={verifiedProduct?.unit || verifiedProduct?.base_unit || "EA"}
-                    readOnly
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-100/80 dark:bg-zinc-800/50 text-slate-800 dark:text-zinc-200 font-mono font-semibold text-xs"
-                  />
+                  <select
+                    value={selectedUnit}
+                    onChange={(e) => setSelectedUnit(e.target.value)}
+                    disabled={units.length === 0}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 font-mono font-semibold text-xs disabled:cursor-not-allowed disabled:opacity-60"
+                    required
+                  >
+                    {units.length > 0 ? (
+                      units.map((unit) => (
+                        <option key={unit.id || unit.code} value={unit.code}>
+                          {unit.code} - {unit.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="">No registered units available</option>
+                    )}
+                  </select>
                 </div>
 
                 {txType === "RECEIPT" && (

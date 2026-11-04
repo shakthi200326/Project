@@ -378,7 +378,7 @@ export function ReconciliationPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+              <tr className="whitespace-nowrap border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
                 <th className="py-3.5 px-4 font-semibold">Reconciliation #</th>
                 <th className="py-3.5 px-3 font-semibold">Date</th>
                 <th className="py-3.5 px-3 font-semibold">Warehouse / Location</th>
@@ -387,8 +387,8 @@ export function ReconciliationPage() {
                 <th className="py-3.5 px-3 font-semibold text-right">Physical Qty</th>
                 <th className="py-3.5 px-3 font-semibold text-right">Difference</th>
                 <th className="py-3.5 px-3 font-semibold">Reason</th>
-                <th className="py-3.5 px-3 text-center">Status</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
+                <th className="py-3.5 px-3 font-semibold text-center">Status</th>
+                <th className="py-3.5 px-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
@@ -429,13 +429,13 @@ export function ReconciliationPage() {
                           {r.sku || r.item_code || "SKU-001"}
                         </div>
                       </td>
-                      <td className="py-3.5 px-3 text-right font-mono tabular-nums text-slate-700 dark:text-zinc-300">
+                      <td className="py-3.5 px-3 text-right whitespace-nowrap font-mono tabular-nums text-slate-700 dark:text-zinc-300">
                         {r.system_quantity} EA
                       </td>
-                      <td className="py-3.5 px-3 text-right font-mono tabular-nums font-bold text-slate-900 dark:text-white">
+                      <td className="py-3.5 px-3 text-right whitespace-nowrap font-mono tabular-nums font-bold text-slate-900 dark:text-white">
                         {r.physical_quantity} EA
                       </td>
-                      <td className="py-3.5 px-3 text-right font-mono tabular-nums font-bold">
+                      <td className="py-3.5 px-3 text-right whitespace-nowrap font-mono tabular-nums font-bold">
                         <span
                           className={
                             isZero
@@ -673,7 +673,7 @@ export function ReconciliationPage() {
                         ? "text-emerald-600 dark:text-emerald-400"
                         : Number(formData.difference_quantity) < 0
                         ? "text-rose-600 dark:text-rose-400"
-                        : "text-slate-600"
+                        : "text-slate-600 dark:text-zinc-300"
                     }`}
                   />
                 </div>
@@ -726,7 +726,7 @@ export function ReconciliationPage() {
                   <button
                     type="button"
                     onClick={() => handleSave("DRAFT")}
-                    className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-50 text-slate-700 dark:text-zinc-200 font-semibold shadow-2xs transition-colors cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-semibold shadow-2xs transition-colors cursor-pointer"
                   >
                     Save Draft
                   </button>

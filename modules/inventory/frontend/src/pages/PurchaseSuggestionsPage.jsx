@@ -373,7 +373,7 @@ export function PurchaseSuggestionsPage() {
       <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-zinc-800/50 text-slate-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-200 dark:border-zinc-800">
+            <thead className="bg-slate-50 dark:bg-zinc-800/50 text-slate-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-200 dark:border-zinc-800 whitespace-nowrap">
               <tr>
                 <th className="py-3 px-4">Suggestion #</th>
                 <th className="py-3 px-4">Date</th>
@@ -411,7 +411,7 @@ export function PurchaseSuggestionsPage() {
                       <td className="py-3.5 px-4 font-mono font-bold text-blue-600 dark:text-blue-400">
                         {sug.suggestion_number || "SUG-000"}
                       </td>
-                      <td className="py-3.5 px-4 text-slate-600 dark:text-zinc-400">
+                      <td className="py-3.5 px-4 whitespace-nowrap tabular-nums text-slate-600 dark:text-zinc-400">
                         {sug.suggestion_date || "—"}
                       </td>
                       <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-white">
@@ -435,10 +435,10 @@ export function PurchaseSuggestionsPage() {
                       <td className="py-3.5 px-4 text-slate-600 dark:text-zinc-400">
                         {sug.supplier || "—"}
                       </td>
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
                         {getStatusBadge(sug.status)}
                       </td>
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1.5">
                           {sug.status === "Pending" && (
                             <>

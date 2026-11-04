@@ -66,7 +66,7 @@ export function ValuationSettingsPage() {
 
       {/* Audit & Accounting Integrity Banner */}
       <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 text-xs">
-        <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+        <ShieldAlert className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
         <div className="space-y-1">
           <strong className="font-semibold block">Accounting Integrity Rule</strong>
           <p className="text-slate-600 dark:text-zinc-300 leading-relaxed">
@@ -83,7 +83,7 @@ export function ValuationSettingsPage() {
               : "bg-rose-50 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800"
           }`}
         >
-          {toast.type === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+          {toast.type === "success" ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
           <span>{toast.message}</span>
         </div>
       )}
@@ -141,8 +141,8 @@ export function ValuationSettingsPage() {
           </div>
 
           {/* 3. Include Additional Costs */}
-          <div className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40">
-            <div>
+          <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40">
+            <div className="min-w-0">
               <span className="text-xs font-bold text-slate-900 dark:text-white block">
                 Include Additional Costs <span className="text-slate-400 font-normal">(Optional)</span>
               </span>
@@ -150,7 +150,7 @@ export function ValuationSettingsPage() {
                 Automatically allocate freight, customs duties, insurance, and handling charges into inventory unit valuation.
               </span>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
               <input
                 type="checkbox"
                 checked={form.include_additional_costs}

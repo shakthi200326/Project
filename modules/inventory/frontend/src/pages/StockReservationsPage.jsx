@@ -291,7 +291,7 @@ export function StockReservationsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+              <tr className="whitespace-nowrap border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
                 <th className="py-3.5 px-4 font-semibold">Reservation #</th>
                 <th className="py-3.5 px-3 font-semibold">Date</th>
                 <th className="py-3.5 px-3 font-semibold">Type</th>
@@ -301,8 +301,8 @@ export function StockReservationsPage() {
                 <th className="py-3.5 px-3 font-semibold text-right">Reserved Qty</th>
                 <th className="py-3.5 px-3 font-semibold">Required Date</th>
                 <th className="py-3.5 px-3 font-semibold text-center">Batch #</th>
-                <th className="py-3.5 px-3 text-center">Status</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
+                <th className="py-3.5 px-3 font-semibold text-center">Status</th>
+                <th className="py-3.5 px-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
@@ -347,10 +347,10 @@ export function StockReservationsPage() {
                       <td className="py-3.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">
                         {res.warehouse_name || res.warehouse}
                       </td>
-                      <td className="py-3.5 px-3 text-right font-mono tabular-nums text-slate-600 dark:text-zinc-300">
+                      <td className="py-3.5 px-3 text-right whitespace-nowrap font-mono tabular-nums text-slate-600 dark:text-zinc-300">
                         {res.available_quantity ?? 100} EA
                       </td>
-                      <td className="py-3.5 px-3 text-right font-mono tabular-nums font-bold text-purple-600 dark:text-purple-400">
+                      <td className="py-3.5 px-3 text-right whitespace-nowrap font-mono tabular-nums font-bold text-purple-600 dark:text-purple-400">
                         {res.reservation_quantity || res.quantity} EA
                       </td>
                       <td className="py-3.5 px-3 font-mono text-[11px] text-slate-500 dark:text-zinc-400">
@@ -370,7 +370,7 @@ export function StockReservationsPage() {
                               ? "bg-blue-50 text-blue-700 border-blue-200/60 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800/50"
                               : status === "RELEASED"
                               ? "bg-slate-50 text-slate-600 border-slate-200/60 dark:bg-zinc-800/50 dark:text-zinc-400 dark:border-zinc-700/50"
-                              : "bg-rose-50 text-rose-700 border-rose-200/60 dark:bg-rose-950/50 dark:text-rose-300"
+                              : "bg-rose-50 text-rose-700 border-rose-200/60 dark:border-rose-900/50 dark:bg-rose-950/50 dark:text-rose-300"
                           }`}
                         >
                           <span

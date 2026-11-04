@@ -30,7 +30,7 @@ import {
   ReferenceLine,
   Legend,
 } from "recharts";
-import { fetchBrands, createBrand, DEMO_BRANDS } from "../services/api";
+import { fetchBrands, createBrand } from "../services/api";
 
 const brandSlaData = [
   {
@@ -141,7 +141,7 @@ const brandCapitalData = [
 ];
 
 export function BrandsPage() {
-  const [brands, setBrands] = useState(DEMO_BRANDS);
+  const [brands, setBrands] = useState([]);
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
@@ -150,9 +150,10 @@ export function BrandsPage() {
   useEffect(() => {
     fetchBrands().then((res) => {
       const list = res.results || res || [];
-      if (list.length > 0) {
-        setBrands(list);
-      }
+      setBrands(list);
+    }).catch((err) => {
+      console.error("Failed to load brands:", err);
+      setBrands([]);
     });
   }, []);
 
@@ -188,7 +189,7 @@ export function BrandsPage() {
       setIsModalOpen(false);
     } catch (err) {
       console.error(err);
-      showToast("Failed to register brand OEM. Please verify parameters.");
+      showToast(`Failed to register brand OEM: ${err.message}`);
     }
   };
 
@@ -287,13 +288,13 @@ export function BrandsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Chart 1: OEM Fulfillment SLA & Quality Assurance Index (LineChart) */}
         <div className="lg:col-span-7 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                   OEM Fulfillment SLA & Quality Assurance Index
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40">
+                <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40">
                   Spline Trajectory
                 </span>
               </div>
@@ -301,7 +302,7 @@ export function BrandsPage() {
                 On-Time In-Full Delivery (OTIF %) vs First-Pass Quality Acceptance % with 95.0% contract threshold.
               </p>
             </div>
-            <div className="flex items-center gap-3 text-xs">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 shrink-0 text-xs">
               <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium text-[11px]">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" /> OTIF %
               </span>
@@ -315,7 +316,7 @@ export function BrandsPage() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={brandSlaData}
-                margin={{ top: 10, right: 25, left: -15, bottom: 0 }}
+                margin={{ top: 10, right: 25, left: 0, bottom: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.15} vertical={false} />
                 <XAxis
@@ -325,7 +326,7 @@ export function BrandsPage() {
                   tickLine={false}
                   axisLine={{ stroke: "#64748b", opacity: 0.2 }}
                 />
-                <YAxis
+                <YAxis width="auto"
                   domain={[90, 100]}
                   tickFormatter={(v) => `${v}%`}
                   stroke="#94a3b8"
@@ -348,19 +349,19 @@ export function BrandsPage() {
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] pt-0.5">
                           <div>
                             <span className="text-slate-400 text-[10px]">OTIF Delivery:</span>
-                            <div className="font-mono font-bold text-emerald-400">{d.otif}%</div>
+                            <div className="font-mono font-bold text-emerald-400 tabular-nums">{d.otif}%</div>
                           </div>
                           <div>
                             <span className="text-slate-400 text-[10px]">Quality Yield:</span>
-                            <div className="font-mono font-bold text-indigo-300">{d.quality}%</div>
+                            <div className="font-mono font-bold text-indigo-300 tabular-nums">{d.quality}%</div>
                           </div>
                           <div>
                             <span className="text-slate-400 text-[10px]">Avg Lead Time:</span>
-                            <div className="font-mono font-bold text-amber-300">{d.leadTimeDays} Days</div>
+                            <div className="font-mono font-bold text-amber-300 tabular-nums">{d.leadTimeDays} Days</div>
                           </div>
                           <div>
                             <span className="text-slate-400 text-[10px]">Defect PPM:</span>
-                            <div className="font-mono font-bold text-rose-300">{d.defectPpm} PPM</div>
+                            <div className="font-mono font-bold text-rose-300 tabular-nums">{d.defectPpm} PPM</div>
                           </div>
                         </div>
                       </div>
@@ -386,7 +387,7 @@ export function BrandsPage() {
                   strokeWidth={2.5}
                   dot={{ r: 4, fill: "#10b981", strokeWidth: 2, stroke: "#ffffff" }}
                   activeDot={{ r: 6, fill: "#10b981", strokeWidth: 2, stroke: "#ffffff" }}
-                  isAnimationActive={true}
+                  isAnimationActive={false}
                 />
                 <Line
                   type="monotone"
@@ -395,7 +396,7 @@ export function BrandsPage() {
                   strokeWidth={2.5}
                   dot={{ r: 4, fill: "#6366f1", strokeWidth: 2, stroke: "#ffffff" }}
                   activeDot={{ r: 6, fill: "#6366f1", strokeWidth: 2, stroke: "#ffffff" }}
-                  isAnimationActive={true}
+                  isAnimationActive={false}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -404,13 +405,13 @@ export function BrandsPage() {
 
         {/* Chart 2: Brand Capital Valuation & Warranty Coverage (Grouped BarChart) */}
         <div className="lg:col-span-5 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                   Brand Capital & Warranty Density
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40">
+                <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40">
                   Grouped Benchmark
                 </span>
               </div>
@@ -418,7 +419,7 @@ export function BrandsPage() {
                 Capital Valuation ($k USD) vs Registered Warranty Units (EA).
               </p>
             </div>
-            <div className="flex items-center gap-2.5 text-xs">
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 shrink-0 text-xs">
               <span className="flex items-center gap-1 text-cyan-600 dark:text-cyan-400 font-medium text-[11px]">
                 <span className="h-2 w-2 rounded-full bg-cyan-500" /> Capital ($k)
               </span>
@@ -432,7 +433,7 @@ export function BrandsPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={brandCapitalData}
-                margin={{ top: 10, right: 15, left: -20, bottom: 0 }}
+                margin={{ top: 10, right: 15, left: 0, bottom: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.15} vertical={false} />
                 <XAxis
@@ -442,7 +443,7 @@ export function BrandsPage() {
                   tickLine={false}
                   axisLine={{ stroke: "#64748b", opacity: 0.2 }}
                 />
-                <YAxis
+                <YAxis width="auto"
                   stroke="#94a3b8"
                   fontSize={10}
                   tickLine={false}
@@ -458,10 +459,10 @@ export function BrandsPage() {
                           <span>{d.brand}</span>
                           <span className="text-[10px] text-slate-400">{d.country}</span>
                         </div>
-                        <div className="text-cyan-400 font-mono font-bold text-sm">
+                        <div className="text-cyan-400 font-mono font-bold text-sm tabular-nums">
                           ${d.capitalValue}k <span className="text-xs font-normal text-slate-400">Capital Value</span>
                         </div>
-                        <div className="text-purple-300 font-mono text-xs">
+                        <div className="text-purple-300 font-mono text-xs tabular-nums">
                           {d.warrantyUnits} Units Under Warranty
                         </div>
                       </div>
@@ -472,13 +473,13 @@ export function BrandsPage() {
                   dataKey="capitalValue"
                   fill="#06b6d4"
                   radius={[5, 5, 0, 0]}
-                  isAnimationActive={true}
+                  isAnimationActive={false}
                 />
                 <Bar
                   dataKey="warrantyUnits"
                   fill="#8b5cf6"
                   radius={[5, 5, 0, 0]}
-                  isAnimationActive={true}
+                  isAnimationActive={false}
                 />
               </BarChart>
             </ResponsiveContainer>
@@ -519,12 +520,12 @@ export function BrandsPage() {
               key={b.id || idx}
               className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs hover:shadow-md hover:border-blue-400/60 dark:hover:border-blue-700/60 transition-all flex flex-col justify-between space-y-3.5 group"
             >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-linear-to-tr from-slate-100 to-slate-200 dark:from-zinc-800 dark:to-zinc-700 text-slate-800 dark:text-zinc-200 font-bold font-mono text-sm tracking-wider border border-slate-200/60 dark:border-zinc-700 group-hover:scale-105 transition-transform">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-linear-to-tr from-slate-100 to-slate-200 dark:from-zinc-800 dark:to-zinc-700 text-slate-800 dark:text-zinc-200 font-bold font-mono text-sm tracking-wider border border-slate-200/60 dark:border-zinc-700 group-hover:scale-105 transition-transform">
                     {b.code.slice(0, 3)}
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white">{b.name}</h3>
                     <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">
                       <Globe className="h-3 w-3" />
@@ -532,7 +533,7 @@ export function BrandsPage() {
                     </div>
                   </div>
                 </div>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50">
+                <span className="shrink-0 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                   ACTIVE
                 </span>

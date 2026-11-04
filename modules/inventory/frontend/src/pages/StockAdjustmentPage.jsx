@@ -401,9 +401,9 @@ export function StockAdjustmentPage() {
       <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex flex-wrap items-center gap-2">
               7-Day Variance Categorization Flux
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40">
+              <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40">
                 Audit Variance
               </span>
             </h3>
@@ -414,10 +414,10 @@ export function StockAdjustmentPage() {
         </div>
         <div className="h-[220px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={adjustmentReasonData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <ComposedChart data={adjustmentReasonData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.2} />
               <XAxis dataKey="day" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
+              <YAxis width="auto" tick={{ fontSize: 11 }} />
               <Tooltip
                 content={({ active, payload, label }) => {
                   if (!active || !payload?.length) return null;
@@ -435,9 +435,9 @@ export function StockAdjustmentPage() {
                 }}
               />
               <Legend verticalAlign="top" align="right" height={30} iconType="circle" iconSize={8} />
-              <Bar dataKey="countDiff" name="Physical Difference" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="damage" name="Damage / Scrap" fill="#ef4444" radius={[4, 4, 0, 0]} />
-              <Line type="monotone" dataKey="found" name="Found Stock" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+              <Bar dataKey="countDiff" name="Physical Difference" fill="#f59e0b" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+              <Bar dataKey="damage" name="Damage / Scrap" fill="#ef4444" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+              <Line type="monotone" dataKey="found" name="Found Stock" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -516,7 +516,7 @@ export function StockAdjustmentPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+              <tr className="whitespace-nowrap border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
                 <th className="py-3.5 px-4 font-semibold">ADJ No.</th>
                 <th className="py-3.5 px-4 font-semibold">Date</th>
                 <th className="py-3.5 px-4 font-semibold">Warehouse / Location</th>
@@ -573,13 +573,13 @@ export function StockAdjustmentPage() {
                           {r.item_code || "BRG-6205-2RS"}
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-right font-mono text-slate-600 dark:text-zinc-400">
+                      <td className="py-3 px-4 text-right whitespace-nowrap font-mono text-slate-600 dark:text-zinc-400">
                         {systemQty} {r.unit || "EA"}
                       </td>
-                      <td className="py-3 px-4 text-right font-mono text-slate-900 dark:text-white font-medium">
+                      <td className="py-3 px-4 text-right whitespace-nowrap font-mono text-slate-900 dark:text-white font-medium">
                         {actualQty} {r.unit || "EA"}
                       </td>
-                      <td className="py-3 px-4 text-right">
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
                         <span
                           className={`font-mono font-bold px-2 py-0.5 rounded ${
                             isIncrease
@@ -647,3 +647,4 @@ export function StockAdjustmentPage() {
     </div>
   );
 }
+

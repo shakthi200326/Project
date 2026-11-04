@@ -124,7 +124,7 @@ export function ApprovalSettingsPage() {
               : "bg-rose-50 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800"
           }`}
         >
-          {toast.type === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+          {toast.type === "success" ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
           <span>{toast.message}</span>
         </div>
       )}
@@ -148,9 +148,9 @@ export function ApprovalSettingsPage() {
                 key={rule.key}
                 className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40 hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition-colors"
               >
-                <div className="flex items-start gap-3 pr-4">
+                <div className="flex min-w-0 items-start gap-3 pr-4">
                   <div
-                    className={`p-2 rounded-lg border text-xs font-bold ${
+                    className={`shrink-0 p-2 rounded-lg border text-xs font-bold ${
                       isChecked
                         ? "bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/40"
                         : "bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 border-slate-200 dark:border-zinc-700"
@@ -158,14 +158,14 @@ export function ApprovalSettingsPage() {
                   >
                     <RuleIcon className="h-4 w-4" />
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs font-bold text-slate-900 dark:text-white">
                         {rule.label}
                       </span>
                       <span className="text-rose-500 font-bold">*</span>
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.2 rounded-full border ${
+                        className={`shrink-0 whitespace-nowrap text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                           isChecked
                             ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
                             : "bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400 border-slate-200 dark:border-zinc-700"

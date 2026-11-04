@@ -377,7 +377,7 @@ export function PhysicalStockCountPage() {
             <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             <span>{successMsg}</span>
           </div>
-          <button onClick={() => setSuccessMsg("")} className="text-emerald-600 hover:text-emerald-800">
+          <button onClick={() => setSuccessMsg("")} className="text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-200">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -485,7 +485,7 @@ export function PhysicalStockCountPage() {
       <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-600 dark:text-zinc-400">
-            <thead className="bg-slate-50/80 dark:bg-zinc-800/50 uppercase tracking-wider text-[11px] font-semibold text-slate-500 dark:text-zinc-400 border-b border-slate-200 dark:border-zinc-800">
+            <thead className="bg-slate-50/80 dark:bg-zinc-800/50 uppercase tracking-wider text-[11px] font-semibold text-slate-500 dark:text-zinc-400 border-b border-slate-200 dark:border-zinc-800 whitespace-nowrap">
               <tr>
                 <th className="py-3.5 px-4">Count Number</th>
                 <th className="py-3.5 px-4">Date</th>
@@ -524,7 +524,7 @@ export function PhysicalStockCountPage() {
                       <td className="py-3.5 px-4 font-mono font-bold text-blue-600 dark:text-blue-400">
                         {c.count_number}
                       </td>
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 px-4 whitespace-nowrap">
                         {c.count_date || c.reconciliation_date || "—"}
                       </td>
                       <td className="py-3.5 px-4">
@@ -549,7 +549,7 @@ export function PhysicalStockCountPage() {
                       <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">
                         {Number(c.physical_quantity || 0).toLocaleString()}
                       </td>
-                      <td className="py-3.5 px-4 text-right font-mono font-bold">
+                      <td className="py-3.5 px-4 text-right font-mono font-bold whitespace-nowrap">
                         <span
                           className={`inline-block px-2 py-0.5 rounded ${
                             diff === 0
@@ -562,7 +562,7 @@ export function PhysicalStockCountPage() {
                           {diff > 0 ? `+${diff}` : diff}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 px-4 whitespace-nowrap">
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                             st === "DRAFT"

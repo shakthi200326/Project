@@ -91,16 +91,16 @@ export function DocumentNumberingPage() {
               : "bg-rose-50 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800"
           }`}
         >
-          {toast.type === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+          {toast.type === "success" ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
           <span>{toast.message}</span>
         </div>
       )}
 
       {/* Test Generator Banner */}
       {testResult && (
-        <div className="flex items-center justify-between p-4 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/70 dark:bg-blue-950/40 text-xs">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+        <div className="flex items-center justify-between gap-3 p-4 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/70 dark:bg-blue-950/40 text-xs">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <Sparkles className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
             <span className="text-slate-700 dark:text-zinc-200">
               Generated Number for <strong>{testResult.docType}</strong>:
             </span>
@@ -111,7 +111,7 @@ export function DocumentNumberingPage() {
           <button
             type="button"
             onClick={() => setTestResult(null)}
-            className="text-slate-400 hover:text-slate-600 cursor-pointer"
+            className="shrink-0 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
@@ -120,8 +120,8 @@ export function DocumentNumberingPage() {
 
       {/* Rules Table */}
       <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs">
-        <div className="p-4 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between">
-          <div>
+        <div className="p-4 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between gap-3">
+          <div className="min-w-0">
             <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
               Document Numbering Rules
             </h2>
@@ -132,7 +132,7 @@ export function DocumentNumberingPage() {
           <button
             type="button"
             onClick={loadRules}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
+            className="inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
           >
             <RefreshCw className="h-3.5 w-3.5 text-slate-500" />
             Refresh
@@ -142,14 +142,14 @@ export function DocumentNumberingPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-slate-50/90 dark:bg-zinc-800/80 border-b border-slate-200 dark:border-zinc-700/80 text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
+              <tr className="bg-slate-50/90 dark:bg-zinc-800/80 border-b border-slate-200 dark:border-zinc-700/80 text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 whitespace-nowrap">
                 <th className="py-3 px-4">Document Type</th>
                 <th className="py-3 px-3">Prefix</th>
                 <th className="py-3 px-3 text-right">Starting #</th>
                 <th className="py-3 px-3 text-right">Number Length</th>
                 <th className="py-3 px-3">Reset Frequency</th>
                 <th className="py-3 px-3">Sample Next Number</th>
-                <th className="py-3 px-4 text-center">Actions</th>
+                <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
@@ -179,10 +179,10 @@ export function DocumentNumberingPage() {
                           {r.prefix}
                         </span>
                       </td>
-                      <td className="py-3 px-3 text-right font-mono text-slate-700 dark:text-zinc-300">
+                      <td className="py-3 px-3 text-right font-mono tabular-nums whitespace-nowrap text-slate-700 dark:text-zinc-300">
                         {r.starting_number ?? 1}
                       </td>
-                      <td className="py-3 px-3 text-right font-mono text-slate-700 dark:text-zinc-300">
+                      <td className="py-3 px-3 text-right font-mono tabular-nums whitespace-nowrap text-slate-700 dark:text-zinc-300">
                         {r.number_length ?? 5} digits
                       </td>
                       <td className="py-3 px-3">
@@ -190,10 +190,10 @@ export function DocumentNumberingPage() {
                           {r.reset_frequency || "Never"}
                         </span>
                       </td>
-                      <td className="py-3 px-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      <td className="py-3 px-3 font-mono font-bold whitespace-nowrap text-emerald-600 dark:text-emerald-400">
                         {sample}
                       </td>
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
                         <div className="inline-flex items-center gap-1.5">
                           <button
                             type="button"
@@ -207,7 +207,7 @@ export function DocumentNumberingPage() {
                           <button
                             type="button"
                             onClick={() => handleTestGenerate(r.document_type)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-blue-200 dark:border-blue-900/60 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 text-blue-700 dark:text-blue-400 text-[11px] font-medium transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-blue-200 dark:border-blue-900/60 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400 text-[11px] font-medium transition-colors cursor-pointer"
                             title="Test Atomic Number Generation"
                           >
                             <Play className="h-3 w-3" />

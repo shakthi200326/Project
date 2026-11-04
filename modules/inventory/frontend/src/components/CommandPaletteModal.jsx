@@ -35,6 +35,10 @@ import {
   Scale,
   History,
   RefreshCw,
+  AlertTriangle,
+  Clock,
+  Calendar,
+  ShieldCheck,
 } from "lucide-react";
 import { useTheme } from "@shared/shell-app/ThemeProvider.jsx";
 import { useWorkspace } from "@shared/shell-app/ContextSelector.jsx";
@@ -76,7 +80,10 @@ export function CommandPaletteModal({ isOpen, onClose }) {
     { label: "Barcodes & QR Station", path: "/inventory/barcodes", icon: Barcode, category: "Catalog" },
     { label: "Warehouses & Facilities", path: "/inventory/warehouses", icon: Building2, category: "Facilities" },
     { label: "Storage Locations & Bins", path: "/inventory/locations", icon: MapPin, category: "Facilities" },
-    { label: "Stock In (Goods Receipt)", path: "/inventory/operations/stock-in", icon: ArrowDownLeft, category: "Operations" },
+    { label: "Receipt Register (Goods Receipt)", path: "/inventory/goods-receipt/register", icon: ArrowDownLeft, category: "Goods Receipt" },
+    { label: "Create Goods Receipt", path: "/inventory/goods-receipt/create", icon: ArrowDownLeft, category: "Goods Receipt" },
+    { label: "Receipt Inspection", path: "/inventory/goods-receipt/inspection", icon: ArrowDownLeft, category: "Goods Receipt" },
+    { label: "Putaway Management", path: "/inventory/goods-receipt/putaway", icon: ArrowDownLeft, category: "Goods Receipt" },
     { label: "Stock Out (Stock Issue)", path: "/inventory/operations/stock-out", icon: ArrowUpRight, category: "Operations" },
     { label: "Warehouse Transfers", path: "/inventory/operations/transfers", icon: ArrowLeftRight, category: "Operations" },
     { label: "Cycle Adjustments", path: "/inventory/operations/adjustments", icon: SlidersHorizontal, category: "Operations" },
@@ -167,7 +174,7 @@ export function CommandPaletteModal({ isOpen, onClose }) {
             placeholder="Type a screen, command, or scan barcode / SKU (Esc to close)..."
             className="w-full bg-transparent text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
           />
-          <kbd className="px-1.5 py-0.5 text-[10px] font-mono text-slate-400 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded">
+          <kbd className="shrink-0 px-1.5 py-0.5 text-[10px] font-mono text-slate-400 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded">
             ESC
           </kbd>
         </div>
@@ -186,25 +193,25 @@ export function CommandPaletteModal({ isOpen, onClose }) {
                   <div
                     key={p.id || p.sku}
                     onClick={() => handleSelectProduct(p)}
-                    className="flex items-center justify-between p-2.5 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/40 cursor-pointer text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white transition-colors border border-transparent hover:border-blue-200 dark:hover:border-blue-900/50"
+                    className="flex items-center justify-between gap-3 p-2.5 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/40 cursor-pointer text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white transition-colors border border-transparent hover:border-blue-200 dark:hover:border-blue-900/50"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-300">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="shrink-0 p-2 rounded-lg bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-300">
                         <Scan className="h-4 w-4" />
                       </div>
-                      <div>
-                        <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                      <div className="min-w-0">
+                        <div className="font-semibold text-slate-900 dark:text-white flex flex-wrap items-center gap-x-2 gap-y-0.5">
                           <span>{p.name}</span>
-                          <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400">
+                          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400">
                             {p.sku}
                           </span>
                         </div>
-                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                        <div className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono tabular-nums mt-0.5">
                           Barcode: <strong className="text-slate-600 dark:text-zinc-300">{p.barcode || p.sku}</strong> • Available: <strong className="text-emerald-600 dark:text-emerald-400">{p.available ?? p.on_hand ?? 0} {p.unit || "EA"}</strong> • WAV: ${Number(p.unit_cost || 0).toFixed(2)}
                         </div>
                       </div>
                     </div>
-                    <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                   </div>
                 ))}
               </div>
@@ -225,7 +232,7 @@ export function CommandPaletteModal({ isOpen, onClose }) {
                   <div
                     key={idx}
                     onClick={() => handleSelectAction(item)}
-                    className="flex items-center justify-between p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800/70 cursor-pointer text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white transition-colors"
+                    className="flex items-center justify-between gap-3 p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800/70 cursor-pointer text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <div className="p-1.5 rounded-md bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400">
@@ -236,7 +243,7 @@ export function CommandPaletteModal({ isOpen, onClose }) {
                         <div className="text-[10px] text-slate-400">{item.category}</div>
                       </div>
                     </div>
-                    <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                   </div>
                 );
               })}

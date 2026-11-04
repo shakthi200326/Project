@@ -305,7 +305,7 @@ export function StockForecastPage() {
       <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-zinc-800/50 text-slate-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-200 dark:border-zinc-800">
+            <thead className="bg-slate-50 dark:bg-zinc-800/50 text-slate-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-200 dark:border-zinc-800 whitespace-nowrap">
               <tr>
                 <th className="py-3 px-4">Product Name</th>
                 <th className="py-3 px-4">SKU</th>
@@ -348,15 +348,15 @@ export function StockForecastPage() {
                       <td className="py-3.5 px-4 text-slate-700 dark:text-zinc-300">
                         {f.warehouse_name || f.warehouse || "Warehouse"}
                       </td>
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
                         <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 font-mono">
                           {f.forecast_period || selectedPeriod}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 text-right tabular-nums text-slate-700 dark:text-zinc-300 font-medium">
+                      <td className="py-3.5 px-4 text-right tabular-nums whitespace-nowrap text-slate-700 dark:text-zinc-300 font-medium">
                         {Number(f.historical_demand || 0).toFixed(0)} units
                       </td>
-                      <td className="py-3.5 px-4 text-right tabular-nums text-slate-700 dark:text-zinc-300 font-medium">
+                      <td className="py-3.5 px-4 text-right tabular-nums whitespace-nowrap text-slate-700 dark:text-zinc-300 font-medium">
                         {Number(f.average_daily_demand || 0).toFixed(2)} / d
                       </td>
                       <td className="py-3.5 px-4 text-right tabular-nums font-bold text-slate-900 dark:text-white">
@@ -368,7 +368,7 @@ export function StockForecastPage() {
                       <td className={`py-3.5 px-4 text-right tabular-nums font-bold ${isStockout ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
                         {projected > 0 ? `+${projected}` : projected}
                       </td>
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
                         {isStockout ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
                             <AlertTriangle className="h-3 w-3" /> Deficit Risk

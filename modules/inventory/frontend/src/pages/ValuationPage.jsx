@@ -94,11 +94,11 @@ export function ValuationPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
               Inventory Valuation (Moving Weighted Average)
             </h1>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/50">
               <Sparkles className="h-2.5 w-2.5" />
               WAV Standard
             </span>
@@ -179,7 +179,7 @@ export function ValuationPage() {
       {/* High Configuration Category Capital Distribution Chart */}
       <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-emerald-500" />
               Category Capital Concentration Benchmark
@@ -188,14 +188,14 @@ export function ValuationPage() {
               Valuation breakdown ($k USD) compared to category average threshold ($85.7k benchmark)
             </p>
           </div>
-          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400">
+          <span className="shrink-0 self-start sm:self-auto text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400">
             WAV Capital Distribution
           </span>
         </div>
 
         <div className="h-64 w-full pt-2">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 15, right: 15, left: -15, bottom: 0 }}>
+            <BarChart data={chartData} margin={{ top: 15, right: 15, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="valBarGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#10B981" stopOpacity={0.9} />
@@ -204,7 +204,7 @@ export function ValuationPage() {
               </defs>
               <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#e2e8f0" opacity={0.5} />
               <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} domain={[0, 200]} />
+              <YAxis width="auto" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} domain={[0, 200]} />
               <Tooltip
                 cursor={{ fill: "rgba(0, 0, 0, 0.03)" }}
                 contentStyle={{
@@ -222,7 +222,7 @@ export function ValuationPage() {
                 ]}
               />
               <ReferenceLine y={avgCategoryVal / 1000} stroke="#F59E0B" strokeDasharray="3 3" label={{ value: "Category Mean: $85.7k", position: "insideTopRight", fill: "#F59E0B", fontSize: 10, fontWeight: "bold" }} />
-              <Bar dataKey="value" fill="url(#valBarGrad)" radius={[6, 6, 0, 0]} maxBarSize={48} />
+              <Bar dataKey="value" fill="url(#valBarGrad)" radius={[6, 6, 0, 0]} maxBarSize={48} isAnimationActive={false} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -259,7 +259,7 @@ export function ValuationPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/40 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+              <tr className="whitespace-nowrap border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/40 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
                 <th className="py-3.5 px-4 font-semibold">Category Classification</th>
                 <th className="py-3.5 px-4 font-semibold text-center">Active SKUs</th>
                 <th className="py-3.5 px-4 font-semibold text-right">Total On-Hand Qty</th>
@@ -277,21 +277,21 @@ export function ValuationPage() {
                   <td className="py-3.5 px-4 text-center tabular-nums text-slate-600 dark:text-zinc-400 font-medium">
                     {row.items_count}
                   </td>
-                  <td className="py-3.5 px-4 text-right tabular-nums font-medium text-slate-800 dark:text-zinc-200">
+                  <td className="py-3.5 px-4 text-right whitespace-nowrap tabular-nums font-medium text-slate-800 dark:text-zinc-200">
                     {row.on_hand_qty.toLocaleString()}
                   </td>
-                  <td className="py-3.5 px-4 text-right font-mono tabular-nums text-slate-600 dark:text-zinc-400">
+                  <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono tabular-nums text-slate-600 dark:text-zinc-400">
                     ${row.avg_unit_cost.toFixed(2)}
                   </td>
-                  <td className="py-3.5 px-4 text-right font-mono font-bold tabular-nums text-slate-900 dark:text-white">
+                  <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono font-bold tabular-nums text-slate-900 dark:text-white">
                     ${row.total_value.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </td>
-                  <td className="py-3.5 px-4 text-right font-semibold tabular-nums text-blue-600 dark:text-blue-400">
+                  <td className="py-3.5 px-4 text-right whitespace-nowrap font-semibold tabular-nums text-blue-600 dark:text-blue-400">
                     {((row.total_value / grandTotal) * 100).toFixed(1)}%
                   </td>
                 </tr>
               ))}
-              <tr className="border-t-2 border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800/50 font-bold">
+              <tr className="border-t-2 border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800/50 font-bold whitespace-nowrap tabular-nums text-slate-900 dark:text-white">
                 <td className="py-3.5 px-4 text-slate-900 dark:text-white">TOTAL VALUATION</td>
                 <td className="py-3.5 px-4 text-center">{totalSkus.toLocaleString()}</td>
                 <td className="py-3.5 px-4 text-right">{totalQty.toLocaleString()}</td>

@@ -442,10 +442,10 @@ export function LocationsPage() {
           </div>
           <div className="h-[230px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={ZONE_SATURATION_DATA} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+              <ComposedChart data={ZONE_SATURATION_DATA} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.15} vertical={false} />
-                <XAxis dataKey="zone" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
+                <XAxis dataKey="zone" stroke="#94a3b8" fontSize={10} tickLine={false} interval={0} tickFormatter={(v) => (v.length > 14 ? `${v.slice(0, 13)}…` : v)} />
+                <YAxis width="auto" stroke="#94a3b8" fontSize={10} tickLine={false} />
                 <Tooltip
                   content={({ active, payload }) => {
                     if (!active || !payload || !payload.length) return null;
@@ -459,8 +459,8 @@ export function LocationsPage() {
                     );
                   }}
                 />
-                <Bar dataKey="totalBins" fill="#e2e8f0" radius={[4, 4, 0, 0]} barSize={28} />
-                <Bar dataKey="occupiedBins" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={28} />
+                <Bar dataKey="totalBins" fill="#94a3b8" fillOpacity={0.3} radius={[4, 4, 0, 0]} barSize={28} isAnimationActive={false} />
+                <Bar dataKey="occupiedBins" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={28} isAnimationActive={false} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -488,7 +488,7 @@ export function LocationsPage() {
                   outerRadius={75}
                   paddingAngle={3}
                   dataKey="value"
-                >
+                  isAnimationActive={false}>
                   {TOPOLOGY_TYPE_DATA.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
@@ -566,7 +566,7 @@ export function LocationsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50/75 dark:bg-zinc-800/50 text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider text-[10px]">
+              <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50/75 dark:bg-zinc-800/50 text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider text-[10px] whitespace-nowrap">
                 <th className="py-3 px-4">Location Code</th>
                 <th className="py-3 px-4">Location Name</th>
                 <th className="py-3 px-4">Warehouse</th>
@@ -606,8 +606,8 @@ export function LocationsPage() {
                         {locType}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-500 dark:text-zinc-400 max-w-xs truncate">
-                      {loc.description || "—"}
+                    <td className="py-3.5 px-4 text-slate-500 dark:text-zinc-400">
+                      <div className="max-w-xs truncate">{loc.description || "—"}</div>
                     </td>
                     <td className="py-3.5 px-4">
                       {getStatusBadge(loc.status, loc.is_active)}
