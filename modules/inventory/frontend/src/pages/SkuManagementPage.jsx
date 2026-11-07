@@ -123,72 +123,7 @@ export function SkuManagementPage() {
         </div>
       </div>
 
-      {/* SKU Format Generator Tool */}
-      <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-            Configurable SKU Code Generator Preview
-          </h2>
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
-            <ShieldCheck className="w-3.5 h-3.5" /> Collision Protected
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
-          <div>
-            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">
-              Prefix / Brand
-            </label>
-            <input
-              type="text"
-              value={prefix}
-              onChange={(e) => setPrefix(e.target.value.toUpperCase())}
-              placeholder="e.g. PROD"
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono uppercase"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">
-              Category Token
-            </label>
-            <input
-              type="text"
-              value={categoryToken}
-              onChange={(e) => setCategoryToken(e.target.value.toUpperCase())}
-              placeholder="e.g. ELEC"
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono uppercase"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">
-              Sequence Number
-            </label>
-            <input
-              type="number"
-              value={seqNumber}
-              onChange={(e) => setSeqNumber(parseInt(e.target.value, 10) || 0)}
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">
-              Generated SKU Sample
-            </label>
-            <div className="flex items-center justify-between px-3 py-2 text-sm font-mono font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 rounded-lg border border-indigo-200 dark:border-indigo-800">
-              <span>{previewSku}</span>
-              <button
-                onClick={() => handleCopy(previewSku)}
-                className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400"
-                title="Copy SKU"
-              >
-                {copiedSku === previewSku ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
         <div className="relative w-full sm:w-96">

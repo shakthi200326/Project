@@ -15,14 +15,14 @@ import {
   DollarSign,
   FileText,
   Sparkles,
-  Barcode,
-  Scan,
   CheckCircle2,
   Package,
   Send,
   Truck,
   CheckCheck,
   Search,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import {
   postStockTransaction,
@@ -31,7 +31,6 @@ import {
   fetchLocations,
   fetchUnits,
   playScanBeep,
-  lookupProductByBarcode,
 } from "../services/api";
 
 const SUPPLIER_PRESETS = [
@@ -100,7 +99,6 @@ function generateDocNumber(type) {
 export function StockTransactionModal({
   isOpen,
   initialType = "RECEIPT",
-  lockType = false,
   onClose,
   onPosted,
 }) {
@@ -109,9 +107,7 @@ export function StockTransactionModal({
   const [warehouses, setWarehouses] = useState([]);
   const [locations, setLocations] = useState([]);
   const [units, setUnits] = useState([]);
-  const [barcodeInput, setBarcodeInput] = useState("");
   const [verifiedProduct, setVerifiedProduct] = useState(null);
-  const [decodedProduct, setDecodedProduct] = useState(null);
 
   // Form states per operation
   const [docNumber, setDocNumber] = useState(generateDocNumber(initialType));
@@ -129,6 +125,40 @@ export function StockTransactionModal({
   const [batchNumber, setBatchNumber] = useState("BATCH-2026-X1");
   const [expiryDate, setExpiryDate] = useState("2027-12-31");
   const [serialNumber, setSerialNumber] = useState("SN-2026-001");
+  const emptyIssueLine = () => ({
+    key: `${Date.now()}-${Math.random()}`,
+    product_id: "",
+    variant_id: "",
+    quantity: "",
+    unit: "",
+    available: 0,
+    batch_number: "",
+    serial_numbers: [],
+  });
+  const [issueLines, setIssueLines] = useState([emptyIssueLine()]);
+  const emptyAdjustmentLine = () => ({
+    key: `${Date.now()}-${Math.random()}`,
+    product_id: "",
+    variant_id: "",
+    unit: "",
+    system_quantity: 0,
+    actual_quantity: "",
+    difference_quantity: 0,
+    batch_number: "",
+    serial_numbers: [],
+  });
+  const [adjustmentLines, setAdjustmentLines] = useState([emptyAdjustmentLine()]);
+  const emptyReturnLine = () => ({
+    key: `${Date.now()}-${Math.random()}`,
+    product_id: "",
+    variant_id: "",
+    quantity: "",
+    unit: "",
+    available: 0,
+    batch_number: "",
+    serial_numbers: [],
+  });
+  const [returnLines, setReturnLines] = useState([emptyReturnLine()]);
   const [issueType, setIssueType] = useState("Production");
   const [issuedTo, setIssuedTo] = useState("Assembly Line 1");
   const [adjustmentType, setAdjustmentType] = useState("Increase");
@@ -145,13 +175,19 @@ export function StockTransactionModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  // Sync tab on initialType prop change
+  // Sync operation type when the initialType prop changes.
   useEffect(() => {
     if (initialType) {
       setTxType(initialType);
       setDocNumber(generateDocNumber(initialType));
     }
   }, [initialType]);
+
+  useEffect(() => {
+    if (isOpen && initialType === "ISSUE" && issueLines.length === 0) {
+      setIssueLines([emptyIssueLine()]);
+    }
+  }, [isOpen, initialType]);
 
   // Load master data
   useEffect(() => {
@@ -239,12 +275,6 @@ export function StockTransactionModal({
 
   if (!isOpen) return null;
 
-  const handleTabChange = (newType) => {
-    setTxType(newType);
-    setDocNumber(generateDocNumber(newType));
-    setError("");
-  };
-
   const handleApplyProduct = (product) => {
     if (!product) return;
     playScanBeep();
@@ -258,30 +288,128 @@ export function StockTransactionModal({
     setError("");
   };
 
-  const handleBarcodeScan = (code) => {
-    const clean = code?.trim();
-    if (!clean) {
-      setDecodedProduct(null);
-      setError("Enter a barcode or SKU to decode.");
-      return;
-    }
-    const match = lookupProductByBarcode(clean, products);
-    if (match) {
-      handleApplyProduct(match);
-      setDecodedProduct(match);
-      setBarcodeInput("");
-    } else {
-      setDecodedProduct(null);
-      setError(`No product matched barcode "${clean}".`);
-    }
-  };
-
   const handleProductSelect = (sku) => {
     setSelectedSku(sku);
     const found = products.find((p) => (p.sku || p.code) === sku);
     if (found) {
       handleApplyProduct(found);
     }
+  };
+
+  const updateIssueLine = (key, patch) => {
+    setIssueLines((lines) =>
+      lines.map((line) => (line.key === key ? { ...line, ...patch } : line))
+    );
+  };
+
+  const selectIssueProduct = (key, productId) => {
+    const product = products.find((item) => String(item.id) === String(productId));
+    if (!product) {
+      updateIssueLine(key, { product_id: "", variant_id: "", quantity: "", unit: "", available: 0 });
+      return;
+    }
+    updateIssueLine(key, {
+      product_id: String(product.id),
+      variant_id: "",
+      quantity: "",
+      unit: product.unit || product.base_uom || "EA",
+      available: Number(product.available ?? product.on_hand ?? 0),
+    });
+  };
+
+  const selectIssueVariant = (key, variantId) => {
+    const line = issueLines.find((item) => item.key === key);
+    const product = products.find((item) => String(item.id) === String(line?.product_id));
+    const variant = product?.variants?.find((item) => String(item.id) === String(variantId));
+    updateIssueLine(key, {
+      variant_id: variantId,
+      unit: variant?.base_uom || variant?.uom || product?.base_uom || product?.unit || "EA",
+      available: Number(variant?.available ?? variant?.on_hand ?? product?.available ?? product?.on_hand ?? 0),
+    });
+  };
+
+  const updateAdjustmentLine = (key, patch) => {
+    setAdjustmentLines((lines) =>
+      lines.map((line) => (line.key === key ? { ...line, ...patch } : line))
+    );
+  };
+
+  const selectAdjustmentProduct = (key, productId) => {
+    const product = products.find((item) => String(item.id) === String(productId));
+    if (!product) {
+      updateAdjustmentLine(key, {
+        product_id: "",
+        variant_id: "",
+        unit: "",
+        system_quantity: 0,
+        actual_quantity: "",
+        difference_quantity: 0,
+      });
+      return;
+    }
+    const systemQuantityForProduct = Number(product.available ?? product.on_hand ?? 0);
+    updateAdjustmentLine(key, {
+      product_id: String(product.id),
+      variant_id: "",
+      unit: product.unit || product.base_uom || "EA",
+      system_quantity: systemQuantityForProduct,
+      actual_quantity: systemQuantityForProduct,
+      difference_quantity: 0,
+    });
+  };
+
+  const selectAdjustmentVariant = (key, variantId) => {
+    const line = adjustmentLines.find((item) => item.key === key);
+    const product = products.find((item) => String(item.id) === String(line?.product_id));
+    const variant = product?.variants?.find((item) => String(item.id) === String(variantId));
+    const systemQuantityForVariant = Number(
+      variant?.available ?? variant?.on_hand ?? product?.available ?? product?.on_hand ?? 0
+    );
+    updateAdjustmentLine(key, {
+      variant_id: variantId,
+      unit: variant?.base_uom || variant?.uom || product?.base_uom || product?.unit || "EA",
+      system_quantity: systemQuantityForVariant,
+      actual_quantity: systemQuantityForVariant,
+      difference_quantity: 0,
+    });
+  };
+
+  const updateReturnLine = (key, patch) => {
+    setReturnLines((lines) =>
+      lines.map((line) => (line.key === key ? { ...line, ...patch } : line))
+    );
+  };
+
+  const selectReturnProduct = (key, productId) => {
+    const product = products.find((item) => String(item.id) === String(productId));
+    if (!product) {
+      updateReturnLine(key, {
+        product_id: "",
+        variant_id: "",
+        quantity: "",
+        unit: "",
+        available: 0,
+      });
+      return;
+    }
+    updateReturnLine(key, {
+      product_id: String(product.id),
+      variant_id: "",
+      quantity: "",
+      unit: product.unit || product.base_uom || "EA",
+      available: Number(product.available ?? product.on_hand ?? 0),
+    });
+  };
+
+  const selectReturnVariant = (key, variantId) => {
+    const line = returnLines.find((item) => item.key === key);
+    const product = products.find((item) => String(item.id) === String(line?.product_id));
+    const variant = product?.variants?.find((item) => String(item.id) === String(variantId));
+    updateReturnLine(key, {
+      variant_id: variantId,
+      unit: variant?.base_uom || variant?.uom || product?.base_uom || product?.unit || "EA",
+      available: Number(variant?.available ?? variant?.on_hand ?? product?.available ?? product?.on_hand ?? 0),
+    });
   };
 
   // Stock Adjustment calculation
@@ -300,23 +428,6 @@ export function StockTransactionModal({
 
   const isBatchTracked = verifiedProduct?.tracking === "BATCH" || verifiedProduct?.tracking === "Batch / Lot";
   const isSerialTracked = verifiedProduct?.tracking === "SERIAL" || verifiedProduct?.tracking === "Serial";
-  const decodedQuantity = decodedProduct?.on_hand ?? decodedProduct?.available;
-  const decodedCost = decodedProduct?.unit_cost;
-  const decodedStockValuation =
-    decodedQuantity !== null &&
-    decodedQuantity !== undefined &&
-    decodedQuantity !== "" &&
-    decodedCost !== null &&
-    decodedCost !== undefined &&
-    decodedCost !== "" &&
-    Number.isFinite(Number(decodedQuantity)) &&
-    Number.isFinite(Number(decodedCost))
-      ? new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-        }).format(Number(decodedQuantity) * Number(decodedCost))
-      : "—";
-
   const handleAction = async (actionType) => {
     setError("");
 
@@ -337,7 +448,7 @@ export function StockTransactionModal({
       setError("Storage location is required.");
       return;
     }
-    if (!selectedSku) {
+    if (!["ISSUE", "ADJUSTMENT", "RETURN"].includes(txType) && !selectedSku) {
       setError("Product is required.");
       return;
     }
@@ -352,21 +463,49 @@ export function StockTransactionModal({
         return;
       }
     } else if (txType === "ISSUE") {
-      if (!quantity || Number(quantity) <= 0) {
-        setError("Issue Quantity must be greater than zero.");
-        return;
-      }
       if (!reason.trim()) {
         setError("Reason is required for Stock Issue.");
         return;
       }
-      if (isBatchTracked && !batchNumber.trim()) {
-        setError("Batch Number is required for this product.");
+      if (issueLines.length === 0) {
+        setError("Add at least one product to the Stock Issue.");
         return;
       }
-      if (isSerialTracked && !serialNumber.trim()) {
-        setError("Serial Number is required for this product.");
-        return;
+      const seenIssueProducts = new Set();
+      for (let index = 0; index < issueLines.length; index++) {
+        const line = issueLines[index];
+        const product = products.find((item) => String(item.id) === String(line.product_id));
+        if (!product) {
+          setError(`Line ${index + 1}: Product is required.`);
+          return;
+        }
+        if (product.variants?.length && !line.variant_id) {
+          setError(`Line ${index + 1}: Variant is required.`);
+          return;
+        }
+        const productKey = `${line.product_id}:${line.variant_id || "base"}`;
+        if (seenIssueProducts.has(productKey)) {
+          setError(`Line ${index + 1}: Duplicate product/variant is not allowed.`);
+          return;
+        }
+        seenIssueProducts.add(productKey);
+        if (!Number(line.quantity) || Number(line.quantity) <= 0) {
+          setError(`Line ${index + 1}: Issue Quantity must be greater than zero.`);
+          return;
+        }
+        if (Number(line.quantity) > Number(line.available || 0)) {
+          setError(`Line ${index + 1}: Issue Quantity exceeds available stock (${line.available}).`);
+          return;
+        }
+        const tracking = product.tracking;
+        if ((tracking === "BATCH" || tracking === "Batch / Lot") && !line.batch_number.trim()) {
+          setError(`Line ${index + 1}: Batch Number is required.`);
+          return;
+        }
+        if ((tracking === "SERIAL" || tracking === "Serial") && (!line.serial_numbers || line.serial_numbers.length !== Number(line.quantity))) {
+          setError(`Line ${index + 1}: Enter one serial number for each issued quantity.`);
+          return;
+        }
       }
     } else if (txType === "TRANSFER") {
       if (!destWarehouse) {
@@ -390,34 +529,92 @@ export function StockTransactionModal({
         return;
       }
     } else if (txType === "ADJUSTMENT") {
-      if (actualQuantity === "" || isNaN(Number(actualQuantity))) {
-        setError("Actual Quantity is required.");
+      if (!adjustmentLines.length) {
+        setError("Add at least one product to the Stock Adjustment.");
         return;
       }
       if (!adjustmentReason) {
         setError("Adjustment Reason is required.");
         return;
       }
-      if (isBatchTracked && !batchNumber.trim()) {
-        setError("Batch Number is required for this product.");
-        return;
+      const seenAdjustmentProducts = new Set();
+      for (let index = 0; index < adjustmentLines.length; index++) {
+        const line = adjustmentLines[index];
+        const product = products.find((item) => String(item.id) === String(line.product_id));
+        if (!product) {
+          setError(`Line ${index + 1}: Product is required.`);
+          return;
+        }
+        if (product.variants?.length && !line.variant_id) {
+          setError(`Line ${index + 1}: Variant is required.`);
+          return;
+        }
+        const productKey = `${line.product_id}:${line.variant_id || "base"}`;
+        if (seenAdjustmentProducts.has(productKey)) {
+          setError(`Line ${index + 1}: Duplicate product/variant is not allowed.`);
+          return;
+        }
+        seenAdjustmentProducts.add(productKey);
+        if (line.actual_quantity === "" || isNaN(Number(line.actual_quantity)) || Number(line.actual_quantity) < 0) {
+          setError(`Line ${index + 1}: Valid Actual Quantity is required.`);
+          return;
+        }
+        const tracking = product.tracking;
+        if ((tracking === "BATCH" || tracking === "Batch / Lot") && !line.batch_number.trim()) {
+          setError(`Line ${index + 1}: Batch Number is required.`);
+          return;
+        }
+        if (
+          (tracking === "SERIAL" || tracking === "Serial") &&
+          (!line.serial_numbers || line.serial_numbers.length !== Number(line.actual_quantity))
+        ) {
+          setError(`Line ${index + 1}: Enter one serial number for each actual quantity.`);
+          return;
+        }
       }
     } else if (txType === "RETURN") {
       if (!partyName.trim()) {
         setError("Party Name is required for Stock Return.");
         return;
       }
-      if (!quantity || Number(quantity) <= 0) {
-        setError("Return Quantity must be greater than zero.");
+      if (!returnLines.length) {
+        setError("Add at least one product to the Stock Return.");
         return;
       }
-      if (isBatchTracked && !batchNumber.trim()) {
-        setError("Batch Number is required for this product.");
-        return;
-      }
-      if (isSerialTracked && !serialNumber.trim()) {
-        setError("Serial Number is required for this product.");
-        return;
+      const seenReturnProducts = new Set();
+      for (let index = 0; index < returnLines.length; index++) {
+        const line = returnLines[index];
+        const product = products.find((item) => String(item.id) === String(line.product_id));
+        if (!product) {
+          setError(`Line ${index + 1}: Product is required.`);
+          return;
+        }
+        if (product.variants?.length && !line.variant_id) {
+          setError(`Line ${index + 1}: Variant is required.`);
+          return;
+        }
+        const productKey = `${line.product_id}:${line.variant_id || "base"}`;
+        if (seenReturnProducts.has(productKey)) {
+          setError(`Line ${index + 1}: Duplicate product/variant is not allowed.`);
+          return;
+        }
+        seenReturnProducts.add(productKey);
+        if (!Number(line.quantity) || Number(line.quantity) <= 0) {
+          setError(`Line ${index + 1}: Return Quantity must be greater than zero.`);
+          return;
+        }
+        const tracking = product.tracking;
+        if ((tracking === "BATCH" || tracking === "Batch / Lot") && !line.batch_number.trim()) {
+          setError(`Line ${index + 1}: Batch Number is required.`);
+          return;
+        }
+        if (
+          (tracking === "SERIAL" || tracking === "Serial") &&
+          (!line.serial_numbers || line.serial_numbers.length !== Number(line.quantity))
+        ) {
+          setError(`Line ${index + 1}: Enter one serial number for each returned quantity.`);
+          return;
+        }
       }
     }
 
@@ -454,6 +651,55 @@ export function StockTransactionModal({
         quantity: txType === "ADJUSTMENT" ? Math.abs(differenceQuantity) : Number(quantity),
         unit: selectedUnit,
         unit_cost: Number(unitCost) || 0,
+        lines: txType === "ISSUE"
+          ? issueLines.map((line) => ({
+              item_id: Number(line.product_id),
+              item: Number(line.product_id),
+              variant_id: line.variant_id ? Number(line.variant_id) : null,
+              variant: line.variant_id ? Number(line.variant_id) : null,
+              location_id: locObj?.id || null,
+              location: locObj?.id || null,
+              quantity: Number(line.quantity),
+              unit: line.unit,
+              batch_number: line.batch_number || "",
+              serial_numbers: line.serial_numbers || [],
+              unit_cost: 0,
+            }))
+          : txType === "ADJUSTMENT"
+            ? adjustmentLines.map((line) => {
+                const difference = Number(line.actual_quantity) - Number(line.system_quantity);
+                return {
+                  item_id: Number(line.product_id),
+                  item: Number(line.product_id),
+                  variant_id: line.variant_id ? Number(line.variant_id) : null,
+                  variant: line.variant_id ? Number(line.variant_id) : null,
+                  location_id: locObj?.id || null,
+                  location: locObj?.id || null,
+                  quantity: Math.abs(difference),
+                  unit: line.unit,
+                  batch_number: line.batch_number || "",
+                  serial_numbers: line.serial_numbers || [],
+                  unit_cost: 0,
+                  system_quantity: Number(line.system_quantity),
+                  actual_quantity: Number(line.actual_quantity),
+                  difference_quantity: difference,
+                };
+              })
+            : txType === "RETURN"
+              ? returnLines.map((line) => ({
+                  item_id: Number(line.product_id),
+                  item: Number(line.product_id),
+                  variant_id: line.variant_id ? Number(line.variant_id) : null,
+                  variant: line.variant_id ? Number(line.variant_id) : null,
+                  location_id: locObj?.id || null,
+                  location: locObj?.id || null,
+                  quantity: Number(line.quantity),
+                  unit: line.unit,
+                  batch_number: line.batch_number || "",
+                  serial_numbers: line.serial_numbers || [],
+                  unit_cost: 0,
+                }))
+            : undefined,
         supplier: txType === "RECEIPT" ? supplier : "",
         reference_number: referenceNumber,
         issue_type: txType === "ISSUE" ? issueType : "",
@@ -519,10 +765,6 @@ export function StockTransactionModal({
                   {txType === "ADJUSTMENT" && "4. Stock Adjustment (Stock Correction)"}
                   {txType === "RETURN" && "5. Stock Return (Return Movement)"}
                 </h2>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/50">
-                  <Sparkles className="h-2.5 w-2.5" />
-                  Phase 3 Standard
-                </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                 {txType === "RECEIPT" && "Record incoming verified stock into a facility storage location."}
@@ -541,37 +783,6 @@ export function StockTransactionModal({
           </button>
         </div>
 
-        {/* 5-Operation Tab Selector */}
-        {!lockType && (
-          <div className="grid shrink-0 grid-cols-5 gap-1 border-b border-slate-100 bg-slate-50/70 p-1.5 text-xs dark:border-zinc-800 dark:bg-zinc-800/30">
-          {[
-            { key: "RECEIPT", label: "Goods Receipt", icon: ArrowDownLeft, activeColor: "text-emerald-600 dark:text-emerald-400" },
-            { key: "ISSUE", label: "Stock Issue", icon: ArrowUpRight, activeColor: "text-rose-600 dark:text-rose-400" },
-            { key: "TRANSFER", label: "Transfer", icon: ArrowLeftRight, activeColor: "text-blue-600 dark:text-blue-400" },
-            { key: "ADJUSTMENT", label: "Adjustment", icon: SlidersHorizontal, activeColor: "text-amber-600 dark:text-amber-400" },
-            { key: "RETURN", label: "Return", icon: RotateCcw, activeColor: "text-purple-600 dark:text-purple-400" },
-          ].map((t) => {
-            const Icon = t.icon;
-            const isSelected = txType === t.key;
-            return (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => handleTabChange(t.key)}
-                className={`min-w-0 py-2 px-1 rounded-xl font-semibold flex items-center justify-center gap-1.5 transition-all text-center cursor-pointer ${
-                  isSelected
-                    ? `bg-white dark:bg-zinc-900 ${t.activeColor} shadow-xs font-bold border border-slate-200/60 dark:border-zinc-800`
-                    : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100"
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5 shrink-0" />
-                <span className="min-w-0 truncate">{t.label}</span>
-              </button>
-            );
-          })}
-          </div>
-        )}
-
         {error && (
           <div className="mx-6 mt-4 shrink-0 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-400 flex items-center gap-2">
             <AlertCircle className="h-4 w-4 shrink-0" />
@@ -581,69 +792,6 @@ export function StockTransactionModal({
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-6 text-xs space-y-4">
-            {/* Barcode Scanner Deck */}
-            <div className="p-3.5 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/80 dark:border-blue-900/60 space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                <label className="font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
-                  <Scan className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  Barcode / SKU Fast-Lookup
-                </label>
-                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
-                  Scan barcode to auto-populate SKU, product tracking & valuation
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Barcode className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                  <input
-                    type="text"
-                    value={barcodeInput}
-                    onChange={(e) => {
-                      setBarcodeInput(e.target.value);
-                      setDecodedProduct(null);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleBarcodeScan(barcodeInput);
-                      }
-                    }}
-                    placeholder="Scan or enter barcode (e.g. 890123620501 or BRG-6205-2RS)..."
-                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-blue-200 dark:border-blue-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white font-mono text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleBarcodeScan(barcodeInput)}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer transition-colors shadow-xs"
-                >
-                  Decode
-                </button>
-              </div>
-
-              {/* Verified Product Telemetry */}
-              {decodedProduct && (
-                <div className="pt-2 mt-2 border-t border-blue-200/60 dark:border-blue-900/40 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                    <div>
-                      <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <span>{decodedProduct.name}</span>
-                        <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
-                          {decodedProduct.sku || decodedProduct.code}
-                        </span>
-                      </div>
-                      <div className="text-[10px] text-slate-500 dark:text-zinc-400 font-mono mt-0.5">
-                        <span>Tracking: <strong className="text-slate-700 dark:text-zinc-300">{decodedProduct.tracking || "NONE"}</strong></span>
-                        {" • "}
-                        <span>Stock valuation: <strong className="text-slate-700 dark:text-zinc-300">{decodedStockValuation}</strong></span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Document Header Row: Number & Date */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -975,88 +1123,439 @@ export function StockTransactionModal({
             )}
 
             {/* Product Item & SKU Selection */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  Product <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  value={selectedSku}
-                  onChange={(e) => handleProductSelect(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 text-xs font-medium"
-                  required
-                >
-                  {products.length > 0 ? (
-                    products.map((p) => (
-                      <option key={p.id || p.sku} value={p.sku || p.code}>
-                        {p.name}
-                      </option>
-                    ))
-                  ) : (
-                    <option value="BRG-6205-2RS">Industrial Ball Bearing 6205-2RS</option>
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  SKU (Auto-filled) <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={selectedSku}
-                  readOnly
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-100/80 dark:bg-zinc-800/50 text-slate-800 dark:text-zinc-200 font-mono font-bold text-xs"
-                />
-              </div>
-            </div>
-
-            {/* Quantity Metrics */}
-            {txType === "ADJUSTMENT" ? (
-              /* Stock Adjustment Quantities */
-              <div className="grid grid-cols-3 gap-3 p-3.5 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/20">
-                <div>
-                  <label className="block font-semibold text-amber-900 dark:text-amber-200 mb-1">
-                    System Quantity <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={systemQuantity}
-                    readOnly
-                    className="w-full px-3 py-2 rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-100/50 dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 font-mono font-bold text-xs"
-                  />
+            {txType === "ISSUE" ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-slate-800 dark:text-zinc-200">Products</div>
+                    <div className="text-[10px] text-slate-500 dark:text-zinc-400">Add one or more products to this stock issue</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIssueLines((lines) => [...lines, emptyIssueLine()])}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300 font-semibold"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add Product
+                  </button>
                 </div>
+
+                {issueLines.map((line, index) => {
+                  const product = products.find((item) => String(item.id) === String(line.product_id));
+                  const variants = product?.variants || [];
+                  const variant = variants.find((item) => String(item.id) === String(line.variant_id));
+                  const sku = variant?.sku || variant?.code || product?.sku || product?.code || "";
+                  const tracking = product?.tracking;
+                  const isLineBatch = tracking === "BATCH" || tracking === "Batch / Lot";
+                  const isLineSerial = tracking === "SERIAL" || tracking === "Serial";
+
+                  return (
+                    <div key={line.key} className="rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 p-3 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                          Product {index + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIssueLines((lines) => lines.filter((item) => item.key !== line.key))}
+                          disabled={issueLines.length === 1}
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Remove
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Product *</label>
+                          <select
+                            value={line.product_id}
+                            onChange={(e) => selectIssueProduct(line.key, e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 text-xs font-medium"
+                          >
+                            <option value="">Select product</option>
+                            {products.map((item) => (
+                              <option key={item.id} value={item.id}>{item.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                            Variant {variants.length > 0 && "*"}
+                          </label>
+                          <select
+                            value={line.variant_id}
+                            onChange={(e) => selectIssueVariant(line.key, e.target.value)}
+                            disabled={!product || variants.length === 0}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 text-xs disabled:opacity-60"
+                          >
+                            <option value="">No variant</option>
+                            {variants.map((item) => (
+                              <option key={item.id} value={item.id}>{item.name || item.code || item.sku}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">SKU</label>
+                          <input value={sku} readOnly className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-800 text-xs font-mono" />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-3">
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Available Quantity</label>
+                          <input value={`${line.available || 0}`} readOnly className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-800 text-xs font-mono font-bold" />
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Issue Quantity *</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max={line.available || undefined}
+                            value={line.quantity}
+                            onChange={(e) => updateIssueLine(line.key, { quantity: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-mono font-bold"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">UOM</label>
+                          <input value={line.unit || ""} readOnly className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-800 text-xs font-mono font-semibold" />
+                        </div>
+                        {isLineBatch && (
+                          <div>
+                            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Batch Number *</label>
+                            <input
+                              value={line.batch_number}
+                              onChange={(e) => updateIssueLine(line.key, { batch_number: e.target.value })}
+                              placeholder="Batch / lot number"
+                              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-mono"
+                            />
+                          </div>
+                        )}
+                        {isLineSerial && (
+                          <div className="col-span-2">
+                            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Serial Numbers * (comma separated)</label>
+                            <input
+                              value={(line.serial_numbers || []).join(",")}
+                              onChange={(e) => updateIssueLine(line.key, { serial_numbers: e.target.value.split(",").map((value) => value.trim()).filter(Boolean) })}
+                              placeholder="SN-001, SN-002"
+                              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-mono"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : txType === "ADJUSTMENT" ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-slate-800 dark:text-zinc-200">Products</div>
+                    <div className="text-[10px] text-slate-500 dark:text-zinc-400">Add multiple products and enter their counted quantities</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAdjustmentLines((lines) => [...lines, emptyAdjustmentLine()])}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 font-semibold"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add Product
+                  </button>
+                </div>
+
+                {adjustmentLines.map((line, index) => {
+                  const product = products.find((item) => String(item.id) === String(line.product_id));
+                  const variants = product?.variants || [];
+                  const variant = variants.find((item) => String(item.id) === String(line.variant_id));
+                  const sku = variant?.sku || variant?.code || product?.sku || product?.code || "";
+                  const difference = Number(line.actual_quantity || 0) - Number(line.system_quantity || 0);
+                  const tracking = product?.tracking;
+                  const isLineBatch = tracking === "BATCH" || tracking === "Batch / Lot";
+                  const isLineSerial = tracking === "SERIAL" || tracking === "Serial";
+
+                  return (
+                    <div key={line.key} className="rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/30 dark:bg-amber-950/20 p-3 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                          Product {index + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setAdjustmentLines((lines) => lines.filter((item) => item.key !== line.key))}
+                          disabled={adjustmentLines.length === 1}
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Remove
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Product *</label>
+                          <select
+                            value={line.product_id}
+                            onChange={(e) => selectAdjustmentProduct(line.key, e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 text-xs font-medium"
+                          >
+                            <option value="">Select product</option>
+                            {products.map((item) => (
+                              <option key={item.id} value={item.id}>{item.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                            Variant {variants.length > 0 && "*"}
+                          </label>
+                          <select
+                            value={line.variant_id}
+                            onChange={(e) => selectAdjustmentVariant(line.key, e.target.value)}
+                            disabled={!product || variants.length === 0}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 text-xs disabled:opacity-60"
+                          >
+                            <option value="">No variant</option>
+                            {variants.map((item) => (
+                              <option key={item.id} value={item.id}>{item.name || item.code || item.sku}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">SKU</label>
+                          <input value={sku} readOnly className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-800 text-xs font-mono" />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-3">
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">System Quantity *</label>
+                          <input value={line.system_quantity} readOnly className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-800 text-xs font-mono font-bold" />
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Actual Quantity *</label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={line.actual_quantity}
+                            onChange={(e) => updateAdjustmentLine(line.key, { actual_quantity: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-mono font-bold"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Difference Quantity *</label>
+                          <input
+                            value={difference > 0 ? `+${difference}` : difference}
+                            readOnly
+                            className={`w-full px-3 py-2 rounded-xl border font-mono font-bold text-xs ${
+                              difference > 0
+                                ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                                : difference < 0
+                                  ? "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300"
+                                  : "border-slate-300 bg-slate-100 text-slate-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                            }`}
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">UOM</label>
+                          <input value={line.unit || ""} readOnly className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-800 text-xs font-mono font-semibold" />
+                        </div>
+                      </div>
+
+                      {(isLineBatch || isLineSerial) && (
+                        <div className="grid grid-cols-4 gap-3">
+                          {isLineBatch && (
+                            <div>
+                              <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Batch Number *</label>
+                              <input
+                                value={line.batch_number}
+                                onChange={(e) => updateAdjustmentLine(line.key, { batch_number: e.target.value })}
+                                placeholder="Batch / lot number"
+                                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-mono"
+                              />
+                            </div>
+                          )}
+                          {isLineSerial && (
+                            <div className="col-span-2">
+                              <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Serial Numbers * (comma separated)</label>
+                              <input
+                                value={(line.serial_numbers || []).join(",")}
+                                onChange={(e) => updateAdjustmentLine(line.key, { serial_numbers: e.target.value.split(",").map((value) => value.trim()).filter(Boolean) })}
+                                placeholder="SN-001, SN-002"
+                                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-mono"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : txType === "RETURN" ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-slate-800 dark:text-zinc-200">Products</div>
+                    <div className="text-[10px] text-slate-500 dark:text-zinc-400">Add one or more products to this stock return</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setReturnLines((lines) => [...lines, emptyReturnLine()])}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-purple-300 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300 font-semibold"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add Product
+                  </button>
+                </div>
+
+                {returnLines.map((line, index) => {
+                  const product = products.find((item) => String(item.id) === String(line.product_id));
+                  const variants = product?.variants || [];
+                  const variant = variants.find((item) => String(item.id) === String(line.variant_id));
+                  const sku = variant?.sku || variant?.code || product?.sku || product?.code || "";
+                  const tracking = product?.tracking;
+                  const isLineBatch = tracking === "BATCH" || tracking === "Batch / Lot";
+                  const isLineSerial = tracking === "SERIAL" || tracking === "Serial";
+
+                  return (
+                    <div key={line.key} className="rounded-xl border border-purple-200 dark:border-purple-900/60 bg-purple-50/30 dark:bg-purple-950/20 p-3 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300">
+                          Product {index + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setReturnLines((lines) => lines.filter((item) => item.key !== line.key))}
+                          disabled={returnLines.length === 1}
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Remove
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Product *</label>
+                          <select
+                            value={line.product_id}
+                            onChange={(e) => selectReturnProduct(line.key, e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 text-xs font-medium"
+                          >
+                            <option value="">Select product</option>
+                            {products.map((item) => (
+                              <option key={item.id} value={item.id}>{item.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                            Variant {variants.length > 0 && "*"}
+                          </label>
+                          <select
+                            value={line.variant_id}
+                            onChange={(e) => selectReturnVariant(line.key, e.target.value)}
+                            disabled={!product || variants.length === 0}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 text-xs disabled:opacity-60"
+                          >
+                            <option value="">No variant</option>
+                            {variants.map((item) => (
+                              <option key={item.id} value={item.id}>{item.name || item.code || item.sku}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">SKU</label>
+                          <input value={sku} readOnly className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-800 text-xs font-mono" />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-3">
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Available Quantity</label>
+                          <input value={`${line.available || 0}`} readOnly className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-800 text-xs font-mono font-bold" />
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Return Quantity *</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={line.quantity}
+                            onChange={(e) => updateReturnLine(line.key, { quantity: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-mono font-bold"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">UOM</label>
+                          <input value={line.unit || ""} readOnly className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-800 text-xs font-mono font-semibold" />
+                        </div>
+                        {isLineBatch && (
+                          <div>
+                            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Batch Number *</label>
+                            <input
+                              value={line.batch_number}
+                              onChange={(e) => updateReturnLine(line.key, { batch_number: e.target.value })}
+                              placeholder="Batch / lot number"
+                              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-mono"
+                            />
+                          </div>
+                        )}
+                        {isLineSerial && (
+                          <div className="col-span-2">
+                            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Serial Numbers * (comma separated)</label>
+                            <input
+                              value={(line.serial_numbers || []).join(",")}
+                              onChange={(e) => updateReturnLine(line.key, { serial_numbers: e.target.value.split(",").map((value) => value.trim()).filter(Boolean) })}
+                              placeholder="SN-001, SN-002"
+                              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-mono"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-semibold text-amber-900 dark:text-amber-200 mb-1">
-                    Actual Quantity <span className="text-rose-500">*</span>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                    Product <span className="text-rose-500">*</span>
                   </label>
-                  <input
-                    type="number"
-                    value={actualQuantity}
-                    onChange={(e) => handleActualQuantityChange(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-amber-300 dark:border-amber-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 font-mono font-bold text-xs"
+                  <select
+                    value={selectedSku}
+                    onChange={(e) => handleProductSelect(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 text-xs font-medium"
                     required
-                  />
+                  >
+                    {products.length > 0 ? (
+                      products.map((p) => (
+                        <option key={p.id || p.sku} value={p.sku || p.code}>{p.name}</option>
+                      ))
+                    ) : (
+                      <option value="BRG-6205-2RS">Industrial Ball Bearing 6205-2RS</option>
+                    )}
+                  </select>
                 </div>
                 <div>
-                  <label className="block font-semibold text-amber-900 dark:text-amber-200 mb-1">
-                    Difference Quantity <span className="text-rose-500">*</span>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                    SKU (Auto-filled) <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
-                    value={differenceQuantity > 0 ? `+${differenceQuantity}` : differenceQuantity}
+                    value={selectedSku}
                     readOnly
-                    className={`w-full px-3 py-2 rounded-xl border font-mono font-bold text-xs ${
-                      differenceQuantity > 0
-                        ? "border-emerald-300 dark:border-emerald-800 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
-                        : differenceQuantity < 0
-                        ? "border-rose-300 dark:border-rose-800 bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400"
-                        : "border-slate-300 dark:border-zinc-700 bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300"
-                    }`}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-100/80 dark:bg-zinc-800/50 text-slate-800 dark:text-zinc-200 font-mono font-bold text-xs"
                   />
                 </div>
               </div>
-            ) : (
+            )}
+
+            {/* Quantity Metrics */}
+            {txType === "ISSUE" || txType === "ADJUSTMENT" || txType === "RETURN" ? null : (
               /* Quantities for Receipt, Issue, Transfer, Return */
               <div className="grid grid-cols-3 gap-3">
                 {(txType === "ISSUE" || txType === "TRANSFER") && (
@@ -1131,7 +1630,7 @@ export function StockTransactionModal({
             )}
 
             {/* CONDITIONAL TRACKING FIELDS (Batch / Expiry / Serial) */}
-            {(isBatchTracked || isSerialTracked) && (
+            {!["ISSUE", "ADJUSTMENT", "RETURN"].includes(txType) && (isBatchTracked || isSerialTracked) && (
               <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/30 space-y-3">
                 <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
                   Conditional Tracking Parameters

@@ -4,6 +4,7 @@ from celery import shared_task
 from apps.integration.services.outbox_service import OutboxService
 from apps.integration.services.inbox_service import InboxConsumerService
 from apps.integration.services.low_stock_service import LowStockAlertService
+from apps.integration.services.notification_service import NotificationService
 
 logger = logging.getLogger("ecosystem.integration.tasks")
 
@@ -47,6 +48,16 @@ def check_low_stock_thresholds_task():
         logger.error("Periodic low-stock sweep failed: %s", e)
 
 
+@shared_task(name="apps.integration.tasks.scan_inventory_notifications_task", ignore_result=True)
+def scan_inventory_notifications_task():
+    try:
+        count = NotificationService.scan()
+        if count:
+            logger.info("Inventory notification scan found %d active alerts.", count)
+    except Exception as e:
+        logger.exception("Inventory notification scan failed: %s", e)
+
+
 @shared_task(name="apps.integration.tasks.retry_dead_letter_task")
 def retry_dead_letter_task(error_id: str, operator: str = "celery_worker") -> bool:
     """
@@ -57,4 +68,3 @@ def retry_dead_letter_task(error_id: str, operator: str = "celery_worker") -> bo
     except Exception as e:
         logger.error("Retry dead-letter task failed for %s: %s", error_id, e)
         return False
-

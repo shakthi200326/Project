@@ -5,10 +5,79 @@
 
 @source "../../../../../shared/frontend";
 
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
 /* ThemeProvider toggles a `.dark` class on <html>. Without this, Tailwind v4
    binds `dark:` to prefers-color-scheme, so pages followed the OS theme
    instead of the in-app toggle and mixed light and dark styles. */
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* Inventory module design contract
+   The dashboard is the visual reference for every Inventory module:
+   Segoe UI / system typography, 12px body copy, zinc/slate surfaces,
+   14-16px cards, 8-12px controls, and 10-11px table labels.
+*/
+.inventory-module-page {
+  font-family: var(--erp-font-sans);
+  font-size: 12px;
+  color: var(--erp-color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.inventory-module-page button,
+.inventory-module-page input,
+.inventory-module-page select,
+.inventory-module-page textarea {
+  font-family: inherit;
+}
+
+.inventory-module-page :where(h1:not([class*="text-"])) {
+  font-size: 20px;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.inventory-module-page :where(h2:not([class*="text-"])) {
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.inventory-module-page :where(h3:not([class*="text-"])) {
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.inventory-module-page table {
+  font-size: 12px;
+  border-collapse: collapse;
+}
+
+.inventory-module-page table thead th {
+  font-size: 10px;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.inventory-module-page table tbody td {
+  font-size: 12px;
+}
+
+.inventory-module-page :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+.inventory-module-page select,
+.inventory-module-page textarea) {
+  border-radius: 8px;
+}
 
 /* --- Native dropdowns -------------------------------------------------------
    The open option list is drawn by the browser. Selects with transparent or
@@ -177,71 +246,6 @@ select option:disabled {
   overscroll-behavior: contain;
 }
 
-#thermal-label-print-root {
-  display: none;
-}
-
-.thermal-label-content {
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  overflow: hidden;
-  padding: 2mm;
-  background: #fff;
-  color: #000;
-  font-family: Arial, sans-serif;
-}
-
-.thermal-label-preview {
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  box-shadow: 0 1px 3px rgb(15 23 42 / 12%);
-}
-
-.thermal-label-name {
-  display: -webkit-box;
-  overflow: hidden;
-  font-size: 8pt;
-  font-weight: 700;
-  line-height: 1.1;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.thermal-label-sku,
-.thermal-label-footer {
-  font-family: monospace;
-  font-size: 6pt;
-}
-
-.thermal-label-barcode {
-  display: flex;
-  min-height: 0;
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.thermal-label-barcode > div {
-  width: 100%;
-  min-height: 0;
-}
-
-.thermal-label-barcode svg {
-  display: block;
-  width: 100%;
-  max-height: 100%;
-}
-
-.thermal-label-footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 2mm;
-  white-space: nowrap;
-}
-
 /* Tabular figures for numbers, currency, quantities, and serials */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
@@ -316,77 +320,813 @@ select option:disabled {
   transform: translateY(-1.5px);
 }
 
-@page label-50x30 {
-  size: 50mm 30mm;
-  margin: 0;
+/* Product Management visual contract */
+.inventory-product-page {
+  color: rgb(15 23 42);
 }
 
-@page label-75x50 {
-  size: 75mm 50mm;
-  margin: 0;
+.dark .inventory-product-page {
+  color: rgb(244 244 245);
 }
 
-@page label-100x50 {
-  size: 100mm 50mm;
-  margin: 0;
+.inventory-product-page h1 {
+  font-size: 1.25rem !important;
+  line-height: 1.75rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
 }
 
-@media print {
-  @page {
-    margin: 0;
+.inventory-product-page h1 + p,
+.inventory-product-page header p,
+.inventory-product-page > div > p {
+  font-size: 0.75rem !important;
+  line-height: 1.25rem !important;
+}
+
+.inventory-product-page input,
+.inventory-product-page select,
+.inventory-product-page textarea {
+  border-radius: 0.5rem;
+}
+
+.inventory-product-page table {
+  font-size: 0.875rem;
+}
+
+.inventory-product-page table thead {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.inventory-product-page table tbody tr {
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.inventory-product-page .bg-indigo-600,
+.inventory-product-page .hover\:bg-indigo-700:hover {
+  background-color: rgb(37 99 235) !important;
+}
+
+.inventory-product-page .focus\:ring-indigo-500:focus {
+  --tw-ring-color: rgb(59 130 246) !important;
+}
+
+.inventory-product-page .text-indigo-600,
+.inventory-product-page .text-indigo-400 {
+  color: rgb(37 99 235) !important;
+}
+
+/* Goods Receipt & Inspection filter contract */
+.inventory-grn-page {
+  max-width: 1600px !important;
+}
+
+.inventory-grn-page input[type="search"],
+.inventory-grn-page select {
+  border-radius: 0.75rem;
+}
+
+.inventory-grn-page input,
+.inventory-grn-page select,
+.inventory-grn-page textarea {
+  font-size: 0.75rem;
+}
+
+.inventory-grn-page select:focus,
+.inventory-grn-page input:focus,
+.inventory-grn-page textarea:focus {
+  border-color: rgb(59 130 246);
+  --tw-ring-color: rgb(59 130 246 / 0.2);
+}
+
+.grn-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgb(226 232 240 / 0.8);
+  border-radius: 16px;
+  background: rgb(255 255 255);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+.dark .grn-filter-bar {
+  border-color: rgb(39 39 42 / 0.9);
+  background: rgb(24 24 27);
+}
+
+.grn-filter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.grn-filter-search {
+  flex: 1 1 200px;
+  min-width: 160px;
+}
+
+.grn-filter-select {
+  flex: 0 1 180px;
+  min-width: 130px;
+  width: auto !important;
+}
+
+.grn-filter-date {
+  flex: 0 0 auto;
+  min-width: auto;
+}
+
+.grn-filter-count {
+  flex: none;
+  color: rgb(148 163 184);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.dark .grn-filter-count {
+  color: rgb(113 113 122);
+}
+
+@media (max-width: 1024px) {
+  .grn-filter-bar {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
-  body > * {
-    display: none !important;
+  .grn-filter-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
-  body > #thermal-label-print-root {
-    display: block !important;
-    color: #000;
-    background: #fff;
-  }
-
-  .thermal-label-page {
-    box-sizing: border-box;
-    display: flex !important;
+  .grn-filter-search {
+    flex: 1 1 100%;
     width: 100%;
-    height: 100%;
-    overflow: hidden;
-    break-after: page;
-    page-break-after: always;
-    background: #fff !important;
-    color: #000 !important;
-    print-color-adjust: exact;
   }
 
-  .thermal-label-page.size-50x30 {
-    page: label-50x30;
+  .grn-filter-count {
+    align-self: flex-end;
+  }
+}
+
+@media (max-width: 640px) {
+  .grn-filter-controls {
+    flex-direction: column;
+    align-items: stretch;
   }
 
-  .thermal-label-page.size-75x50 {
-    page: label-75x50;
+  .grn-filter-search {
+    min-width: 0;
   }
 
-  .thermal-label-page.size-100x50 {
-    page: label-100x50;
-  }
-
-  .thermal-label-page.last-label {
-    break-after: auto;
-    page-break-after: auto;
-  }
-
-  .thermal-label-page .thermal-label-content {
+  .grn-filter-select {
     width: 100% !important;
-    height: 100% !important;
+    flex: 1 1 auto;
   }
 
-  .thermal-label-page .thermal-label-name {
-    font-size: 8pt;
+  .grn-filter-date {
+    width: 100%;
+    min-width: 0;
+    justify-content: space-between;
   }
 
-  .thermal-label-page .thermal-label-sku,
-  .thermal-label-page .thermal-label-footer {
-    font-size: 6pt;
+  .grn-filter-date input {
+    width: calc(50% - 10px) !important;
+    min-width: 0;
   }
+}
+
+/* Stock Operations visual contract */
+.inventory-stock-operations h1 {
+  font-size: 20px !important;
+  line-height: 28px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+  color: rgb(15 23 42) !important;
+}
+
+.inventory-stock-operations h2,
+.inventory-stock-operations h3 {
+  letter-spacing: -0.0125em;
+}
+
+.dark .inventory-stock-operations h1,
+.dark .inventory-stock-operations h2,
+.dark .inventory-stock-operations h3 {
+  color: rgb(255 255 255) !important;
+}
+
+.inventory-stock-operations h1 + p,
+.inventory-stock-operations header p,
+.inventory-stock-operations p.text-sm {
+  font-size: 12px !important;
+  line-height: 20px !important;
+}
+
+.inventory-stock-operations .bg-slate-900\/60,
+.inventory-stock-operations .bg-slate-900 {
+  background-color: rgb(255 255 255) !important;
+}
+
+.dark .inventory-stock-operations .bg-slate-900\/60,
+.dark .inventory-stock-operations .bg-slate-900 {
+  background-color: rgb(24 24 27) !important;
+}
+
+.inventory-stock-operations .bg-slate-800\/50,
+.inventory-stock-operations .bg-slate-800 {
+  background-color: rgb(248 250 252) !important;
+}
+
+.dark .inventory-stock-operations .bg-slate-800\/50,
+.dark .inventory-stock-operations .bg-slate-800 {
+  background-color: rgb(39 39 42) !important;
+}
+
+.inventory-stock-operations .border-slate-800,
+.inventory-stock-operations .border-slate-700 {
+  border-color: rgb(226 232 240 / 0.8) !important;
+}
+
+.dark .inventory-stock-operations .border-slate-800,
+.dark .inventory-stock-operations .border-slate-700 {
+  border-color: rgb(39 39 42 / 0.9) !important;
+}
+
+.inventory-stock-operations .text-white {
+  color: rgb(15 23 42) !important;
+}
+
+.dark .inventory-stock-operations .text-white {
+  color: rgb(255 255 255) !important;
+}
+
+.inventory-stock-operations input,
+.inventory-stock-operations select,
+.inventory-stock-operations textarea {
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.inventory-stock-operations table {
+  font-size: 12px;
+}
+
+.inventory-stock-operations table thead {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.inventory-stock-operations .rounded-xl {
+  border-radius: 12px;
+}
+
+.inventory-stock-operations .rounded-2xl {
+  border-radius: 16px;
+}
+
+.inventory-stock-operations .bg-emerald-600 {
+  background-color: rgb(37 99 235) !important;
+}
+
+.inventory-stock-operations .hover\:bg-emerald-500:hover,
+.inventory-stock-operations .hover\:bg-emerald-700:hover {
+  background-color: rgb(29 78 216) !important;
+}
+
+/* Inventory-wide dashboard contract
+   This shared contract standardizes typography, page spacing, cards, controls,
+   and table presentation across every Inventory module and submodule.
+*/
+.inventory-dashboard-contract {
+  max-width: 1600px !important;
+  font-family: var(--erp-font-sans);
+  font-size: 12px;
+  line-height: 1.5;
+  --inventory-section-gap: 32px;
+  --inventory-card-gap: 16px;
+}
+
+.inventory-dashboard-contract > :first-child {
+  min-width: 0;
+}
+
+/* Match the Inventory dashboard's page-level vertical rhythm.
+   Major page sections use 32px spacing; smaller filter/card gaps remain intact. */
+.inventory-dashboard-contract > .space-y-6 > :not(:last-child),
+.inventory-dashboard-contract > .space-y-8 > :not(:last-child) {
+  margin-top: var(--inventory-section-gap) !important;
+}
+
+.inventory-dashboard-contract > .space-y-6 > :first-child,
+.inventory-dashboard-contract > .space-y-8 > :first-child {
+  margin-top: 0 !important;
+}
+
+/* Page roots sometimes retain legacy inner padding/max-width wrappers.
+   Remove those only at the Inventory content boundary so the shell controls
+   the same outer margin for Storage Locations, utilization, and all subpages. */
+.inventory-dashboard-contract > .p-6.max-w-7xl.mx-auto {
+  max-width: none !important;
+  padding: 0 !important;
+}
+
+.inventory-dashboard-contract > div {
+  width: 100%;
+  max-width: 1600px !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.inventory-dashboard-contract > div[class~="p-4"],
+.inventory-dashboard-contract > div[class~="p-5"],
+.inventory-dashboard-contract > div[class~="p-6"],
+.inventory-dashboard-contract > div[class~="p-8"],
+.inventory-dashboard-contract > div[class~="px-4"],
+.inventory-dashboard-contract > div[class~="px-6"],
+.inventory-dashboard-contract > div[class~="py-8"] {
+  padding-top: 0 !important;
+  padding-right: 0 !important;
+  padding-bottom: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Batch, Lot & Serial Tracking submodule contract */
+.inventory-tracking-page > .min-h-screen[class] {
+  min-height: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 24px !important;
+  background: transparent !important;
+  color: var(--erp-color-text) !important;
+}
+
+.inventory-tracking-page > .min-h-screen > .max-w-screen-xl,
+.inventory-tracking-page > .min-h-screen > .max-w-7xl,
+.inventory-tracking-page > .min-h-screen > [class*="max-w-"] {
+  width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding: 0 !important;
+}
+
+.inventory-tracking-page [class~="bg-gray-50"],
+.inventory-tracking-page [class~="dark:bg-gray-50"],
+.inventory-tracking-page [class~="bg-gray-100"],
+.inventory-tracking-page [class~="dark:bg-gray-700"],
+.inventory-tracking-page [class~="dark:bg-gray-800"],
+.inventory-tracking-page [class~="bg-neutral-800"],
+.inventory-tracking-page [class~="bg-neutral-950/60"],
+.inventory-tracking-page [class~="bg-neutral-950/40"],
+.inventory-tracking-page [class~="bg-neutral-950/30"],
+.inventory-tracking-page [class~="bg-neutral-950/20"],
+.inventory-tracking-page [class~="bg-neutral-900/50"],
+.inventory-tracking-page [class~="bg-neutral-900/40"],
+.inventory-tracking-page [class~="bg-neutral-900/30"] {
+  background-color: var(--erp-color-surface-muted) !important;
+}
+
+.inventory-tracking-page [class~="bg-white"],
+.inventory-tracking-page [class~="dark:bg-gray-900"],
+.inventory-tracking-page [class~="bg-gray-900"],
+.inventory-tracking-page [class~="dark:bg-gray-800"],
+.inventory-tracking-page [class~="bg-neutral-950"],
+.inventory-tracking-page [class~="bg-neutral-900"],
+.inventory-tracking-page [class~="bg-neutral-900/50"],
+.inventory-tracking-page [class~="bg-neutral-950/60"] {
+  background-color: var(--erp-color-surface) !important;
+}
+
+.inventory-tracking-page [class~="border-gray-200"],
+.inventory-tracking-page [class~="border-gray-300"],
+.inventory-tracking-page [class~="border-gray-100"],
+.inventory-tracking-page [class~="dark:border-gray-700"],
+.inventory-tracking-page [class~="dark:border-gray-600"],
+.inventory-tracking-page [class~="dark:border-gray-800"],
+.inventory-tracking-page [class~="border-neutral-800"],
+.inventory-tracking-page [class~="border-neutral-800/80"],
+.inventory-tracking-page [class~="border-neutral-700"] {
+  border-color: var(--erp-color-border) !important;
+}
+
+.inventory-tracking-page [class~="text-gray-900"],
+.inventory-tracking-page [class~="text-gray-800"],
+.inventory-tracking-page [class~="text-gray-700"],
+.inventory-tracking-page [class~="dark:text-gray-100"],
+.inventory-tracking-page [class~="dark:text-gray-200"],
+.inventory-tracking-page [class~="dark:text-gray-300"],
+.inventory-tracking-page [class~="dark:text-white"],
+.inventory-tracking-page [class~="text-neutral-100"],
+.inventory-tracking-page [class~="text-neutral-200"],
+.inventory-tracking-page [class~="text-neutral-300"],
+.inventory-tracking-page [class~="text-white"] {
+  color: var(--erp-color-text) !important;
+}
+
+.inventory-tracking-page [class~="text-gray-500"],
+.inventory-tracking-page [class~="text-gray-600"],
+.inventory-tracking-page [class~="text-gray-400"],
+.inventory-tracking-page [class~="dark:text-gray-400"],
+.inventory-tracking-page [class~="dark:text-gray-500"],
+.inventory-tracking-page [class~="text-neutral-400"],
+.inventory-tracking-page [class~="text-neutral-500"] {
+  color: var(--erp-color-text-muted) !important;
+}
+
+.inventory-tracking-page [class~="text-blue-400"],
+.inventory-tracking-page [class~="text-blue-300"],
+.inventory-tracking-page [class~="text-indigo-600"],
+.inventory-tracking-page [class~="text-indigo-400"],
+.inventory-tracking-page [class~="text-purple-400"] {
+  color: var(--erp-color-primary) !important;
+}
+
+.inventory-tracking-page [class~="text-emerald-400"],
+.inventory-tracking-page [class~="text-emerald-300"] {
+  color: var(--erp-color-success-strong) !important;
+}
+
+.inventory-tracking-page [class~="text-amber-400"],
+.inventory-tracking-page [class~="text-amber-300"] {
+  color: var(--erp-color-warning-strong) !important;
+}
+
+.inventory-tracking-page [class~="text-red-300"] {
+  color: var(--erp-color-danger-strong) !important;
+}
+
+.inventory-tracking-page [class~="text-green-300"] {
+  color: var(--erp-color-success-strong) !important;
+}
+
+.inventory-tracking-page [class~="bg-blue-950/20"],
+.inventory-tracking-page [class~="bg-blue-900/40"] {
+  background-color: var(--erp-color-primary-surface) !important;
+}
+
+.inventory-tracking-page [class~="bg-emerald-950/20"],
+.inventory-tracking-page [class~="bg-emerald-950/40"],
+.inventory-tracking-page [class~="bg-emerald-900/40"] {
+  background-color: var(--erp-color-success-surface) !important;
+}
+
+.inventory-tracking-page [class~="bg-amber-950/20"],
+.inventory-tracking-page [class~="bg-amber-900/40"] {
+  background-color: var(--erp-color-warning-badge) !important;
+}
+
+.inventory-tracking-page [class~="bg-red-900/30"],
+.inventory-tracking-page [class~="bg-red-900/40"] {
+  background-color: var(--erp-color-danger-surface) !important;
+}
+
+.inventory-tracking-page [class~="bg-green-900/30"] {
+  background-color: var(--erp-color-success-surface) !important;
+}
+
+.inventory-tracking-page [class~="border-emerald-700/50"] {
+  border-color: var(--erp-color-success-border, var(--erp-color-success)) !important;
+}
+
+.inventory-tracking-page [class~="border-blue-700/50"] {
+  border-color: var(--erp-color-primary-border) !important;
+}
+
+.inventory-tracking-page [class~="border-amber-700/50"] {
+  border-color: var(--erp-color-warning) !important;
+}
+
+.inventory-tracking-page [class~="border-red-700/50"] {
+  border-color: var(--erp-color-danger-border) !important;
+}
+
+.inventory-tracking-page [class~="border-indigo-500"],
+.inventory-tracking-page [class~="border-indigo-600"],
+.inventory-tracking-page [class~="dark:border-indigo-400"],
+.inventory-tracking-page [class~="border-blue-500"],
+.inventory-tracking-page [class~="border-blue-600"],
+.inventory-tracking-page [class~="border-emerald-500"] {
+  border-color: var(--erp-color-primary) !important;
+}
+
+.inventory-tracking-page nav button[class~="text-indigo-600"],
+.inventory-tracking-page nav button[class~="text-indigo-400"],
+.inventory-tracking-page nav button[class~="text-blue-600"],
+.inventory-tracking-page nav button[class~="text-blue-400"],
+.inventory-tracking-page nav button[class~="text-emerald-400"] {
+  color: var(--erp-color-primary) !important;
+}
+
+.inventory-tracking-page .shadow-sm {
+  box-shadow: var(--erp-shadow-sm) !important;
+}
+
+.inventory-tracking-page button[class~="bg-blue-600"],
+.inventory-tracking-page button[class~="bg-indigo-600"],
+.inventory-tracking-page button[class~="bg-emerald-600"],
+.inventory-tracking-page button[class~="bg-green-600"],
+.inventory-tracking-page button[class~="bg-red-600"],
+.inventory-tracking-page button[class~="bg-amber-500"],
+.inventory-tracking-page button[class~="bg-yellow-500"] {
+  color: var(--erp-color-on-primary-fill) !important;
+}
+
+.inventory-tracking-page [class~="bg-green-600"],
+.inventory-tracking-page [class~="bg-red-600"],
+.inventory-tracking-page [class~="bg-blue-600"],
+.inventory-tracking-page [class~="bg-indigo-600"],
+.inventory-tracking-page [class~="bg-emerald-600"],
+.inventory-tracking-page [class~="bg-amber-500"],
+.inventory-tracking-page [class~="bg-yellow-500"] {
+  color: var(--erp-color-on-primary-fill) !important;
+}
+
+@media (max-width: 640px) {
+  .inventory-tracking-page > .min-h-screen[class] {
+    padding: 16px !important;
+  }
+}
+
+.inventory-dashboard-contract h1 {
+  margin: 0;
+  font-size: 20px !important;
+  line-height: 28px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+}
+
+.inventory-dashboard-contract h2 {
+  font-size: 14px !important;
+  line-height: 20px !important;
+  font-weight: 700 !important;
+}
+
+.inventory-dashboard-contract h3 {
+  font-size: 12px !important;
+  line-height: 18px !important;
+  font-weight: 700 !important;
+}
+
+.inventory-dashboard-contract label {
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+}
+
+.inventory-dashboard-contract button,
+.inventory-dashboard-contract input,
+.inventory-dashboard-contract select,
+.inventory-dashboard-contract textarea {
+  border-radius: 8px;
+  font-family: var(--erp-font-sans);
+  font-size: 12px;
+}
+
+.inventory-dashboard-contract input,
+.inventory-dashboard-contract select,
+.inventory-dashboard-contract textarea {
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.inventory-dashboard-contract input:focus,
+.inventory-dashboard-contract select:focus,
+.inventory-dashboard-contract textarea:focus {
+  border-color: rgb(59 130 246) !important;
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.12);
+  outline: none;
+}
+
+.inventory-dashboard-contract .rounded-2xl {
+  border-radius: 16px;
+}
+
+.inventory-dashboard-contract .rounded-xl {
+  border-radius: 12px;
+}
+
+.inventory-dashboard-contract table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.inventory-dashboard-contract table thead {
+  background: rgb(248 250 252 / 0.75);
+}
+
+.dark .inventory-dashboard-contract table thead {
+  background: rgb(24 24 27 / 0.9);
+}
+
+.inventory-dashboard-contract table thead th {
+  height: 44px;
+  padding: 10px 16px;
+  font-size: 10px;
+  line-height: 16px;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.inventory-dashboard-contract table tbody td {
+  padding: 12px 16px;
+  font-size: 12px;
+  line-height: 18px;
+  vertical-align: middle;
+}
+
+.inventory-dashboard-contract table tbody tr {
+  transition: background-color 120ms ease;
+}
+
+.inventory-dashboard-contract table tbody tr:hover {
+  background: rgb(248 250 252 / 0.9);
+}
+
+.dark .inventory-dashboard-contract table tbody tr:hover {
+  background: rgb(39 39 42 / 0.72);
+}
+
+.inventory-dashboard-contract .overflow-x-auto {
+  scrollbar-width: thin;
+}
+
+.inventory-tracking-page .text-sm,
+.inventory-tracking-page .text-base {
+  font-size: 12px !important;
+  line-height: 18px !important;
+}
+
+.inventory-tracking-page .text-lg {
+  font-size: 14px !important;
+  line-height: 20px !important;
+}
+
+.inventory-tracking-page :not(h1).text-2xl {
+  font-size: 24px !important;
+  line-height: 32px !important;
+}
+
+.inventory-tracking-page .text-3xl {
+  font-size: 30px !important;
+  line-height: 36px !important;
+}
+
+
+/* ============================================================================
+   GLOBAL UNIFIED ENTERPRISE TABLE, TYPOGRAPHY & DESIGN CONTRACT
+   Ensures consistent font style, weights, card enclosures, row heights,
+   headers, alternating hovers, and status badges across ALL inventory submodules.
+   ============================================================================ */
+
+/* Universal font family and base typography contract across the entire application */
+body,
+.inventory-module-page,
+#root {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: rgb(15 23 42);
+  font-variant-numeric: tabular-nums;
+}
+
+.dark body,
+.dark .inventory-module-page,
+.dark #root {
+  color: rgb(244 244 245);
+}
+
+/* Global Table Standard */
+.inventory-module-page table,
+table.inventory-global-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px !important;
+  line-height: 1.5;
+  text-align: left;
+}
+
+/* Unified Table Header */
+.inventory-module-page table thead,
+table.inventory-global-table thead {
+  background-color: rgb(248 250 252 / 0.85);
+}
+
+.dark .inventory-module-page table thead,
+.dark table.inventory-global-table thead {
+  background-color: rgb(24 24 27 / 0.85);
+}
+
+.inventory-module-page table thead th,
+table.inventory-global-table thead th {
+  height: 42px;
+  padding: 10px 16px;
+  font-size: 11px !important;
+  line-height: 1.25;
+  font-weight: 700 !important;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  color: rgb(100 116 139) !important;
+  border-bottom: 1px solid rgb(226 232 240 / 0.85);
+  white-space: nowrap;
+}
+
+.dark .inventory-module-page table thead th,
+.dark table.inventory-global-table thead th {
+  color: rgb(161 161 170) !important;
+  border-bottom-color: rgb(39 39 42 / 0.85);
+}
+
+/* Unified Table Body & Cells */
+.inventory-module-page table tbody td,
+table.inventory-global-table tbody td {
+  padding: 12px 16px;
+  font-size: 12px !important;
+  line-height: 1.5;
+  color: rgb(51 65 85);
+  border-bottom: 1px solid rgb(241 245 249);
+  vertical-align: middle;
+}
+
+.dark .inventory-module-page table tbody td,
+.dark table.inventory-global-table tbody td {
+  color: rgb(212 212 216);
+  border-bottom-color: rgb(39 39 42 / 0.6);
+}
+
+/* Unified Table Row Hover Feedback */
+.inventory-module-page table tbody tr,
+table.inventory-global-table tbody tr {
+  transition: background-color 120ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.inventory-module-page table tbody tr:hover,
+table.inventory-global-table tbody tr:hover {
+  background-color: rgb(248 250 252 / 0.95) !important;
+}
+
+.dark .inventory-module-page table tbody tr:hover,
+.dark table.inventory-global-table tbody tr:hover {
+  background-color: rgb(39 39 42 / 0.5) !important;
+}
+
+/* Unified Container Box for Tables */
+.inventory-module-page .overflow-hidden.rounded-2xl.border,
+.inventory-table-container {
+  border-radius: 16px !important;
+  border: 1px solid rgb(226 232 240 / 0.85) !important;
+  background-color: rgb(255 255 255) !important;
+  box-shadow: 0 1px 3px 0 rgb(15 23 42 / 0.04);
+}
+
+.dark .inventory-module-page .overflow-hidden.rounded-2xl.border,
+.dark .inventory-table-container {
+  border-color: rgb(39 39 42 / 0.85) !important;
+  background-color: rgb(24 24 27) !important;
+}
+
+/* Unified Typography Hierarchy across ALL Modules */
+.inventory-module-page h1 {
+  font-size: 20px !important;
+  line-height: 28px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+}
+
+.inventory-module-page h2 {
+  font-size: 14px !important;
+  line-height: 20px !important;
+  font-weight: 700 !important;
+}
+
+.inventory-module-page h3 {
+  font-size: 13px !important;
+  line-height: 18px !important;
+  font-weight: 600 !important;
+}
+
+.inventory-module-page p {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Global scrollbars for horizontal data tables */
+.overflow-x-auto {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(203 213 225) transparent;
+}
+
+.dark .overflow-x-auto {
+  scrollbar-color: rgb(63 63 70) transparent;
 }

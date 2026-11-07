@@ -11,6 +11,7 @@ import {
   Check,
   RotateCcw,
   CheckCircle,
+  Trash2,
 } from "lucide-react";
 import {
   fetchStockReservations,
@@ -47,6 +48,16 @@ export function StockReservationsPage() {
     batch_number: "",
     remarks: "",
   });
+  const emptyReservationLine = () => ({
+    key: `${Date.now()}-${Math.random()}`,
+    product_id: "",
+    variant_id: "",
+    quantity: "",
+    unit: "",
+    available_quantity: 0,
+    batch_number: "",
+  });
+  const [reservationLines, setReservationLines] = useState([emptyReservationLine()]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -93,47 +104,140 @@ export function StockReservationsPage() {
       batch_number: "",
       remarks: "",
     });
+    setReservationLines([emptyReservationLine()]);
     setIsModalOpen(true);
+  };
+
+  const updateReservationLine = (key, patch) => {
+    setReservationLines((lines) =>
+      lines.map((line) => (line.key === key ? { ...line, ...patch } : line))
+    );
+  };
+
+  const selectReservationProduct = (key, productId) => {
+    const product = products.find((item) => String(item.id) === String(productId));
+    if (!product) {
+      updateReservationLine(key, {
+        product_id: "",
+        variant_id: "",
+        quantity: "",
+        unit: "",
+        available_quantity: 0,
+      });
+      return;
+    }
+    const warehouseBalance = balances.find((b) =>
+      (b.sku === (product.sku || product.code) || b.item_code === (product.sku || product.code)) &&
+      (b.warehouse_name === formData.warehouse || b.warehouse === formData.warehouse)
+    );
+    updateReservationLine(key, {
+      product_id: String(product.id),
+      variant_id: "",
+      quantity: "",
+      unit: product.unit || product.base_uom || "EA",
+      available_quantity: Number(
+        warehouseBalance?.available_stock ??
+        warehouseBalance?.available_qty ??
+        product.available ??
+        product.on_hand ??
+        0
+      ),
+    });
+  };
+
+  const selectReservationVariant = (key, variantId) => {
+    const line = reservationLines.find((item) => item.key === key);
+    const product = products.find((item) => String(item.id) === String(line?.product_id));
+    const variant = product?.variants?.find((item) => String(item.id) === String(variantId));
+    updateReservationLine(key, {
+      variant_id: variantId,
+      unit: variant?.base_uom || variant?.uom || product?.base_uom || product?.unit || "EA",
+      available_quantity: Number(
+        variant?.available ?? variant?.on_hand ?? product?.available ?? product?.on_hand ?? 0
+      ),
+    });
   };
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    const qty = Number(formData.reservation_quantity);
-    if (!qty || qty <= 0) {
-      showToast("Reservation quantity must be greater than zero.");
-      return;
-    }
-    if (qty > formData.available_quantity) {
-      showToast(`Warning: Requested quantity (${qty}) exceeds available stock (${formData.available_quantity}).`);
-    }
-
     try {
-      const selectedProd = products.find((p) => p.sku === formData.product_sku) || {};
-      const payload = {
-        reservation_number: formData.reservation_number,
-        reservation_date: formData.reservation_date,
-        reservation_type: formData.reservation_type,
-        reference_number: formData.reference_number,
-        product_name: selectedProd.name || "Industrial Component",
-        item_name: selectedProd.name || "Industrial Component",
-        sku: formData.product_sku,
-        item_sku: formData.product_sku,
-        item_id: selectedProd.id,
-        warehouse: formData.warehouse,
-        warehouse_name: formData.warehouse,
-        available_quantity: formData.available_quantity,
-        reservation_quantity: qty,
-        quantity: qty,
-        required_date: formData.required_date || null,
-        batch_number: formData.batch_number,
-        remarks: formData.remarks,
-        status: "RESERVED",
-      };
+      if (!reservationLines.length) {
+        showToast("Add at least one product to the reservation.");
+        return;
+      }
 
-      const created = await createStockReservation(payload);
-      setReservations((prev) => [created, ...prev.filter((r) => r.id !== created.id)]);
+      const seenProducts = new Set();
+      const createdReservations = [];
+      for (let index = 0; index < reservationLines.length; index++) {
+        const line = reservationLines[index];
+        const selectedProd = products.find((product) => String(product.id) === String(line.product_id));
+        if (!selectedProd) {
+          showToast(`Line ${index + 1}: Product is required.`);
+          return;
+        }
+        if (selectedProd.variants?.length && !line.variant_id) {
+          showToast(`Line ${index + 1}: Variant is required.`);
+          return;
+        }
+        const productKey = `${line.product_id}:${line.variant_id || "base"}`;
+        if (seenProducts.has(productKey)) {
+          showToast(`Line ${index + 1}: Duplicate product/variant is not allowed.`);
+          return;
+        }
+        seenProducts.add(productKey);
+
+        const qty = Number(line.quantity);
+        if (!qty || qty <= 0) {
+          showToast(`Line ${index + 1}: Reservation Quantity must be greater than zero.`);
+          return;
+        }
+        if (qty > Number(line.available_quantity || 0)) {
+          showToast(`Line ${index + 1}: Requested quantity (${qty}) exceeds available stock (${line.available_quantity}).`);
+          return;
+        }
+
+        const tracking = selectedProd.tracking;
+        if ((tracking === "BATCH" || tracking === "Batch / Lot") && !line.batch_number.trim()) {
+          showToast(`Line ${index + 1}: Batch Number is required.`);
+          return;
+        }
+
+        const variant = selectedProd.variants?.find((item) => String(item.id) === String(line.variant_id));
+        const payload = {
+          reservation_number:
+            reservationLines.length === 1
+              ? formData.reservation_number
+              : `${formData.reservation_number}-${index + 1}`,
+          reservation_date: formData.reservation_date,
+          reservation_type: formData.reservation_type,
+          reference_number: formData.reference_number,
+          product_name: variant?.name || selectedProd.name || "Industrial Component",
+          item_name: variant?.name || selectedProd.name || "Industrial Component",
+          sku: variant?.sku || variant?.code || selectedProd.sku || selectedProd.code,
+          item_sku: variant?.sku || variant?.code || selectedProd.sku || selectedProd.code,
+          item_id: selectedProd.id,
+          variant_id: line.variant_id ? Number(line.variant_id) : null,
+          warehouse: formData.warehouse,
+          warehouse_name: formData.warehouse,
+          available_quantity: line.available_quantity,
+          reservation_quantity: qty,
+          quantity: qty,
+          required_date: formData.required_date || null,
+          batch_number: line.batch_number,
+          remarks: formData.remarks,
+          status: "RESERVED",
+        };
+        createdReservations.push(await createStockReservation(payload));
+      }
+
+      setReservations((prev) => [
+        ...createdReservations,
+        ...prev.filter((existing) =>
+          !createdReservations.some((created) => String(created.id) === String(existing.id))
+        ),
+      ]);
       setIsModalOpen(false);
-      showToast(`Reservation ${formData.reservation_number} confirmed. Available stock adjusted.`);
+      showToast(`${createdReservations.length} reservation${createdReservations.length > 1 ? "s" : ""} confirmed.`);
       loadData();
     } catch (err) {
       showToast("Failed to create reservation: " + err.message);
@@ -421,7 +525,7 @@ export function StockReservationsPage() {
       {/* Create Reservation Modal - Exact Phase 4 fields */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="w-full max-w-lg rounded-3xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 shadow-2xl space-y-4 my-8">
+          <div className="w-full max-w-5xl rounded-3xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 shadow-2xl space-y-4 my-8">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
               <div>
                 <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -506,34 +610,6 @@ export function StockReservationsPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                {/* 5. Product */}
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Product *
-                  </label>
-                  <select
-                    required
-                    value={formData.product_sku}
-                    onChange={(e) => setFormData({ ...formData, product_sku: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  >
-                    {products.length > 0 ? (
-                      products.map((p) => (
-                        <option key={p.id || p.sku} value={p.sku || p.code}>
-                          {p.sku || p.code} - {p.name}
-                        </option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="BRG-6205-2RS">BRG-6205-2RS - Industrial Ball Bearing</option>
-                        <option value="HYD-SV-24V">HYD-SV-24V - Hydraulic Solenoid Valve</option>
-                        <option value="BELT-T10-1200">BELT-T10-1200 - Polyurethane Belt</option>
-                        <option value="LUB-SYN-VG46">LUB-SYN-VG46 - Compressor Lubricant</option>
-                      </>
-                    )}
-                  </select>
-                </div>
-
                 {/* 6. Warehouse */}
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
@@ -562,37 +638,130 @@ export function StockReservationsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                {/* 7. Available Quantity (Auto-filled) */}
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Available Quantity (Auto-filled) *
-                  </label>
-                  <input
-                    type="number"
-                    readOnly
-                    value={formData.available_quantity}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-800/80 text-emerald-600 dark:text-emerald-400 font-mono font-bold cursor-not-allowed"
-                  />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-slate-800 dark:text-zinc-200">Products</div>
+                    <div className="text-[10px] text-slate-400">Add one or more products to this reservation</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setReservationLines((lines) => [...lines, emptyReservationLine()])}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-purple-300 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300 font-semibold"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add Product
+                  </button>
                 </div>
 
-                {/* 8. Reservation Quantity */}
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Reservation Quantity *
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={formData.reservation_quantity}
-                    onChange={(e) => setFormData({ ...formData, reservation_quantity: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white tabular-nums font-bold focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
+                {reservationLines.map((line, index) => {
+                  const product = products.find((item) => String(item.id) === String(line.product_id));
+                  const variants = product?.variants || [];
+                  const variant = variants.find((item) => String(item.id) === String(line.variant_id));
+                  const sku = variant?.sku || variant?.code || product?.sku || product?.code || "";
+                  const barcode = variant?.barcode || product?.barcode || "";
+                  const tracking = product?.tracking;
+                  const isBatchTracked = tracking === "BATCH" || tracking === "Batch / Lot";
+
+                  return (
+                    <div key={line.key} className="rounded-xl border border-purple-200 dark:border-purple-900/60 bg-purple-50/30 dark:bg-purple-950/20 p-3 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300">
+                          Product {index + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setReservationLines((lines) => lines.filter((item) => item.key !== line.key))}
+                          disabled={reservationLines.length === 1}
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Remove
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-3">
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Product *</label>
+                          <select
+                            required
+                            value={line.product_id}
+                            onChange={(e) => selectReservationProduct(line.key, e.target.value)}
+                            className="w-full px-2 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 text-xs font-medium"
+                          >
+                            <option value="">Select product</option>
+                            {products.map((item) => (
+                              <option key={item.id || item.sku} value={item.id}>
+                                {item.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                            Variant {variants.length > 0 && "*"}
+                          </label>
+                          <select
+                            value={line.variant_id}
+                            onChange={(e) => selectReservationVariant(line.key, e.target.value)}
+                            disabled={!product || variants.length === 0}
+                            className="w-full px-2 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 text-xs disabled:opacity-60"
+                          >
+                            <option value="">No variant</option>
+                            {variants.map((item) => (
+                              <option key={item.id} value={item.id}>{item.name || item.code || item.sku}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">SKU</label>
+                          <input value={sku} readOnly className="w-full px-2 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-800 text-xs font-mono" />
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Barcode</label>
+                          <input value={barcode} readOnly className="w-full px-2 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-800 text-xs font-mono" />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-3">
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Available Quantity</label>
+                          <input value={line.available_quantity || 0} readOnly className="w-full px-2 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-bold" />
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Reservation Quantity *</label>
+                          <input
+                            type="number"
+                            min="1"
+                            required
+                            value={line.quantity}
+                            onChange={(e) => updateReservationLine(line.key, { quantity: e.target.value })}
+                            className="w-full px-2 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white text-xs font-mono font-bold"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">UOM</label>
+                          <input value={line.unit || ""} readOnly className="w-full px-2 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-800 text-xs font-mono font-semibold" />
+                        </div>
+                        {isBatchTracked && (
+                          <div>
+                            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Batch Number *</label>
+                            <input
+                              required
+                              value={line.batch_number}
+                              onChange={(e) => updateReservationLine(line.key, { batch_number: e.target.value })}
+                              placeholder="Batch / lot number"
+                              className="w-full px-2 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-mono"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div>
                 {/* 9. Required Date */}
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
@@ -606,19 +775,6 @@ export function StockReservationsPage() {
                   />
                 </div>
 
-                {/* 10. Batch Number */}
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Batch Number (Conditional)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.batch_number}
-                    onChange={(e) => setFormData({ ...formData, batch_number: e.target.value })}
-                    placeholder="e.g. LOT-2026-BRG-01"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
               </div>
 
               {/* 11. Remarks */}

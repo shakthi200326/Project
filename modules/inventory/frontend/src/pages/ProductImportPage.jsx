@@ -87,7 +87,7 @@ export function ProductImportPage() {
           </p>
         </div>
         <Link
-          to="/inventory/products/import-history"
+          to="/inventory/products/data-management?tab=history"
           className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
         >
           <History className="w-4 h-4" />
@@ -376,4 +376,3 @@ export function ProductImportPage() {
   );
 }
 export default ProductImportPage;
-

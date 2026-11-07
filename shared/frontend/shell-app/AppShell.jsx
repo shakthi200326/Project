@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
+  Upload,
+  Download,
+  Camera,
   Package,
   Layers,
   Tag,
@@ -48,12 +51,26 @@ import {
   BarChart3,
   ClipboardCheck,
   RefreshCw,
+  Zap,
   BookOpen,
+  ClipboardList,
+  ScanSearch,
+  FlaskConical,
+  PackageCheck,
+  PackageX,
+  Split,
+  Layers3,
+  FileWarning,
+  Users,
+  KeyRound,
+  FileText,
+  FileDiff,
+  Shield,
 } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 import { useWorkspace } from "./ContextSelector";
 import { CommandPaletteModal } from "../../../modules/inventory/frontend/src/components/CommandPaletteModal.jsx";
-import { getApiStatus, subscribeApiStatus } from "../../../modules/inventory/frontend/src/services/api.js";
+import { API_BASE, getApiStatus, subscribeApiStatus } from "../../../modules/inventory/frontend/src/services/api.js";
 
 export function AppShell({ children }) {
   const location = useLocation();
@@ -64,42 +81,15 @@ export function AppShell({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState([
-    {
-      id: "notif-1",
-      title: "Low Stock Alert",
-      description: "Hydraulic Pump HP-400 dropped below reorder threshold (8 units on-hand vs 25 min).",
-      time: "10m ago",
-      unread: true,
-      type: "warning",
-      path: "/inventory/planning/replenishment",
-    },
-    {
-      id: "notif-2",
-      title: "Stock Reconciliation Completed",
-      description: "Cycle count REC-2026-001 reconciled with zero variance across Zone A.",
-      time: "1h ago",
-      unread: true,
-      type: "success",
-      path: "/inventory/operations/reconciliation",
-    },
-    {
-      id: "notif-3",
-      title: "Goods Receipt Posted",
-      description: "GRN-2026-089: 150 EA Precision Bearings received and quarantined.",
-      time: "3h ago",
-      unread: false,
-      type: "info",
-      path: "/inventory/operations/stock-in",
-    },
-  ]);
+  const [notifications, setNotifications] = useState([]);
   const [isApiLive, setIsApiLive] = useState(getApiStatus());
   const [openGroups, setOpenGroups] = useState({
-    catalog: true,
-    warehouses: true,
+    product_management: true,
+    warehouse_management: false,
     operations: true,
-    control: false,
-    tracking: true,
+    goods_receipt: true,
+    control: true,
+    tracking: false,
     planning: false,
     audit: false,
     analytics: false,
@@ -110,6 +100,51 @@ export function AppShell({ children }) {
     return unsub;
   }, []);
 
+  const refreshNotifications = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE}/inventory/notifications/alerts/?active=true&unread=true`);
+      if (!response.ok) throw new Error(`Notification request failed (HTTP ${response.status}).`);
+      const data = await response.json();
+      setNotifications((data.results || []).map((alert) => ({
+        id: alert.id,
+        title: alert.title,
+        description: alert.description,
+        time: new Date(alert.last_seen_at).toLocaleString(),
+        unread: !alert.is_read,
+        type: alert.severity === "CRITICAL" ? "warning" : "info",
+        path: alert.action_url,
+      })));
+    } catch (error) {
+      console.error("Failed to load in-app inventory notifications.", error);
+    }
+  }, []);
+
+  const markNotificationRead = useCallback(async (id) => {
+    try {
+      const response = await fetch(`${API_BASE}/inventory/notifications/alerts/${id}/read/`, { method: "POST" });
+      if (!response.ok) throw new Error(`Mark-read request failed (HTTP ${response.status}).`);
+      setNotifications((items) => items.filter((item) => item.id !== id));
+    } catch (error) {
+      console.error("Failed to mark inventory notification as read.", error);
+    }
+  }, []);
+
+  const markAllNotificationsRead = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE}/inventory/notifications/alerts/read-all/`, { method: "POST" });
+      if (!response.ok) throw new Error(`Mark-all-read request failed (HTTP ${response.status}).`);
+      setNotifications([]);
+    } catch (error) {
+      console.error("Failed to mark all inventory notifications as read.", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshNotifications();
+    const timer = setInterval(refreshNotifications, 60000);
+    return () => clearInterval(timer);
+  }, [refreshNotifications]);
+
   useEffect(() => {
     const path = location.pathname;
     if (
@@ -117,19 +152,30 @@ export function AppShell({ children }) {
       path.startsWith("/inventory/categories") ||
       path.startsWith("/inventory/brands") ||
       path.startsWith("/inventory/units") ||
-      path.startsWith("/inventory/barcodes")
+      path.startsWith("/inventory/attributes") ||
+      path.startsWith("/inventory/skus") ||
+      path.startsWith("/inventory/barcodes") ||
+      path === "/inventory/variants"
     ) {
-      setOpenGroups((p) => ({ ...p, catalog: true }));
+      setOpenGroups((p) => ({ ...p, product_management: true }));
     } else if (
       path.startsWith("/inventory/warehouses") ||
       path.startsWith("/inventory/locations") ||
-      path.startsWith("/inventory/racks-bins")
+      path.startsWith("/inventory/storage-structure") ||
+      path.startsWith("/inventory/racks-bins") ||
+      path.startsWith("/inventory/zones") ||
+      path.startsWith("/inventory/racks") ||
+      path.startsWith("/inventory/bins")
     ) {
-      setOpenGroups((p) => ({ ...p, warehouses: true }));
+      setOpenGroups((p) => ({ ...p, warehouse_management: true }));
     } else if (path.startsWith("/inventory/operations")) {
       setOpenGroups((p) => ({ ...p, operations: true }));
+    } else if (path.startsWith("/inventory/goods-receipt")) {
+      setOpenGroups((p) => ({ ...p, goods_receipt: true }));
     } else if (path.startsWith("/inventory/control")) {
       setOpenGroups((p) => ({ ...p, control: true }));
+    } else if (path.startsWith("/inventory/reports")) {
+      setOpenGroups((p) => ({ ...p, analytics: true }));
     } else if (path.startsWith("/inventory/tracking")) {
       setOpenGroups((p) => ({ ...p, tracking: true }));
     } else if (path.startsWith("/inventory/planning")) {
@@ -152,14 +198,24 @@ export function AppShell({ children }) {
     const getBreadcrumbs = (pathname) => {
     const map = {
       "/inventory": [{ label: "Inventory", path: "/inventory" }, { label: "Executive Dashboard" }],
-      "/inventory/products": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Products" }],
+      "/inventory/products/overview": [{ label: "Inventory", path: "/inventory" }, { label: "Items & Products", path: "/inventory/products/overview" }, { label: "Product Overview" }],
+      "/inventory/products": [{ label: "Inventory", path: "/inventory" }, { label: "Product Management", path: "/inventory/products" }, { label: "Item Master" }],
+      "/inventory/products/data-management": [{ label: "Inventory", path: "/inventory" }, { label: "Product Management", path: "/inventory/products" }, { label: "Item Data Management" }],
+      "/inventory/products/variants": [{ label: "Inventory", path: "/inventory" }, { label: "Product Management", path: "/inventory/products" }, { label: "Product Variants" }],
+      "/inventory/attributes": [{ label: "Inventory", path: "/inventory" }, { label: "Product Classification", path: "/inventory/categories" }, { label: "Product Attributes" }],
+      "/inventory/skus": [{ label: "Inventory", path: "/inventory" }, { label: "Product Identification", path: "/inventory/skus" }, { label: "SKU Management" }],
+      "/inventory/products/media": [{ label: "Inventory", path: "/inventory" }, { label: "Product Media", path: "/inventory/products/media" }, { label: "Images & Attachments" }],
+      "/inventory/products/import": [{ label: "Inventory", path: "/inventory" }, { label: "Data Management", path: "/inventory/products/import" }, { label: "Import Items" }],
+      "/inventory/products/export": [{ label: "Inventory", path: "/inventory" }, { label: "Data Management", path: "/inventory/products/export" }, { label: "Export Items" }],
+      "/inventory/products/import-history": [{ label: "Inventory", path: "/inventory" }, { label: "Data Management", path: "/inventory/products/import-history" }, { label: "Import History" }],
       "/inventory/categories": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Categories" }],
       "/inventory/brands": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Brands" }],
       "/inventory/units": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Units of Measure" }],
       "/inventory/barcodes": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Barcodes & Tags" }],
-      "/inventory/warehouses": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Facility Overview" }],
-      "/inventory/locations": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Storage Locations" }],
-      "/inventory/racks-bins": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Racks & Bins" }],
+      "/inventory/warehouses": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouse Management", path: "/inventory/warehouses" }, { label: "Warehouse Master" }],
+      "/inventory/locations": [{ label: "Inventory", path: "/inventory" }, { label: "Storage Locations" }],
+      "/inventory/locations/utilization": [{ label: "Inventory", path: "/inventory" }, { label: "Capacity Management", path: "/inventory/locations/utilization" }, { label: "Location Utilization" }],
+      "/inventory/warehouses/configuration": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouse Configuration", path: "/inventory/warehouses/configuration" }, { label: "Facility Configuration" }],
       "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Goods Receipt (GRN)" }],
       "/inventory/operations/goods-receipt": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Goods Receipt (GRN)" }],
       "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-out" }, { label: "Stock Issue (GIN)" }],
@@ -202,7 +258,23 @@ export function AppShell({ children }) {
       "/inventory/configuration/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Inventory Configuration", path: "/inventory/configuration/general" }, { label: "Valuation Settings" }],
       "/inventory/configuration/numbering": [{ label: "Inventory", path: "/inventory" }, { label: "Inventory Configuration", path: "/inventory/configuration/general" }, { label: "Document Numbering" }],
       "/inventory/configuration/approvals": [{ label: "Inventory", path: "/inventory" }, { label: "Inventory Configuration", path: "/inventory/configuration/general" }, { label: "Approval Settings" }],
+      "/inventory/notifications": [{ label: "Inventory", path: "/inventory" }, { label: "Notifications & Alerts" }],
       "/inventory/settings": [{ label: "Inventory", path: "/inventory" }, { label: "Inventory Configuration", path: "/inventory/configuration/general" }, { label: "General Settings" }],
+      "/inventory/integrations": [{ label: "Inventory", path: "/inventory" }, { label: "Integration & Events", path: "/inventory/integrations/dashboard" }, { label: "Integration Dashboard" }],
+      "/inventory/integrations/dashboard": [{ label: "Inventory", path: "/inventory" }, { label: "Integration & Events", path: "/inventory/integrations/dashboard" }, { label: "Integration Dashboard" }],
+      "/inventory/integrations/incoming": [{ label: "Inventory", path: "/inventory" }, { label: "Integration & Events", path: "/inventory/integrations/dashboard" }, { label: "Incoming Events" }],
+      "/inventory/integrations/outgoing": [{ label: "Inventory", path: "/inventory" }, { label: "Integration & Events", path: "/inventory/integrations/dashboard" }, { label: "Outgoing Events" }],
+      "/inventory/integrations/failed": [{ label: "Inventory", path: "/inventory" }, { label: "Integration & Events", path: "/inventory/integrations/dashboard" }, { label: "Failed Events" }],
+      "/inventory/integrations/history": [{ label: "Inventory", path: "/inventory" }, { label: "Integration & Events", path: "/inventory/integrations/dashboard" }, { label: "Event History" }],
+      "/inventory/integrations/settings": [{ label: "Inventory", path: "/inventory" }, { label: "Integration & Events", path: "/inventory/integrations/dashboard" }, { label: "Integration Settings" }],
+      "/security/users": [{ label: "Security & Audit", path: "/security/users" }, { label: "User Access Management" }],
+      "/security/roles": [{ label: "Security & Audit", path: "/security/roles" }, { label: "Role Management" }],
+      "/security/permissions": [{ label: "Security & Audit", path: "/security/permissions" }, { label: "Permission Management" }],
+      "/security/warehouse-access": [{ label: "Security & Audit", path: "/security/warehouse-access" }, { label: "Warehouse-level Permissions" }],
+      "/security/actions": [{ label: "Security & Audit", path: "/security/actions" }, { label: "Action-level Permissions" }],
+      "/security/activity-logs": [{ label: "Security & Audit", path: "/security/activity-logs" }, { label: "Activity Logs" }],
+      "/security/document-audit": [{ label: "Security & Audit", path: "/security/document-audit" }, { label: "Document Audit Trail" }],
+      "/security/data-history": [{ label: "Security & Audit", path: "/security/data-history" }, { label: "Data Change History" }],
     };
     return map[pathname] || [{ label: "Inventory", path: "/inventory" }, { label: "Module View" }];
   };
@@ -220,61 +292,86 @@ export function AppShell({ children }) {
       items: [{ label: "Dashboard", path: "/inventory", icon: LayoutDashboard }],
     },
     {
-      key: "catalog",
-      title: "Products & Catalog",
+      key: "product_management",
+      title: "Product Management",
       items: [
-        { label: "Products", path: "/inventory/products", icon: Package },
+        { label: "Product Overview", path: "/inventory/products/overview", icon: LayoutDashboard },
+        { label: "Item Master", path: "/inventory/products", icon: Package },
+        { label: "Product Variants", path: "/inventory/products/variants", icon: Boxes },
         { label: "Categories", path: "/inventory/categories", icon: Layers },
         { label: "Brands", path: "/inventory/brands", icon: Tag },
-        { label: "Units of Measure", path: "/inventory/units", icon: Ruler },
-        { label: "Barcodes & Tags", path: "/inventory/barcodes", icon: Barcode },
+        { label: "Units of Measurement (UOM)", path: "/inventory/units", icon: Ruler },
+        { label: "Product Attributes", path: "/inventory/attributes", icon: SlidersHorizontal },
+        { label: "SKU Management", path: "/inventory/skus", icon: Hash },
+        { label: "Barcode & QR Management", path: "/inventory/barcodes", icon: Barcode },
+        { label: "Item Data Management", path: "/inventory/products/data-management", icon: Database },
       ],
     },
     {
-      key: "warehouses",
-      title: "Warehouses",
+      key: "warehouse_management",
+      title: "Warehouse Management",
       items: [
-        { label: "Facility Overview", path: "/inventory/warehouses", icon: Warehouse },
+        { label: "Warehouse Master", path: "/inventory/warehouses", icon: Warehouse },
         { label: "Storage Locations", path: "/inventory/locations", icon: MapPin },
-        { label: "Racks & Bins", path: "/inventory/racks-bins", icon: Layers },
+        { label: "Zone & Rack & Bin Management", path: "/inventory/racks-bins?tab=zones", icon: Layers },
+        { label: "Location Utilization", path: "/inventory/locations/utilization", icon: TrendingUp },
+        { label: "Warehouse Configuration", path: "/inventory/warehouses/configuration", icon: Settings },
+      ],
+    },
+    {
+      key: "goods_receipt",
+      title: "Goods Receipt & Inspection",
+      items: [
+        { label: "Receipt Register", path: "/inventory/goods-receipt/register", icon: ClipboardList },
+        { label: "Receipt Inspection", path: "/inventory/goods-receipt/inspection", icon: ScanSearch },
+        { label: "Quality Inspection", path: "/inventory/goods-receipt/quality", icon: FlaskConical },
+        { label: "Accepted Goods", path: "/inventory/goods-receipt/accepted", icon: PackageCheck },
+        { label: "Rejected Goods", path: "/inventory/goods-receipt/rejected", icon: PackageX },
+        { label: "Partial Acceptance", path: "/inventory/goods-receipt/partial", icon: Split },
+        { label: "Putaway Management", path: "/inventory/goods-receipt/putaway", icon: Layers3 },
+        { label: "Receipt Discrepancy", path: "/inventory/goods-receipt/discrepancies", icon: FileWarning },
+        { label: "Receipt History", path: "/inventory/goods-receipt/history", icon: History },
       ],
     },
     {
       key: "operations",
       title: "Stock Operations",
       items: [
-        { label: "Goods Receipt", path: "/inventory/operations/stock-in", icon: ArrowDownLeft },
-        { label: "Stock Issue", path: "/inventory/operations/stock-out", icon: ArrowUpRight },
-        { label: "Stock Transfer", path: "/inventory/operations/transfers", icon: ArrowLeftRight },
-        { label: "Stock Adjustment", path: "/inventory/operations/adjustments", icon: SlidersHorizontal },
-        { label: "Stock Return", path: "/inventory/operations/returns", icon: RotateCcw },
+        { label: "Stock In", path: "/inventory/operations/stock-in", icon: ArrowDownLeft },
+        { label: "Stock Issue", path: "/inventory/operations/stock-issue", icon: ArrowUpRight },
+        { label: "Stock Transfer", path: "/inventory/operations/stock-transfer", icon: ArrowLeftRight },
+        { label: "Inter-Warehouse Transfer", path: "/inventory/operations/inter-warehouse-transfer", icon: Building2 },
+        { label: "Stock Adjustment", path: "/inventory/operations/stock-adjustment", icon: SlidersHorizontal },
+        { label: "Stock Return", path: "/inventory/operations/stock-return", icon: RotateCcw },
+        { label: "Opening Stock", path: "/inventory/operations/opening-stock", icon: FileSpreadsheet },
+        { label: "Stock Reservation", path: "/inventory/operations/stock-reservation", icon: BookmarkCheck },
+        { label: "Stock Release", path: "/inventory/operations/stock-release", icon: CheckCircle2 },
+        { label: "Stock Reclassification", path: "/inventory/operations/stock-reclassification", icon: RefreshCw },
+        { label: "Stock Out", path: "/inventory/operations/stock-out", icon: Upload },
       ],
     },
     {
       key: "control",
       title: "Stock Control",
       items: [
-        { label: "Stock Overview", path: "/inventory/control/overview", icon: Boxes },
-        { label: "Stock Ledger", path: "/inventory/control/ledger", icon: FileSpreadsheet },
-        { label: "Stock In History", path: "/inventory/control/stock-in-history", icon: ArrowDownLeft },
-        { label: "Stock Out History", path: "/inventory/control/stock-out-history", icon: ArrowUpRight },
-        { label: "Stock Reservation", path: "/inventory/control/reservations", icon: BookmarkCheck },
-        { label: "Stock Reconciliation", path: "/inventory/control/reconciliation", icon: Scale },
-        { label: "Damaged Stock", path: "/inventory/control/damaged", icon: ShieldAlert },
+        { label: "Stock Overview & Levels", path: "/inventory/control/overview", icon: Boxes },
         { label: "Stock in Transit", path: "/inventory/control/transit", icon: Truck },
+        { label: "Reorder Level", path: "/inventory/control/reorder-levels", icon: AlertTriangle },
+        { label: "Stock Aging", path: "/inventory/control/aging", icon: Clock },
+        { label: "Stock Ledger", path: "/inventory/control/ledger", icon: FileSpreadsheet },
+        { label: "Stock History", path: "/inventory/control/history", icon: History },
+        { label: "Stock Reconciliation", path: "/inventory/control/reconciliation", icon: Scale },
       ],
     },
     {
       key: "tracking",
-      title: "Batch & Serial Tracking",
+      title: "Batch, Lot & Serial Tracking",
       items: [
-        { label: "Batch Management", path: "/inventory/tracking/batches", icon: Hash },
-        { label: "Batch Movement History", path: "/inventory/tracking/batch-movements", icon: History },
-        { label: "Batch Quarantine", path: "/inventory/tracking/batch-quarantine", icon: ShieldAlert },
-        { label: "Batch Release", path: "/inventory/tracking/batch-release", icon: ShieldCheck },
-        { label: "Expiry Management", path: "/inventory/tracking/expiry", icon: Calendar },
+        { label: "Batch & Lot Management", path: "/inventory/tracking/batches", icon: Layers },
         { label: "Serial Number Management", path: "/inventory/tracking/serials", icon: Cpu },
-        { label: "Serial Movement History", path: "/inventory/tracking/serial-movements", icon: Activity },
+        { label: "Date & Shelf Life", path: "/inventory/tracking/expiry", icon: Calendar },
+        { label: "Stock Allocation", path: "/inventory/tracking/allocation", icon: SlidersHorizontal },
+        { label: "Traceability & Recall", path: "/inventory/tracking/traceability", icon: Activity },
       ],
     },
     {
@@ -323,6 +420,33 @@ export function AppShell({ children }) {
         { label: "Valuation Settings", path: "/inventory/configuration/valuation", icon: DollarSign },
         { label: "Document Numbering", path: "/inventory/configuration/numbering", icon: Hash },
         { label: "Approval Settings", path: "/inventory/configuration/approvals", icon: ShieldCheck },
+        { label: "Goods Receipt & Inspection", path: "/inventory/configuration/goods-receipt", icon: ClipboardCheck },
+      ],
+    },
+    {
+      key: "integrations",
+      title: "Integration & Events",
+      items: [
+        { label: "Integration Dashboard", path: "/inventory/integrations/dashboard", icon: LayoutDashboard },
+        { label: "Incoming Events", path: "/inventory/integrations/incoming", icon: ArrowDownLeft },
+        { label: "Outgoing Events", path: "/inventory/integrations/outgoing", icon: ArrowUpRight },
+        { label: "Failed Events", path: "/inventory/integrations/failed", icon: ShieldAlert },
+        { label: "Event History", path: "/inventory/integrations/history", icon: History },
+        { label: "Integration Settings", path: "/inventory/integrations/settings", icon: Settings },
+      ],
+    },
+    {
+      key: "security_audit",
+      title: "Security & Audit",
+      items: [
+        { label: "User Access", path: "/security/users", icon: Users },
+        { label: "Role Management", path: "/security/roles", icon: KeyRound },
+        { label: "Permission Management", path: "/security/permissions", icon: ShieldAlert },
+        { label: "Warehouse-level Permissions", path: "/security/warehouse-access", icon: Warehouse },
+        { label: "Action-level Permissions", path: "/security/actions", icon: Shield },
+        { label: "Activity Logs", path: "/security/activity-logs", icon: Activity },
+        { label: "Document Audit Trail", path: "/security/document-audit", icon: FileText },
+        { label: "Data Change History", path: "/security/data-history", icon: FileDiff },
       ],
     },
   ];
@@ -335,9 +459,11 @@ export function AppShell({ children }) {
       "/inventory/brands": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Brands" }],
       "/inventory/units": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Units of Measure" }],
       "/inventory/barcodes": [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Barcodes & Tags" }],
-      "/inventory/warehouses": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Facility Overview" }],
-      "/inventory/locations": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Storage Locations" }],
-      "/inventory/racks-bins": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouses", path: "/inventory/warehouses" }, { label: "Racks & Bins" }],
+      "/inventory/warehouses": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouse Management", path: "/inventory/warehouses" }, { label: "Warehouse Master" }],
+      "/inventory/locations": [{ label: "Inventory", path: "/inventory" }, { label: "Storage Locations" }],
+      "/inventory/racks-bins": [{ label: "Inventory", path: "/inventory" }, { label: "Zone & Rack & Bin Management" }],
+      "/inventory/locations/utilization": [{ label: "Inventory", path: "/inventory" }, { label: "Capacity Management", path: "/inventory/locations/utilization" }, { label: "Location Utilization" }],
+      "/inventory/warehouses/configuration": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouse Configuration", path: "/inventory/warehouses/configuration" }, { label: "Facility Configuration" }],
       "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Goods Receipt" }],
       "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-out" }, { label: "Stock Issue" }],
       "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/transfers" }, { label: "Stock Transfer" }],
@@ -346,24 +472,29 @@ export function AppShell({ children }) {
       "/inventory/returns": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/returns" }, { label: "Stock Return" }],
       "/inventory/operations/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/reservations" }, { label: "Stock Reservation" }],
       "/inventory/operations/reconciliation": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/reconciliation" }, { label: "Stock Reconciliation" }],
-      "/inventory/control/overview": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock Overview" }],
-      "/inventory/control/balances": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock Overview" }],
-      "/inventory/control/ledger": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock Ledger" }],
-      "/inventory/control/stock-in-history": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock In History" }],
-      "/inventory/control/stock-out-history": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock Out History" }],
-      "/inventory/control/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock Reservation" }],
-      "/inventory/control/reconciliation": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock Reconciliation" }],
-      "/inventory/control/damaged": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Damaged Stock" }],
+      "/inventory/control/overview": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock Overview & Levels" }],
+      "/inventory/control/balances": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock Overview & Levels" }],
       "/inventory/control/transit": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock in Transit" }],
+      "/inventory/control/reorder-levels": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Reorder Level" }],
+      "/inventory/control/aging": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock Aging" }],
+      "/inventory/control/ledger": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock Ledger" }],
+      "/inventory/control/history": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock History" }],
+      "/inventory/control/reconciliation": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock Reconciliation" }],
+      "/inventory/control/stock-in-history": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock History" }],
+      "/inventory/control/stock-out-history": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock History" }],
+      "/inventory/control/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock Reservation" }],
+      "/inventory/control/damaged": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Damaged Stock" }],
       "/inventory/control/batches": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Batch Tracking" }],
       "/inventory/control/serials": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Serial Registry" }],
-      "/inventory/tracking/batches": [{ label: "Inventory", path: "/inventory" }, { label: "Batch & Serial Tracking", path: "/inventory/tracking/batches" }, { label: "Batch Management" }],
-      "/inventory/tracking/batch-movements": [{ label: "Inventory", path: "/inventory" }, { label: "Batch & Serial Tracking", path: "/inventory/tracking/batches" }, { label: "Batch Movement History" }],
-      "/inventory/tracking/batch-quarantine": [{ label: "Inventory", path: "/inventory" }, { label: "Batch & Serial Tracking", path: "/inventory/tracking/batches" }, { label: "Batch Quarantine" }],
-      "/inventory/tracking/batch-release": [{ label: "Inventory", path: "/inventory" }, { label: "Batch & Serial Tracking", path: "/inventory/tracking/batches" }, { label: "Batch Release" }],
-      "/inventory/tracking/expiry": [{ label: "Inventory", path: "/inventory" }, { label: "Batch & Serial Tracking", path: "/inventory/tracking/batches" }, { label: "Expiry Management" }],
-      "/inventory/tracking/serials": [{ label: "Inventory", path: "/inventory" }, { label: "Batch & Serial Tracking", path: "/inventory/tracking/serials" }, { label: "Serial Number Management" }],
-      "/inventory/tracking/serial-movements": [{ label: "Inventory", path: "/inventory" }, { label: "Batch & Serial Tracking", path: "/inventory/tracking/serials" }, { label: "Serial Movement History" }],
+      "/inventory/tracking/batches": [{ label: "Inventory", path: "/inventory" }, { label: "Batch, Lot & Serial Tracking", path: "/inventory/tracking/batches" }, { label: "Batch & Lot Management" }],
+      "/inventory/tracking/serials": [{ label: "Inventory", path: "/inventory" }, { label: "Batch, Lot & Serial Tracking", path: "/inventory/tracking/serials" }, { label: "Serial Number Management" }],
+      "/inventory/tracking/expiry": [{ label: "Inventory", path: "/inventory" }, { label: "Batch, Lot & Serial Tracking", path: "/inventory/tracking/expiry" }, { label: "Date & Shelf Life" }],
+      "/inventory/tracking/allocation": [{ label: "Inventory", path: "/inventory" }, { label: "Batch, Lot & Serial Tracking", path: "/inventory/tracking/allocation" }, { label: "Stock Allocation" }],
+      "/inventory/tracking/traceability": [{ label: "Inventory", path: "/inventory" }, { label: "Batch, Lot & Serial Tracking", path: "/inventory/tracking/traceability" }, { label: "Traceability & Recall" }],
+      "/inventory/tracking/batch-movements": [{ label: "Inventory", path: "/inventory" }, { label: "Batch, Lot & Serial Tracking", path: "/inventory/tracking/batches" }, { label: "Batch & Lot Management" }],
+      "/inventory/tracking/batch-quarantine": [{ label: "Inventory", path: "/inventory" }, { label: "Batch, Lot & Serial Tracking", path: "/inventory/tracking/batches" }, { label: "Batch & Lot Management" }],
+      "/inventory/tracking/batch-release": [{ label: "Inventory", path: "/inventory" }, { label: "Batch, Lot & Serial Tracking", path: "/inventory/tracking/batches" }, { label: "Batch & Lot Management" }],
+      "/inventory/tracking/serial-movements": [{ label: "Inventory", path: "/inventory" }, { label: "Batch, Lot & Serial Tracking", path: "/inventory/tracking/serials" }, { label: "Serial Number Management" }],
       "/inventory/planning/reorder-rules": [{ label: "Inventory", path: "/inventory" }, { label: "Planning & Replenishment", path: "/inventory/planning/reorder-rules" }, { label: "Reorder Rules" }],
       "/inventory/planning/min-max-levels": [{ label: "Inventory", path: "/inventory" }, { label: "Planning & Replenishment", path: "/inventory/planning/reorder-rules" }, { label: "Min / Max Stock Levels" }],
       "/inventory/planning/replenishment": [{ label: "Inventory", path: "/inventory" }, { label: "Planning & Replenishment", path: "/inventory/planning/reorder-rules" }, { label: "Replenishment Planning" }],
@@ -378,6 +509,18 @@ export function AppShell({ children }) {
       "/inventory/analytics/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Analytics Reports" }],
       "/inventory/settings": [{ label: "Inventory", path: "/inventory" }, { label: "Configuration" }, { label: "Inventory Settings" }],
     };
+    if (pathname.startsWith("/inventory/goods-receipt")) {
+      const grnRoot = [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/register" }];
+      const leaf = navGroups.find((g) => g.key === "goods_receipt").items.find((i) => pathname === i.path);
+      if (leaf) return [...grnRoot, { label: leaf.label }];
+      if (pathname.startsWith("/inventory/goods-receipt/receipts/")) {
+        return [...grnRoot, { label: pathname.endsWith("/edit") ? "Edit Receipt" : "Receipt Detail" }];
+      }
+      return grnRoot;
+    }
+    if (pathname === "/inventory/configuration/goods-receipt") {
+      return [{ label: "Inventory", path: "/inventory" }, { label: "Inventory Configuration", path: "/inventory/configuration/general" }, { label: "Goods Receipt & Inspection" }];
+    }
     return map[pathname] || [{ label: "Inventory", path: "/inventory" }, { label: "Module View" }];
   };
 
@@ -689,7 +832,10 @@ export function AppShell({ children }) {
             {/* Notification Bell with Dropdown */}
             <div className="relative">
               <button
-                onClick={() => setIsNotificationsOpen((prev) => !prev)}
+                onClick={() => {
+                  refreshNotifications();
+                  setIsNotificationsOpen((prev) => !prev);
+                }}
                 className="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 relative cursor-pointer"
                 title="Notifications"
                 aria-label="Toggle notifications menu"
@@ -719,9 +865,7 @@ export function AppShell({ children }) {
                       <div className="flex items-center gap-2">
                         {notifications.length > 0 && (
                           <button
-                            onClick={() =>
-                              setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })))
-                            }
+                            onClick={markAllNotificationsRead}
                             className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                           >
                             Mark all read
@@ -750,12 +894,8 @@ export function AppShell({ children }) {
                               if (n.path) {
                                 navigate(n.path);
                                 setIsNotificationsOpen(false);
-                                setNotifications((prev) =>
-                                  prev.map((item) =>
-                                    item.id === n.id ? { ...item, unread: false } : item
-                                  )
-                                );
                               }
+                              markNotificationRead(n.id);
                             }}
                             className={`p-3 flex items-start gap-3 hover:bg-slate-50/80 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer ${
                               n.unread ? "bg-blue-50/30 dark:bg-blue-950/20" : ""
@@ -792,9 +932,7 @@ export function AppShell({ children }) {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setNotifications((prev) =>
-                                  prev.filter((item) => item.id !== n.id)
-                                );
+                                markNotificationRead(n.id);
                               }}
                               className="p-1 rounded text-slate-300 hover:text-rose-500 dark:text-zinc-600 dark:hover:text-rose-400 shrink-0 cursor-pointer"
                               title="Dismiss"
@@ -806,19 +944,30 @@ export function AppShell({ children }) {
                       )}
                     </div>
 
-                    {notifications.length > 0 && (
-                      <div className="p-2 px-3 border-t border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40 flex items-center justify-between">
-                        <span className="text-[10px] text-slate-400">
-                          {notifications.length} active alert{notifications.length > 1 ? "s" : ""}
-                        </span>
+                    <div className="p-2 px-3 border-t border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40 flex items-center justify-between">
+                      <span className="text-[10px] text-slate-400">
+                        {notifications.length} unread alert{notifications.length === 1 ? "" : "s"}
+                      </span>
+                      <div className="flex items-center gap-3">
                         <button
-                          onClick={() => setNotifications([])}
+                          onClick={() => {
+                            navigate("/inventory/notifications");
+                            setIsNotificationsOpen(false);
+                          }}
+                          className="text-[10px] font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                        >
+                          View all
+                        </button>
+                        {notifications.length > 0 && (
+                        <button
+                          onClick={markAllNotificationsRead}
                           className="text-[10px] text-slate-500 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 font-medium cursor-pointer"
                         >
-                          Clear all
+                          Mark all read
                         </button>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </>
               )}
@@ -836,8 +985,44 @@ export function AppShell({ children }) {
         </header>
 
         {/* Viewport / Scrollable page body */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-slate-50/60 dark:bg-zinc-950">
-          <div className="max-w-7xl mx-auto space-y-6">
+        <main className={`flex-1 overflow-y-auto bg-slate-50/60 dark:bg-zinc-950 ${
+            location.pathname.includes("/inventory/tracking/") ||
+            location.pathname.includes("/inventory/control/batches") ||
+            location.pathname.includes("/inventory/control/serials") ||
+            location.pathname.includes("/inventory/control/expiry")
+              ? "p-0"
+              : "p-4 lg:p-6"
+          }`}>
+          <div className={`inventory-module-page inventory-dashboard-contract max-w-7xl mx-auto space-y-6 ${
+            location.pathname.includes("/inventory/operations/")
+              ? "inventory-stock-operations "
+              : ""
+          }${
+            location.pathname.includes("/inventory/goods-receipt")
+              ? "inventory-grn-page "
+              : ""
+          }${
+            location.pathname.includes("/inventory/tracking/") ||
+            location.pathname.includes("/inventory/control/batches") ||
+            location.pathname.includes("/inventory/control/serials") ||
+            location.pathname.includes("/inventory/control/expiry")
+              ? "inventory-tracking-page "
+              : ""
+          }${
+            location.pathname.includes("/inventory/product") ||
+            location.pathname.includes("/inventory/products") ||
+            location.pathname.includes("/inventory/variants") ||
+            location.pathname.includes("/inventory/categories") ||
+            location.pathname.includes("/inventory/brands") ||
+            location.pathname.includes("/inventory/units") ||
+            location.pathname.includes("/inventory/attributes") ||
+            location.pathname.includes("/inventory/sku") ||
+            location.pathname.includes("/inventory/skus") ||
+            location.pathname.includes("/inventory/barcodes") ||
+            location.pathname.includes("/inventory/item-data")
+              ? "inventory-product-page"
+              : ""
+          }`}>
             {children}
           </div>
         </main>

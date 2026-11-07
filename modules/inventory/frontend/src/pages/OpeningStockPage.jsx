@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   FileSpreadsheet,
   Plus,
@@ -14,6 +15,7 @@ import {
   RefreshCw,
   X,
   Check,
+  Upload,
 } from "lucide-react";
 import {
   fetchStockMovements,
@@ -25,6 +27,11 @@ import {
 } from "../services/api";
 
 export function OpeningStockPage() {
+  const navigate = useNavigate();
+  const newOpeningStockButtonRef = useRef(null);
+  const createOptionsDialogRef = useRef(null);
+  const manualEntryOptionRef = useRef(null);
+  const manualItemSelectRef = useRef(null);
   const [openingRecords, setOpeningRecords] = useState([]);
   const [products, setProducts] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
@@ -34,6 +41,7 @@ export function OpeningStockPage() {
   const [warehouseFilter, setWarehouseFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateOptions, setShowCreateOptions] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
   // Form state
@@ -77,6 +85,45 @@ export function OpeningStockPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!showCreateOptions) return undefined;
+    const focusInitialOption = window.requestAnimationFrame(() => {
+      manualEntryOptionRef.current?.focus();
+    });
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setShowCreateOptions(false);
+        window.requestAnimationFrame(() => newOpeningStockButtonRef.current?.focus());
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const buttons = createOptionsDialogRef.current?.querySelectorAll("button:not(:disabled)");
+      if (!buttons?.length) return;
+      const firstButton = buttons[0];
+      const lastButton = buttons[buttons.length - 1];
+      if (event.shiftKey && document.activeElement === firstButton) {
+        event.preventDefault();
+        lastButton.focus();
+      } else if (!event.shiftKey && document.activeElement === lastButton) {
+        event.preventDefault();
+        firstButton.focus();
+      } else if (!createOptionsDialogRef.current.contains(document.activeElement)) {
+        event.preventDefault();
+        firstButton.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.cancelAnimationFrame(focusInitialOption);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showCreateOptions]);
+
+  const dismissCreateOptions = () => {
+    setShowCreateOptions(false);
+    window.requestAnimationFrame(() => newOpeningStockButtonRef.current?.focus());
+  };
 
   const showToast = (msg, isError = false) => {
     setToastMessage({ text: msg, isError });
@@ -236,7 +283,8 @@ export function OpeningStockPage() {
             Refresh
           </button>
           <button
-            onClick={() => setShowCreateModal(true)}
+            ref={newOpeningStockButtonRef}
+            onClick={() => setShowCreateOptions(true)}
             className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 hover:bg-emerald-500 transition"
           >
             <Plus className="h-4 w-4" />
@@ -428,6 +476,79 @@ export function OpeningStockPage() {
         </div>
       </div>
 
+      {showCreateOptions && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) dismissCreateOptions();
+          }}
+        >
+          <section
+            ref={createOptionsDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="opening-stock-method-title"
+            className="w-full max-w-2xl rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl sm:p-6"
+          >
+            <div className="mb-5 flex items-start justify-between border-b border-slate-800 pb-4">
+              <div>
+                <h2 id="opening-stock-method-title" className="text-lg font-bold text-white">New Opening Stock</h2>
+                <p className="mt-1 text-sm text-slate-400">Choose how you want to initialize inventory balances.</p>
+              </div>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={dismissCreateOptions}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                ref={manualEntryOptionRef}
+                onClick={() => {
+                  setShowCreateOptions(false);
+                  setShowCreateModal(true);
+                  window.requestAnimationFrame(() => manualItemSelectRef.current?.focus());
+                }}
+                className="group rounded-xl border border-slate-700 bg-slate-800/50 p-5 text-left transition hover:border-purple-500 hover:bg-purple-500/10 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-purple-500/10 text-purple-400">
+                  <FileSpreadsheet className="h-5 w-5" />
+                </span>
+                <span className="block text-base font-semibold text-white">Manual Entry</span>
+                <span className="mt-1 block text-sm leading-5 text-slate-400">Create an opening balance for one item using the existing entry form.</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCreateOptions(false);
+                  navigate("/inventory/operations/opening-stock/import");
+                }}
+                className="group rounded-xl border border-slate-700 bg-slate-800/50 p-5 text-left transition hover:border-emerald-500 hover:bg-emerald-500/10 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+                  <Upload className="h-5 w-5" />
+                </span>
+                <span className="block text-base font-semibold text-white">Bulk Import</span>
+                <span className="mt-1 block text-sm leading-5 text-slate-400">Upload a CSV or Excel file to validate and post multiple opening balances.</span>
+              </button>
+            </div>
+            <div className="mt-5 flex justify-end border-t border-slate-800 pt-4">
+              <button
+                type="button"
+                onClick={dismissCreateOptions}
+                className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                Cancel
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
       {/* Create Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
@@ -456,6 +577,7 @@ export function OpeningStockPage() {
               <div className="md:col-span-2">
                 <label className="block text-xs font-medium text-slate-300 mb-1">Select Item *</label>
                 <select
+                  ref={manualItemSelectRef}
                   value={formData.item_id}
                   onChange={(e) => setFormData({ ...formData, item_id: e.target.value })}
                   className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-purple-500 focus:outline-none"
@@ -606,4 +728,3 @@ export function OpeningStockPage() {
 }
 
 export default OpeningStockPage;
-

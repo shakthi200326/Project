@@ -152,7 +152,7 @@ export function WarehouseOverviewPage() {
           </div>
           <div className="mt-3 flex items-center gap-2">
             <Link
-              to="/inventory/warehouses/capacity"
+              to="/inventory/warehouses"
               className="text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
             >
               Capacity Heatmap &rarr;
@@ -304,7 +304,7 @@ export function WarehouseOverviewPage() {
                         Zones
                       </Link>
                       <Link
-                        to={`/inventory/warehouses/capacity`}
+                        to="/inventory/warehouses"
                         className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
                       >
                         Capacity
@@ -328,4 +328,3 @@ export function WarehouseOverviewPage() {
   );
 }
 export default WarehouseOverviewPage;
-

@@ -15,8 +15,16 @@ import {
   Sliders,
   ChevronRight,
   ChevronLeft,
+  Image,
 } from "lucide-react";
-import { createProduct, fetchCategories, fetchBrands, fetchUnits, generateEan13 } from "../services/api";
+import {
+  createProduct,
+  fetchCategories,
+  fetchBrands,
+  fetchUnits,
+  generateEan13,
+  uploadAttachment,
+} from "../services/api";
 
 // Blank form; also used to reset after a product is saved.
 const EMPTY_PRODUCT_FORM = {
@@ -27,14 +35,15 @@ const EMPTY_PRODUCT_FORM = {
   description: "",
   category: "",
   category_id: null,
+  subcategory: null,
   brand: "",
   brand_id: null,
   item_type: "STOCK",
-  status: "ACTIVE",
+  status: "DRAFT",
   manufacturer: "",
   model_number: "",
   country_of_origin: "",
-  base_unit: "EA",
+  base_unit: "",
   base_uom: null,
   purchase_uom: null,
   sales_uom: null,
@@ -67,10 +76,11 @@ const EMPTY_PRODUCT_FORM = {
 export function CreateProductModal({ isOpen, onClose, onCreated }) {
   const [tab, setTab] = useState("basic");
   const steps = [
-    { key: "basic", label: "1. Basic & Identity" },
+    { key: "basic", label: "1. Basic & Classification" },
     { key: "tracking", label: "2. Policy & UOM" },
     { key: "costing", label: "3. Costing & Reorder" },
     { key: "specs", label: "4. Physical Specs & Barcode" },
+    { key: "media", label: "5. Product Media" },
   ];
   const currentStepIndex = steps.findIndex((step) => step.key === tab);
 
@@ -79,6 +89,9 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
   const [units, setUnits] = useState([]);
 
   const [formData, setFormData] = useState(EMPTY_PRODUCT_FORM);
+  const [mediaFiles, setMediaFiles] = useState([]);
+  const [createdItem, setCreatedItem] = useState(null);
+  const [uploadedMediaCount, setUploadedMediaCount] = useState(0);
 
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -87,26 +100,31 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
     if (isOpen) {
       setTab("basic");
       setError("");
-      fetchCategories().then((res) => {
-        const list = res.results || res || [];
-        setCategories(list);
-        if (list.length > 0 && !formData.category_id) {
-          setFormData((prev) => ({
-            ...prev,
-            category: list[0].name,
-            category_id: list[0].id,
-          }));
+      setFormData(EMPTY_PRODUCT_FORM);
+      setMediaFiles([]);
+      setCreatedItem(null);
+      setUploadedMediaCount(0);
+      Promise.allSettled([fetchCategories(), fetchBrands(), fetchUnits()]).then((results) => {
+        const [categoryResult, brandResult, unitResult] = results;
+        if (categoryResult.status === "fulfilled") {
+          setCategories(categoryResult.value.results || categoryResult.value || []);
+        } else {
+          setCategories([]);
         }
-      });
-
-      fetchBrands().then((res) => {
-        const list = res.results || res || [];
-        setBrands(list);
-      });
-
-      fetchUnits().then((res) => {
-        const list = res.results || res || [];
-        setUnits(list);
+        if (brandResult.status === "fulfilled") {
+          setBrands(brandResult.value.results || brandResult.value || []);
+        } else {
+          setBrands([]);
+        }
+        if (unitResult.status === "fulfilled") {
+          setUnits(unitResult.value.results || unitResult.value || []);
+        } else {
+          setUnits([]);
+        }
+        const failures = results.filter((result) => result.status === "rejected");
+        if (failures.length) {
+          setError("Some dropdown data could not be loaded. Check the connection and refresh before saving.");
+        }
       });
     }
   }, [isOpen]);
@@ -128,7 +146,32 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
       ...prev,
       category_id: cat ? cat.id : null,
       category: cat ? cat.name : "",
+      subcategory: null,
     }));
+  };
+
+  const handleBaseUomChange = (e) => {
+    const unit = units.find((u) => String(u.id) === e.target.value);
+    setFormData((prev) => ({
+      ...prev,
+      base_uom: unit ? unit.code : null,
+      base_unit: unit ? unit.code : "",
+    }));
+  };
+
+  const handleItemTypeChange = (e) => {
+    const itemType = e.target.value;
+    setFormData((prev) => itemType === "SERVICE" ? ({
+      ...prev,
+      item_type: itemType,
+      is_stockable: false,
+      track_inventory: false,
+      tracking: "NONE",
+      batch_tracking_required: false,
+      serial_tracking_required: false,
+      expiry_tracking_required: false,
+      has_variants: false,
+    }) : ({ ...prev, item_type: itemType }));
   };
 
   const handleBrandChange = (e) => {
@@ -154,8 +197,8 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
 
   const handleNext = () => {
     if (tab === "basic") {
-      if (!formData.code.trim() || !formData.name.trim()) {
-        setError("Item Code and Product Name are required.");
+      if (!formData.code.trim() || !formData.name.trim() || !formData.category_id) {
+        setError("Item Code, Item Name, and Category are required.");
         return;
       }
       setError("");
@@ -166,91 +209,117 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
     } else if (tab === "costing") {
       setError("");
       setTab("specs");
+    } else if (tab === "specs") {
+      setError("");
+      setTab("media");
     }
   };
 
   const handleBack = () => {
     setError("");
-    if (tab === "specs") setTab("costing");
+    if (tab === "media") setTab("specs");
+    else if (tab === "specs") setTab("costing");
     else if (tab === "costing") setTab("tracking");
     else if (tab === "tracking") setTab("basic");
   };
 
+  const finishCreate = () => {
+    setFormData(EMPTY_PRODUCT_FORM);
+    setMediaFiles([]);
+    setCreatedItem(null);
+    setUploadedMediaCount(0);
+    onClose();
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.code.trim() || !formData.name.trim()) {
-      setError("Item Code and Product Name are required.");
+    if (!formData.code.trim() || !formData.name.trim() || !formData.category_id) {
+      setError("Item Code, Item Name, and Category are required.");
       setTab("basic");
+      return;
+    }
+    if (formData.track_inventory && formData.is_stockable && !formData.base_uom) {
+      setError("Select a registered Base UOM for a stock-tracked item.");
+      setTab("tracking");
       return;
     }
 
     setError("");
     setSubmitting(true);
+    let item = createdItem;
 
     try {
-      const selectedCategory = categories.find(
-        (c) => String(c.id) === String(formData.category_id) || c.name === formData.category
-      );
-
-      const payload = {
-        code: formData.code.trim().toUpperCase(),
-        name: formData.name.trim(),
-        display_name: formData.display_name.trim() || formData.name.trim(),
-        short_description: formData.short_description.trim(),
-        description: formData.description.trim() || formData.short_description.trim(),
-        item_type: formData.item_type,
-        status: formData.status,
-        category: selectedCategory?.id || categories[0]?.id,
-        category_id: selectedCategory?.id || categories[0]?.id,
-        category_name: selectedCategory?.name || formData.category,
-        brand: formData.brand || "Preferred OEM",
-        brand_ref: formData.brand_id || null,
-        manufacturer: formData.manufacturer.trim(),
-        model_number: formData.model_number.trim(),
-        country_of_origin: formData.country_of_origin.trim().toUpperCase(),
-        base_unit: formData.base_unit || "EA",
-        base_uom: formData.base_uom || null,
-        purchase_uom: formData.purchase_uom || null,
-        sales_uom: formData.sales_uom || null,
-        track_inventory: formData.track_inventory,
-        is_stockable: formData.is_stockable,
-        is_purchasable: formData.is_purchasable,
-        is_salable: formData.is_salable,
-        allow_negative_stock: formData.allow_negative_stock,
-        tracking: formData.tracking,
-        batch_tracking_required: formData.batch_tracking_required,
-        serial_tracking_required: formData.serial_tracking_required,
-        expiry_tracking_required: formData.expiry_tracking_required,
-        has_variants: formData.has_variants,
-        standard_cost: Number(formData.standard_cost) || 0,
-        list_price: Number(formData.list_price) || 0,
-        reorder_point: Number(formData.reorder_point) || 0,
-        reorder_quantity: Number(formData.reorder_quantity) || 0,
-        min_order_qty: Number(formData.min_order_qty) || 1,
-        lead_time_days: Number(formData.lead_time_days) || 0,
-        purchase_tax_code: formData.purchase_tax_code.trim(),
-        sales_tax_code: formData.sales_tax_code.trim(),
-        net_weight: formData.net_weight ? Number(formData.net_weight) : null,
-        gross_weight: formData.gross_weight ? Number(formData.gross_weight) : null,
-        length: formData.length ? Number(formData.length) : null,
-        width: formData.width ? Number(formData.width) : null,
-        height: formData.height ? Number(formData.height) : null,
-        barcode: formData.barcode?.trim() || generateEan13(),
-      };
-
-      const created = await createProduct(payload);
-      if (onCreated) {
-        onCreated(created);
+      if (!item) {
+        const selectedCategory = categories.find(
+          (category) => String(category.id) === String(formData.category_id)
+        );
+        if (!selectedCategory) {
+          throw new Error("The selected category is unavailable. Refresh the form and try again.");
+        }
+        const payload = {
+          code: formData.code.trim().toUpperCase(),
+          name: formData.name.trim(),
+          display_name: formData.display_name.trim() || formData.name.trim(),
+          short_description: formData.short_description.trim(),
+          description: formData.description.trim(),
+          item_type: formData.item_type,
+          status: formData.status,
+          category: selectedCategory.id,
+          category_id: selectedCategory.id,
+          category_name: selectedCategory.name,
+          subcategory: formData.subcategory || null,
+          brand: formData.brand,
+          brand_ref: formData.brand_id || null,
+          manufacturer: formData.manufacturer.trim(),
+          model_number: formData.model_number.trim(),
+          country_of_origin: formData.country_of_origin.trim().toUpperCase(),
+          base_unit: formData.base_unit,
+          base_uom: formData.base_uom || null,
+          purchase_uom: formData.is_purchasable ? formData.purchase_uom : null,
+          sales_uom: formData.is_salable ? formData.sales_uom : null,
+          track_inventory: formData.track_inventory,
+          is_stockable: formData.is_stockable,
+          is_purchasable: formData.is_purchasable,
+          is_salable: formData.is_salable,
+          allow_negative_stock: formData.allow_negative_stock,
+          tracking: formData.tracking,
+          batch_tracking_required: formData.batch_tracking_required,
+          serial_tracking_required: formData.serial_tracking_required,
+          expiry_tracking_required: formData.expiry_tracking_required,
+          has_variants: formData.has_variants,
+          standard_cost: Number(formData.standard_cost) || 0,
+          list_price: Number(formData.list_price) || 0,
+          reorder_point: Number(formData.reorder_point) || 0,
+          reorder_quantity: Number(formData.reorder_quantity) || 0,
+          min_order_qty: Number(formData.min_order_qty) || 1,
+          lead_time_days: Number(formData.lead_time_days) || 0,
+          purchase_tax_code: formData.purchase_tax_code.trim(),
+          sales_tax_code: formData.sales_tax_code.trim(),
+          net_weight: formData.net_weight ? Number(formData.net_weight) : null,
+          gross_weight: formData.gross_weight ? Number(formData.gross_weight) : null,
+          length: formData.length ? Number(formData.length) : null,
+          width: formData.width ? Number(formData.width) : null,
+          height: formData.height ? Number(formData.height) : null,
+          barcode: formData.barcode?.trim() || generateEan13(),
+        };
+        item = await createProduct(payload);
+        setCreatedItem(item);
+        if (onCreated) onCreated(item);
       }
-      // Start the next product from a blank form (keep the default category).
-      setFormData((prev) => ({
-        ...EMPTY_PRODUCT_FORM,
-        category: prev.category,
-        category_id: prev.category_id,
-      }));
-      onClose();
+
+      for (let index = uploadedMediaCount; index < mediaFiles.length; index += 1) {
+        await uploadAttachment(
+          mediaFiles[index],
+          "apps.products.models.InventoryItem",
+          item.id
+        );
+        setUploadedMediaCount(index + 1);
+      }
+      finishCreate();
     } catch (err) {
-      setError(err.message || "Failed to register item. Please check network and field validity.");
+      setError(item
+        ? `Item was saved, but media upload failed: ${err.message}. Submit again to retry the remaining files.`
+        : err.message || "Failed to register item. Please check the fields and try again.");
     } finally {
       setSubmitting(false);
     }
@@ -282,6 +351,7 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
           </div>
           <button
             onClick={onClose}
+            disabled={submitting}
             className="shrink-0 p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
           >
             <X className="h-5 w-5" />
@@ -298,6 +368,7 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                 setTab(t.key);
               }}
               type="button"
+              disabled={submitting || Boolean(createdItem)}
               className={`py-3 font-semibold whitespace-nowrap border-b-2 transition-colors cursor-pointer ${
                 tab === t.key
                   ? "border-blue-600 text-blue-600 dark:text-blue-400"
@@ -375,7 +446,7 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                     <select
                       name="item_type"
                       value={formData.item_type}
-                      onChange={handleChange}
+                      onChange={handleItemTypeChange}
                       className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden cursor-pointer"
                     >
                       <option value="STOCK">Stockable Product</option>
@@ -402,6 +473,7 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                       className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden cursor-pointer"
                       required
                     >
+                      <option value="">-- Select Category --</option>
                       {categories.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.code} – {c.name}
@@ -409,6 +481,32 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                       ))}
                     </select>
                   </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Subcategory
+                    </label>
+                    <select
+                      value={formData.subcategory || ""}
+                      onChange={(e) => setFormData((prev) => ({
+                        ...prev,
+                        subcategory: e.target.value ? Number(e.target.value) : null,
+                      }))}
+                      disabled={!formData.category_id}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden cursor-pointer disabled:opacity-50"
+                    >
+                      <option value="">No subcategory</option>
+                      {categories
+                        .filter((category) => String(category.parent || "") === String(formData.category_id || ""))
+                        .map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.code} – {category.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
                       Brand / OEM Manufacturer
@@ -473,6 +571,20 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
 
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    rows={3}
+                    placeholder="Product details and specifications"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
                     Short Description (Invoices & PO lines)
                   </label>
                   <input
@@ -483,6 +595,22 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                     placeholder="Brief 1-sentence product summary"
                     className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
                   />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                    Status
+                  </label>
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden cursor-pointer"
+                  >
+                    <option value="DRAFT">Draft</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="INACTIVE">Inactive</option>
+                  </select>
                 </div>
               </div>
             )}
@@ -497,17 +625,22 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                     </label>
                     <select
                       name="base_unit"
-                      value={formData.base_unit}
-                      onChange={handleChange}
+                      value={units.find((unit) => unit.code === formData.base_unit)?.id || ""}
+                      onChange={handleBaseUomChange}
+                      required={formData.track_inventory && formData.is_stockable}
+                      disabled={units.length === 0 || !formData.track_inventory || !formData.is_stockable}
                       className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 outline-hidden cursor-pointer"
                     >
+                      <option value="">Select registered Base UOM</option>
                       {units.map((u) => (
-                        <option key={u.id} value={u.code}>
+                        <option key={u.id} value={u.id}>
                           {u.code} – {u.name} ({u.dimension})
                         </option>
                       ))}
-                      {units.length === 0 && <option value="EA">EA – Each</option>}
                     </select>
+                    {units.length === 0 && (
+                      <p className="mt-1 text-[10px] text-amber-600">Register a UOM before creating a stock-tracked item.</p>
+                    )}
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
@@ -631,7 +764,7 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                 <div className="flex items-center justify-between p-3 rounded-xl border border-indigo-100 dark:border-indigo-950/60 bg-indigo-50/40 dark:bg-indigo-950/20">
                   <div>
                     <div className="font-semibold text-slate-900 dark:text-white">Has Product Variants</div>
-                    <div className="text-[11px] text-slate-500 dark:text-zinc-400">Enable if product has sizes, colors, or technical variations.</div>
+                    <div className="text-[11px] text-slate-500 dark:text-zinc-400">Enable if product has sizes, colors, or technical variations. Configure combinations in Product Variants after saving.</div>
                   </div>
                   <input
                     type="checkbox"
@@ -858,6 +991,50 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
                 </div>
               </div>
             )}
+
+            {tab === "media" && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/40 p-4">
+                  <Image className="h-5 w-5 shrink-0 text-blue-600" />
+                  <div>
+                    <div className="font-semibold text-slate-800 dark:text-zinc-200">Product media and attachments</div>
+                    <p className="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">
+                      Files are attached to the saved item through shared file storage. You can also add them later from Product Media.
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                    Choose product images or documents
+                  </label>
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,.png,.jpg,.jpeg,.webp,.csv,.xlsx,.docx,.txt"
+                    disabled={Boolean(createdItem)}
+                    onChange={(e) => setMediaFiles(Array.from(e.target.files || []))}
+                    className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-950 dark:file:text-blue-300 disabled:opacity-50"
+                  />
+                  {mediaFiles.length > 0 && (
+                    <ul className="mt-2 space-y-1 text-[11px] text-slate-600 dark:text-zinc-400">
+                      {mediaFiles.map((file) => (
+                        <li key={`${file.name}-${file.size}-${file.lastModified}`}>{file.name}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {createdItem && (
+                    <p className="mt-2 text-[11px] text-emerald-700 dark:text-emerald-400">
+                      Item saved. Submit again to retry any media files that did not upload.
+                    </p>
+                  )}
+                </div>
+                {formData.has_variants && (
+                  <div className="rounded-lg border border-indigo-100 dark:border-indigo-900/60 bg-indigo-50/50 dark:bg-indigo-950/20 p-3 text-[11px] text-indigo-800 dark:text-indigo-300">
+                    This item is marked as variant-enabled. Configure variant combinations in the Product Variants module after saving.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Footer Controls */}
@@ -865,7 +1042,7 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
             <button
               type="button"
               onClick={handleBack}
-              disabled={tab === "basic"}
+              disabled={tab === "basic" || submitting || Boolean(createdItem)}
               className="px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 font-semibold hover:bg-slate-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5 cursor-pointer"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -876,29 +1053,42 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
               <button
                 type="button"
                 onClick={onClose}
+                disabled={submitting}
                 className="px-3.5 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-medium hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
 
-              {tab !== "specs" ? (
+              {tab !== "media" ? (
                 <button
                   type="button"
                   onClick={handleNext}
+                  disabled={submitting || Boolean(createdItem)}
                   className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   Next Step
                   <ChevronRight className="h-4 w-4" />
                 </button>
               ) : (
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-500/20 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  <Save className="h-4 w-4" />
-                  {submitting ? "Registering..." : "Save Product Master"}
-                </button>
+                createdItem ? (
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-500/20 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <Save className="h-4 w-4" />
+                    {submitting ? "Uploading..." : uploadedMediaCount < mediaFiles.length ? "Retry Media Upload" : "Finish"}
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-500/20 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <Save className="h-4 w-4" />
+                    {submitting ? "Saving..." : formData.status === "DRAFT" ? "Save Draft" : formData.status === "INACTIVE" ? "Save Inactive Item" : "Activate Item"}
+                  </button>
+                )
               )}
             </div>
           </div>

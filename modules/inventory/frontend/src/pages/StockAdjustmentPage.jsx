@@ -19,7 +19,6 @@ import {
   TrendingUp,
   Clock,
   Sparkles,
-  Barcode,
   Scale,
   FileSpreadsheet,
 } from "lucide-react";
@@ -640,11 +639,9 @@ export function StockAdjustmentPage() {
       <StockTransactionModal
         isOpen={isModalOpen}
         initialType="ADJUSTMENT"
-        lockType={true}
         onClose={() => setIsModalOpen(false)}
         onPosted={handleAdjustmentPosted}
       />
     </div>
   );
 }
-

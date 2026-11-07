@@ -140,7 +140,8 @@ function ReceiptForm({ grn, receiptId }) {
           navigate(`/inventory/goods-receipt/receipts/${rec.id}`, { replace: true });
           return;
         }
-        const itemIds = [...new Set(rec.lines.map((l) => l.item))];
+        const receiptLines = Array.isArray(rec.lines) ? rec.lines : [];
+        const itemIds = [...new Set(receiptLines.map((l) => l.item))];
         const items = Object.fromEntries(
           (await Promise.all(itemIds.map((i) => fetchReceiptItem(i)))).filter(Boolean).map((i) => [i.id, i])
         );
@@ -162,8 +163,8 @@ function ReceiptForm({ grn, receiptId }) {
           inspection_required: rec.inspection_required,
         });
         setLines(
-          rec.lines.length
-            ? rec.lines.map((l) => ({
+          receiptLines.length
+            ? receiptLines.map((l) => ({
                 key: String(l.id),
                 item: items[l.item] || { id: l.item, code: l.item_code, name: l.item_name, variants: [], uom_options: [l.uom], tracking: l.tracking, inactive: true },
                 variant: l.variant ? String(l.variant) : "",
@@ -321,7 +322,7 @@ function ReceiptForm({ grn, receiptId }) {
         const submitted = await receiptAction(saved.id, "submit");
         warnings.push(...(submitted.warnings || []));
       }
-      navigate(`/inventory/goods-receipt/receipts/${saved.id}`, {
+      navigate(submit ? "/inventory/goods-receipt/register" : `/inventory/goods-receipt/receipts/${saved.id}`, {
         state: { toast: `${saved.document_number} ${submit ? "submitted" : "saved as draft"}.`, warnings },
       });
     } catch (e) {

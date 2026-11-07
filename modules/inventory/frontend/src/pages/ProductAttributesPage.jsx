@@ -3,33 +3,37 @@ import {
   SlidersHorizontal,
   Plus,
   Search,
-  CheckCircle2,
-  Ban,
   RefreshCw,
-  Tag,
-  Layers,
-  Sparkles,
+  Pencil,
 } from "lucide-react";
-import { fetchAttributes, createAttribute, addAttributeValue } from "../services/api.js";
+import {
+  fetchAttributes,
+  createAttribute,
+  updateAttribute,
+  addAttributeValue,
+} from "../services/api.js";
 
 export function ProductAttributesPage() {
   const [attributes, setAttributes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [editingAttribute, setEditingAttribute] = useState(null);
 
   // New Attribute Form
   const [newCode, setNewCode] = useState("");
   const [newName, setNewName] = useState("");
-  const [newDataType, setNewDataType] = useState("TEXT");
-  const [isVariantGen, setIsVariantGen] = useState(false);
-  const [sortOrder, setSortOrder] = useState(0);
+  const [newConfiguredValues, setNewConfiguredValues] = useState("");
+  const [newIsActive, setNewIsActive] = useState(true);
 
   // Add Value Modal
   const [activeAttrForValue, setActiveAttrForValue] = useState(null);
   const [newValueInput, setNewValueInput] = useState("");
   const [addingValue, setAddingValue] = useState(false);
+  const [valueError, setValueError] = useState("");
 
   useEffect(() => {
     loadAttributes();
@@ -37,11 +41,12 @@ export function ProductAttributesPage() {
 
   const loadAttributes = async () => {
     setLoading(true);
+    setLoadError("");
     try {
-      const data = await fetchAttributes();
+      const data = await fetchAttributes({ throwOnError: true });
       setAttributes(data?.results || (Array.isArray(data) ? data : []));
     } catch (err) {
-      console.error("Failed to load attributes:", err);
+      setLoadError(err.message || "Failed to load product attributes.");
     } finally {
       setLoading(false);
     }
@@ -49,42 +54,88 @@ export function ProductAttributesPage() {
 
   const handleCreateAttribute = async (e) => {
     e.preventDefault();
-    if (!newCode.trim() || !newName.trim()) return;
+    setCreateError("");
+    const code = newCode.trim().toUpperCase();
+    const name = newName.trim();
+    if (!code || !name) {
+      setCreateError("Attribute code and name are required.");
+      return;
+    }
+    if (!/^[A-Z0-9_-]+$/.test(code)) {
+      setCreateError("Use only letters, numbers, underscores, and hyphens in the attribute code.");
+      return;
+    }
+    const configuredValues = [
+      ...new Map(
+        newConfiguredValues
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+          .map((value) => [value.toLowerCase(), value])
+      ).values(),
+    ];
     setCreating(true);
+    let savedAttribute = null;
     try {
-      await createAttribute({
-        code: newCode.trim().toUpperCase(),
-        name: newName.trim(),
-        data_type: newDataType,
-        is_variant_generator: isVariantGen,
-        sort_order: parseInt(sortOrder, 10) || 0,
-        is_active: true,
-      });
-      setIsCreateOpen(false);
-      setNewCode("");
-      setNewName("");
-      setNewDataType("TEXT");
-      setIsVariantGen(false);
-      setSortOrder(0);
-      loadAttributes();
+      savedAttribute = editingAttribute
+        ? await updateAttribute(editingAttribute.id, { code, name, is_active: newIsActive })
+        : await createAttribute({ code, name, is_active: newIsActive });
+      const existingValues = new Set(
+        (editingAttribute?.values || []).map((value) => value.value.toLowerCase())
+      );
+      for (const value of configuredValues) {
+        if (existingValues.has(value.toLowerCase())) continue;
+        try {
+          await addAttributeValue(savedAttribute.id, value);
+        } catch (err) {
+          throw new Error(`Attribute saved, but configured value "${value}" could not be added: ${err.message}`);
+        }
+      }
+      await loadAttributes();
+      closeAttributeForm();
     } catch (err) {
-      alert("Failed to create attribute: " + err.message);
+      if (savedAttribute) await loadAttributes();
+      setCreateError(
+        err.message ||
+          `Failed to ${editingAttribute ? "update" : "create"} attribute.`
+      );
     } finally {
       setCreating(false);
     }
   };
 
+  const openEditAttribute = (attribute) => {
+    setEditingAttribute(attribute);
+    setNewCode(attribute.code || "");
+    setNewName(attribute.name || "");
+    setNewConfiguredValues((attribute.values || []).map((value) => value.value).join(", "));
+    setNewIsActive(attribute.is_active !== false);
+    setCreateError("");
+    setIsCreateOpen(true);
+  };
+
+  const closeAttributeForm = () => {
+    setIsCreateOpen(false);
+    setEditingAttribute(null);
+    setNewCode("");
+    setNewName("");
+    setNewConfiguredValues("");
+    setNewIsActive(true);
+    setCreateError("");
+  };
+
   const handleAddValue = async (e) => {
     e.preventDefault();
     if (!newValueInput.trim() || !activeAttrForValue) return;
+    setValueError("");
     setAddingValue(true);
     try {
       await addAttributeValue(activeAttrForValue.id, newValueInput.trim());
       setNewValueInput("");
       setActiveAttrForValue(null);
-      loadAttributes();
+      await loadAttributes();
     } catch (err) {
-      alert("Failed to add attribute value: " + err.message);
+      setValueError(err.message || "Failed to add attribute value.");
     } finally {
       setAddingValue(false);
     }
@@ -95,8 +146,7 @@ export function ProductAttributesPage() {
     return (
       !search ||
       a.code?.toLowerCase().includes(q) ||
-      a.name?.toLowerCase().includes(q) ||
-      a.data_type?.toLowerCase().includes(q)
+      a.name?.toLowerCase().includes(q)
     );
   });
 
@@ -122,7 +172,10 @@ export function ProductAttributesPage() {
             Refresh
           </button>
           <button
-            onClick={() => setIsCreateOpen(true)}
+            onClick={() => {
+              closeAttributeForm();
+              setIsCreateOpen(true);
+            }}
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-colors"
           >
             <Plus className="w-4 h-4" />
@@ -139,7 +192,7 @@ export function ProductAttributesPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search attributes by code, name, data type..."
+            placeholder="Search attributes by code or name..."
             className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
@@ -153,10 +206,7 @@ export function ProductAttributesPage() {
               <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/75 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
                 <th className="py-3.5 px-4">Code</th>
                 <th className="py-3.5 px-4">Attribute Name</th>
-                <th className="py-3.5 px-4">Data Type</th>
-                <th className="py-3.5 px-4 text-center">Variant Generator</th>
                 <th className="py-3.5 px-4">Configured Values</th>
-                <th className="py-3.5 px-4 text-center">Sort Order</th>
                 <th className="py-3.5 px-4 text-center">Status</th>
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
@@ -164,14 +214,27 @@ export function ProductAttributesPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan="8" className="py-12 text-center text-slate-500">
+                  <td colSpan="5" className="py-12 text-center text-slate-500">
                     <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600" />
                     Loading product attributes...
                   </td>
                 </tr>
+              ) : loadError ? (
+                <tr>
+                  <td colSpan="5" className="py-12 text-center text-rose-700 dark:text-rose-300">
+                    <p role="alert">{loadError}</p>
+                    <button
+                      type="button"
+                      onClick={loadAttributes}
+                      className="mt-3 font-semibold underline"
+                    >
+                      Retry
+                    </button>
+                  </td>
+                </tr>
               ) : filteredAttributes.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="py-12 text-center text-slate-500">
+                  <td colSpan="5" className="py-12 text-center text-slate-500">
                     No attributes found. Click "New Attribute" to create one.
                   </td>
                 </tr>
@@ -183,20 +246,6 @@ export function ProductAttributesPage() {
                     </td>
                     <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-slate-100">
                       {attr.name}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className="px-2 py-0.5 rounded-md text-xs font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                        {attr.data_type}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-center">
-                      {attr.is_variant_generator ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-800">
-                          <Sparkles className="w-3 h-3" /> Yes
-                        </span>
-                      ) : (
-                        <span className="text-xs text-slate-400">No</span>
-                      )}
                     </td>
                     <td className="py-3.5 px-4 max-w-xs">
                       <div className="flex flex-wrap gap-1 items-center">
@@ -221,9 +270,6 @@ export function ProductAttributesPage() {
                         </button>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-center font-mono text-xs">
-                      {attr.sort_order}
-                    </td>
                     <td className="py-3.5 px-4 text-center">
                       <span
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
@@ -237,6 +283,16 @@ export function ProductAttributesPage() {
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <button
+                        type="button"
+                        onClick={() => openEditAttribute(attr)}
+                        aria-label={`Edit ${attr.name}`}
+                        className="mr-2 inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        Edit
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setActiveAttrForValue(attr)}
                         className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
                       >
@@ -251,17 +307,17 @@ export function ProductAttributesPage() {
         </div>
       </div>
 
-      {/* Create Attribute Modal */}
+      {/* Create/Edit Attribute Modal */}
       {isCreateOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-5">
             <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
               <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <SlidersHorizontal className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                Create Product Attribute
+                {editingAttribute ? "Edit Product Attribute" : "Create Product Attribute"}
               </h3>
               <button
-                onClick={() => setIsCreateOpen(false)}
+                onClick={closeAttributeForm}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg"
               >
                 &times;
@@ -269,13 +325,22 @@ export function ProductAttributesPage() {
             </div>
 
             <form onSubmit={handleCreateAttribute} className="space-y-4">
+              {createError && (
+                <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
+                  {createError}
+                </p>
+              )}
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                <label htmlFor="attribute-code" className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
                   Attribute Code *
                 </label>
                 <input
+                  id="attribute-code"
                   type="text"
                   required
+                  maxLength={40}
+                  pattern="[A-Za-z0-9_-]+"
+                  title="Use only letters, numbers, underscores, and hyphens."
                   value={newCode}
                   onChange={(e) => setNewCode(e.target.value.toUpperCase())}
                   placeholder="e.g. COLOR, SIZE, RAM"
@@ -284,12 +349,14 @@ export function ProductAttributesPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                <label htmlFor="attribute-name" className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
                   Attribute Display Name *
                 </label>
                 <input
+                  id="attribute-name"
                   type="text"
                   required
+                  maxLength={100}
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="e.g. Garment Color, RAM Capacity"
@@ -297,54 +364,43 @@ export function ProductAttributesPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
-                    Data Type *
-                  </label>
-                  <select
-                    value={newDataType}
-                    onChange={(e) => setNewDataType(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="TEXT">Text</option>
-                    <option value="NUMBER">Integer Number</option>
-                    <option value="DECIMAL">Decimal Number</option>
-                    <option value="BOOLEAN">Boolean (Yes/No)</option>
-                    <option value="DATE">Date</option>
-                    <option value="SELECT">Predefined Options</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
-                    Sort Order
-                  </label>
-                  <input
-                    type="number"
-                    value={sortOrder}
-                    onChange={(e) => setSortOrder(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
+              <div>
+                <label htmlFor="attribute-values" className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                  Configured Values
+                </label>
+                <input
+                  id="attribute-values"
+                  type="text"
+                  value={newConfiguredValues}
+                  onChange={(e) => setNewConfiguredValues(e.target.value)}
+                  placeholder="e.g. Small, Medium, Large"
+                  aria-describedby="attribute-values-hint"
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500"
+                />
+                <p id="attribute-values-hint" className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Separate values with commas. Existing values are retained when editing.
+                </p>
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="is_variant_gen"
-                  checked={isVariantGen}
-                  onChange={(e) => setIsVariantGen(e.target.checked)}
-                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <label htmlFor="is_variant_gen" className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Variant Generator Attribute (Used to create SKU combinations)
+              <div>
+                <label htmlFor="attribute-status" className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                  Status *
                 </label>
+                <select
+                  id="attribute-status"
+                  value={newIsActive ? "active" : "inactive"}
+                  onChange={(e) => setNewIsActive(e.target.value === "active")}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setIsCreateOpen(false)}
+                  onClick={closeAttributeForm}
                   className="px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   Cancel
@@ -354,7 +410,13 @@ export function ProductAttributesPage() {
                   disabled={creating}
                   className="px-4 py-2 text-sm font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white shadow-sm"
                 >
-                  {creating ? "Creating..." : "Save Attribute"}
+                  {creating
+                    ? editingAttribute
+                      ? "Saving..."
+                      : "Creating..."
+                    : editingAttribute
+                      ? "Save Changes"
+                      : "Save Attribute"}
                 </button>
               </div>
             </form>
@@ -371,6 +433,7 @@ export function ProductAttributesPage() {
                 Add Option to {activeAttrForValue.name} ({activeAttrForValue.code})
               </h3>
               <button
+                type="button"
                 onClick={() => setActiveAttrForValue(null)}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg"
               >
@@ -379,6 +442,11 @@ export function ProductAttributesPage() {
             </div>
 
             <form onSubmit={handleAddValue} className="space-y-4">
+              {valueError && (
+                <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
+                  {valueError}
+                </p>
+              )}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
                   New Value *
@@ -386,6 +454,7 @@ export function ProductAttributesPage() {
                 <input
                   type="text"
                   required
+                  maxLength={100}
                   autoFocus
                   value={newValueInput}
                   onChange={(e) => setNewValueInput(e.target.value)}
@@ -418,4 +487,3 @@ export function ProductAttributesPage() {
   );
 }
 export default ProductAttributesPage;
-

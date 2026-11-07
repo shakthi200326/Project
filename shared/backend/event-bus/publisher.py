@@ -56,7 +56,7 @@ class EventPublisher:
         if redis_url:
             try:
                 import redis
-                r = redis.Redis.from_url(redis_url)
+                r = redis.Redis.from_url(redis_url, socket_connect_timeout=0.2, socket_timeout=0.2)
                 r.publish(f"events:{event_name}", json.dumps(event_packet))
             except Exception as e:
                 logger.warning("Could not broadcast event %s to Redis: %s", event_name, e)

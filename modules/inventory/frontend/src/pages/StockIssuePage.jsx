@@ -18,7 +18,6 @@ import {
   TrendingDown,
   Clock,
   Sparkles,
-  Barcode,
   Truck,
   Send,
   User,
@@ -596,14 +595,6 @@ export function StockIssuePage() {
                               Dispatch
                             </button>
                           )}
-                          {status === "DISPATCHED" && (
-                            <button
-                              onClick={() => showToast(`Picking slip for ${r.document_number} printed.`)}
-                              className="px-2 py-1 rounded-lg border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 text-[10px] font-semibold text-slate-700 dark:text-zinc-300 transition-colors cursor-pointer"
-                            >
-                              Print Slip
-                            </button>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -619,11 +610,9 @@ export function StockIssuePage() {
       <StockTransactionModal
         isOpen={isModalOpen}
         initialType="ISSUE"
-        lockType={true}
         onClose={() => setIsModalOpen(false)}
         onPosted={handleIssuePosted}
       />
     </div>
   );
 }
-

@@ -20,17 +20,14 @@ import {
   ArrowRight,
   ShieldCheck,
   RefreshCw,
-  Plus,
 } from "lucide-react";
 import { fetchProducts, barcodeLookupOnline } from "../services/api.js";
 import { ProductDetailDrawer } from "../components/ProductDetailDrawer.jsx";
-import { CreateProductModal } from "../components/CreateProductModal.jsx";
 
 export function ProductOverviewPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [scanQuery, setScanQuery] = useState("");
   const [scanResult, setScanResult] = useState(null);
   const [scanning, setScanning] = useState(false);
@@ -104,17 +101,14 @@ export function ProductOverviewPage() {
       icon: Hash,
       links: [
         { label: "SKU Management", path: "/inventory/skus", desc: "Registry, code formats & collision checks" },
-        { label: "Barcode & QR Management", path: "/inventory/barcodes", desc: "EAN-13, ITF-14, thermal print & aliases" },
+        { label: "Barcode & QR Management", path: "/inventory/barcodes", desc: "EAN-13, ITF-14 barcode formats & aliases" },
       ],
     },
     {
       title: "Data & Media Management",
       icon: Upload,
       links: [
-        { label: "Images & Attachments", path: "/inventory/products/media", desc: "Datasheets, manual specs & media gallery" },
-        { label: "Import Items", path: "/inventory/products/import", desc: "Dry-run validation & spreadsheet ingest" },
-        { label: "Export Items", path: "/inventory/products/export", desc: "Filtered CSV / XLSX streaming downloads" },
-        { label: "Import History", path: "/inventory/products/import-history", desc: "Batch audit log & failure diagnostics" },
+        { label: "Item Data Management", path: "/inventory/products/data-management", desc: "Attachments, imports, exports and import history" },
       ],
     },
   ];
@@ -130,22 +124,6 @@ export function ProductOverviewPage() {
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Enterprise Product Master Management, Classification, Identification & Data Hub.
           </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={loadOverviewData}
-            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
-          <button
-            onClick={() => setIsCreateOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add New Product
-          </button>
         </div>
       </div>
 
@@ -312,12 +290,6 @@ export function ProductOverviewPage() {
         onSave={loadOverviewData}
       />
 
-      {/* Create Modal */}
-      <CreateProductModal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onCreated={loadOverviewData}
-      />
     </div>
   );
 }

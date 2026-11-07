@@ -1,6 +1,7 @@
 import mimetypes
 from pathlib import Path
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.http import FileResponse, Http404
 from rest_framework import status, views, viewsets
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -50,8 +51,9 @@ class StoredFileViewSet(viewsets.ModelViewSet):
             )
             serializer = self.get_serializer(record)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        except ValueError as err:
-            return Response({"error": str(err)}, status=status.HTTP_400_BAD_REQUEST)
+        except (ValueError, ValidationError) as err:
+            msg = getattr(err, "message", str(err))
+            return Response({"error": msg}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as err:
             return Response({"error": f"Upload failed: {str(err)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

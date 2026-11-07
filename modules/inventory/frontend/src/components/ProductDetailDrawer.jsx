@@ -46,6 +46,7 @@ import {
   createUOMConversion,
   deleteUOMConversion,
   generateProductVariants,
+  updateProduct,
 } from "@/services/api";
 
 // Parse a numeric form field, keeping 0 as a real value; blank or invalid falls back.
@@ -74,9 +75,13 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editSaveError, setEditSaveError] = useState("");
   const [isGeneratingVariants, setIsGeneratingVariants] = useState(false);
   const [variantModalOpen, setVariantModalOpen] = useState(false);
   const [selectedAttrOptions, setSelectedAttrOptions] = useState({});
+  const [variantAttributeIds, setVariantAttributeIds] = useState([]);
+  const [variantAttributesChanged, setVariantAttributesChanged] = useState(false);
   const [variantSkuPrefix, setVariantSkuPrefix] = useState("");
 
   // New Barcode Form
@@ -127,6 +132,7 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
     batch_tracking_required: false,
     serial_tracking_required: false,
     expiry_tracking_required: false,
+    has_variants: false,
     net_weight: 0,
     gross_weight: 0,
     weight_uom: "KG",
@@ -168,6 +174,12 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
       fetchAttributes().then((list) => {
         setAttributes(list);
       });
+      setVariantAttributeIds(
+        (product.attribute_assignments || [])
+          .filter((assignment) => assignment.variant == null)
+          .map((assignment) => String(assignment.attribute))
+      );
+      setVariantAttributesChanged(false);
 
       setVariantsList(product.variants || []);
       setVariantSkuPrefix(product.sku || "");
@@ -201,6 +213,7 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
         batch_tracking_required: product.batch_tracking_required ?? false,
         serial_tracking_required: product.serial_tracking_required ?? false,
         expiry_tracking_required: product.expiry_tracking_required ?? false,
+        has_variants: product.has_variants ?? false,
         net_weight: product.net_weight ?? 0,
         gross_weight: product.gross_weight ?? 0,
         weight_uom: product.weight_uom_code || getUnitCode(product.weight_uom, units),
@@ -217,6 +230,7 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
       });
 
       setIsEditing(false);
+      setEditSaveError("");
     }
   }, [isOpen, product]);
 
@@ -283,9 +297,10 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     if (e) e.preventDefault();
     if (!editForm.name.trim()) return;
+    setEditSaveError("");
 
     const selectedCategory = categories.find(
       (category) =>
@@ -326,6 +341,7 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
       batch_tracking_required: editForm.batch_tracking_required,
       serial_tracking_required: editForm.serial_tracking_required,
       expiry_tracking_required: editForm.expiry_tracking_required,
+      has_variants: editForm.has_variants,
       net_weight: parseFloat(editForm.net_weight) || 0,
       gross_weight: parseFloat(editForm.gross_weight) || 0,
       weight_uom: editForm.weight_uom,
@@ -333,12 +349,21 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
       width: parseFloat(editForm.width) || 0,
       height: parseFloat(editForm.height) || 0,
       dimension_uom: editForm.dimension_uom,
+      ...(variantAttributesChanged
+        ? { variant_attribute_ids: variantAttributeIds.map(Number) }
+        : {}),
     };
 
-    if (onSave) {
-      onSave(updated);
+    setSavingEdit(true);
+    try {
+      await updateProduct(product.id, updated);
+      if (onSave) await onSave(updated);
+      setIsEditing(false);
+    } catch (saveError) {
+      setEditSaveError(saveError.message || "Failed to save product changes.");
+    } finally {
+      setSavingEdit(false);
     }
-    setIsEditing(false);
   };
 
   // Add Barcode Handler
@@ -529,9 +554,98 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
         <div className="flex-1 overflow-y-auto p-5 space-y-6">
           {isEditing ? (
             <form onSubmit={handleSaveEdit} className="space-y-4 text-xs">
+              {editSaveError && (
+                <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
+                  {editSaveError}
+                </div>
+              )}
               <div className="p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-900 text-blue-900 dark:text-blue-300">
                 <span className="font-semibold">Edit Product Master:</span> Update core classification, policy switches, and financial parameters.
               </div>
+
+              <label className="flex items-start gap-3 rounded-xl border border-indigo-200 bg-indigo-50/50 p-3 dark:border-indigo-900/60 dark:bg-indigo-950/20">
+                <input
+                  type="checkbox"
+                  checked={Boolean(editForm.has_variants)}
+                  disabled={Boolean(editForm.has_variants && (product.variants_count || variantsList.length))}
+                  onChange={(event) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      has_variants: event.target.checked,
+                    }))
+                  }
+                  className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>
+                  <span className="block font-semibold text-slate-800 dark:text-zinc-200">
+                    Has Product Variants
+                  </span>
+                  <span className="mt-0.5 block text-[11px] text-slate-500 dark:text-zinc-400">
+                    Enable this item to make it available in the Product Variants parent-item dropdown.
+                    {editForm.has_variants && (product.variants_count || variantsList.length)
+                      ? " This cannot be turned off while variants exist."
+                      : ""}
+                  </span>
+                </span>
+              </label>
+
+              {editForm.has_variants && (
+                <fieldset className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-3 dark:border-indigo-900/60 dark:bg-indigo-950/20">
+                  <legend className="px-1 font-semibold text-slate-800 dark:text-zinc-200">
+                    Variant Attributes
+                  </legend>
+                  <p className="mb-2 text-[11px] text-slate-500 dark:text-zinc-400">
+                    Choose the attributes available when creating variants for this item.
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {attributes
+                      .filter(
+                        (attribute) =>
+                          attribute.is_active &&
+                          attribute.is_variant_generator &&
+                          (attribute.values || []).some((value) => value.is_active)
+                      )
+                      .map((attribute) => (
+                        <label
+                          key={attribute.id}
+                          className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={variantAttributeIds.includes(String(attribute.id))}
+                            onChange={(event) => {
+                              setVariantAttributesChanged(true);
+                              setVariantAttributeIds((current) => {
+                                const validIds = new Set(
+                                  attributes
+                                    .filter(
+                                      (entry) =>
+                                        entry.is_active &&
+                                        entry.is_variant_generator
+                                    )
+                                    .map((entry) => String(entry.id))
+                                );
+                                const selected = current.filter((id) => validIds.has(id));
+                                return event.target.checked
+                                  ? [...selected, String(attribute.id)]
+                                  : selected.filter((id) => id !== String(attribute.id));
+                              });
+                            }}
+                            className="rounded text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span className="font-medium text-slate-700 dark:text-zinc-200">
+                            {attribute.name}
+                          </span>
+                        </label>
+                      ))}
+                  </div>
+                  {variantAttributeIds.length === 0 && (
+                    <p className="mt-2 text-[11px] text-amber-700 dark:text-amber-300">
+                      Assign at least one attribute before adding product variants.
+                    </p>
+                  )}
+                </fieldset>
+              )}
 
               <div>
                 <label className="block text-slate-500 dark:text-zinc-400 font-medium mb-1">Item Name *</label>
@@ -1442,7 +1556,11 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
               <>
                 <button
                   type="button"
-                  onClick={() => setIsEditing(false)}
+                  disabled={savingEdit}
+                  onClick={() => {
+                    setEditSaveError("");
+                    setIsEditing(false);
+                  }}
                   className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 font-medium cursor-pointer"
                 >
                   Cancel
@@ -1450,10 +1568,11 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
                 <button
                   type="button"
                   onClick={handleSaveEdit}
-                  className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-xs cursor-pointer flex items-center gap-1.5"
+                  disabled={savingEdit}
+                  className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-xs cursor-pointer flex items-center gap-1.5 disabled:cursor-wait disabled:opacity-60"
                 >
-                  <Save className="h-3.5 w-3.5" />
-                  <span>Save Changes</span>
+                  {savingEdit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                  <span>{savingEdit ? "Saving..." : "Save Changes"}</span>
                 </button>
               </>
             ) : (

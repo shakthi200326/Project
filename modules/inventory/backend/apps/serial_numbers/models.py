@@ -1,4 +1,4 @@
-from datetime import date
+﻿from datetime import date
 from django.db import models
 from apps.products.models import InventoryItem, InventoryItemVariant
 from apps.warehouses.models import Warehouse, StorageLocation
@@ -12,6 +12,8 @@ class SerialNumber(models.Model):
         IN_TRANSIT = "In Transit", "In Transit"
         RETURNED = "Returned", "Returned"
         QUARANTINED = "Quarantined", "Quarantined"
+        BLOCKED = "Blocked", "Blocked"
+        DAMAGED = "Damaged", "Damaged"
         SCRAPPED = "Scrapped", "Scrapped"
         # Backward compatibility choices
         IN_STOCK = "IN_STOCK", "In Stock"
@@ -30,6 +32,11 @@ class SerialNumber(models.Model):
     dispatched_at = models.DateTimeField(null=True, blank=True)
     warranty_until = models.DateField(null=True, blank=True)
     notes = models.TextField(blank=True, default="")
+    # Phase-7 extensions
+    supplier_serial_reference = models.CharField(max_length=150, blank=True, default="")
+    goods_receipt_ref = models.CharField(max_length=120, blank=True, default="")
+    warranty_start_date = models.DateField(null=True, blank=True)
+    manufacturing_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

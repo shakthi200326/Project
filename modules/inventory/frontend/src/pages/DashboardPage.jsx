@@ -60,6 +60,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import {
+  API_BASE,
   fetchInventoryKPIs,
   fetchStockMovements,
   approveStockTransaction,
@@ -147,14 +148,6 @@ const DEFAULT_PENDING_APPROVALS = [
   { id: 903, document_number: "ADJ-2026-0012", transaction_type: "ADJUSTMENT", status: "SUBMITTED", warehouse_name: "Cold Storage Hub", dest_warehouse_name: null, lines_count: 1, estimated_value: 980.00, requester: "elena.rostova", date: "2026-10-25" },
 ];
 
-// Fallback Inventory Alerts
-const DEFAULT_ALERTS = [
-  { id: "alert-1", severity: "CRITICAL", category: "FEFO Expiry", title: "Batch LOT-2025-NOV-01 Expiring Soon", description: "150 LTR Synthetic Lubricant expiring in 26 days at Main Hub.", timestamp: "2h ago", action_url: "/inventory/control/batches" },
-  { id: "alert-2", severity: "HIGH", category: "Stockout Warning", title: "Zero Stock: Optical Rotary Encoder 1024", description: "Production buffer depleted. Reorder target: 15 EA.", timestamp: "4h ago", action_url: "/inventory/planning/replenishment" },
-  { id: "alert-3", severity: "MEDIUM", category: "Quality Quarantine", title: "Hydraulic Seals Held in Quarantine", description: "85 Units pending QA physical clearance at Vault Q1.", timestamp: "1d ago", action_url: "/inventory/control/batches" },
-  { id: "alert-4", severity: "INFO", category: "Buffer Safety", title: "West Coast Terminal Near Max Capacity", description: "Facility occupancy reached 86% (above 80% safety ceiling).", timestamp: "2d ago", action_url: "/inventory/warehouses" },
-];
-
 const formatCurrency = (val) => {
   if (val === null || val === undefined || isNaN(val)) return "$0.00";
   return `$${Number(val).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -166,6 +159,7 @@ export function DashboardPage() {
   const [recentMovements, setRecentMovements] = useState([]);
   const [period, setPeriod] = useState("30d");
   const [pendingApprovals, setPendingApprovals] = useState(DEFAULT_PENDING_APPROVALS);
+  const [inventoryAlerts, setInventoryAlerts] = useState([]);
   const [processingId, setProcessingId] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -194,6 +188,22 @@ export function DashboardPage() {
 
   useEffect(() => {
     loadData();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    fetch(`${API_BASE}/inventory/notifications/alerts/?active=true`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Notification request failed (HTTP ${response.status}).`);
+        return response.json();
+      })
+      .then((data) => {
+        if (active) setInventoryAlerts(data.results || []);
+      })
+      .catch((error) => console.error("Dashboard notification load error:", error));
+    return () => {
+      active = false;
+    };
   }, []);
 
   const showToast = (msg) => {
@@ -325,9 +335,11 @@ export function DashboardPage() {
     ? kpis.recent_activities
     : [];
 
-  const alerts = (kpis.inventory_alerts && kpis.inventory_alerts.length > 0)
-    ? kpis.inventory_alerts
-    : DEFAULT_ALERTS;
+  const alerts = inventoryAlerts.map((alert) => ({
+    ...alert,
+    category: alert.alert_type.replaceAll("_", " "),
+    timestamp: new Date(alert.last_seen_at).toLocaleString(),
+  }));
 
   return (
     <div className="space-y-8 pb-12">
@@ -399,126 +411,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* 01. INVENTORY OVERVIEW                                                    */}
-      {/* ========================================================================= */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-6 w-1.5 rounded-full bg-blue-600" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
-              <Boxes className="h-4 w-4 text-blue-600" />
-              01. Inventory Overview
-            </h2>
-          </div>
-          <span className="text-[11px] font-semibold text-slate-400 dark:text-zinc-500">
-            Catalog & Master Data Infrastructure
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {/* Total SKUs */}
-          <Link
-            to="/inventory/products"
-            className="group relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-md hover:border-blue-400 dark:hover:border-blue-700 transition-all cursor-pointer"
-          >
-            <div className="flex items-center justify-between text-slate-400 text-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider">Total SKUs</span>
-              <Boxes className="h-4 w-4 text-blue-500 group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
-              {(inventoryOverview.total_products || 0).toLocaleString()}
-            </div>
-            <div className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" />
-              <span>{inventoryOverview.active_products || 1398} Active</span>
-            </div>
-          </Link>
-
-          {/* Categories */}
-          <Link
-            to="/inventory/categories"
-            className="group relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-md hover:border-indigo-400 dark:hover:border-indigo-700 transition-all cursor-pointer"
-          >
-            <div className="flex items-center justify-between text-slate-400 text-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider">Categories</span>
-              <Layers className="h-4 w-4 text-indigo-500 group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
-              {(inventoryOverview.total_categories || 0).toLocaleString()}
-            </div>
-            <div className="mt-1 text-[11px] text-slate-400 dark:text-zinc-500">
-              Across 5 sectors
-            </div>
-          </Link>
-
-          {/* Brands */}
-          <Link
-            to="/inventory/brands"
-            className="group relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-md hover:border-purple-400 dark:hover:border-purple-700 transition-all cursor-pointer"
-          >
-            <div className="flex items-center justify-between text-slate-400 text-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider">Brands</span>
-              <Tag className="h-4 w-4 text-purple-500 group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
-              {(inventoryOverview.total_brands || 0).toLocaleString()}
-            </div>
-            <div className="mt-1 text-[11px] text-slate-400 dark:text-zinc-500">
-              Registered OEM brands
-            </div>
-          </Link>
-
-          {/* Warehouses */}
-          <Link
-            to="/inventory/warehouses"
-            className="group relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-md hover:border-emerald-400 dark:hover:border-emerald-700 transition-all cursor-pointer"
-          >
-            <div className="flex items-center justify-between text-slate-400 text-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider">Warehouses</span>
-              <Warehouse className="h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
-              {(inventoryOverview.total_warehouses || 0).toLocaleString()}
-            </div>
-            <div className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-              4 Regional Hubs
-            </div>
-          </Link>
-
-          {/* Units of Measure */}
-          <Link
-            to="/inventory/units"
-            className="group relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs hover:shadow-md hover:border-amber-400 dark:hover:border-amber-700 transition-all cursor-pointer"
-          >
-            <div className="flex items-center justify-between text-slate-400 text-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider">Units (UOM)</span>
-              <Bookmark className="h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">
-              {(inventoryOverview.total_units || 6).toLocaleString()}
-            </div>
-            <div className="mt-1 text-[11px] text-slate-400 dark:text-zinc-500">
-              EA, LTR, KG, MTR, KIT
-            </div>
-          </Link>
-
-          {/* Catalog Health */}
-          <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5 shadow-xs">
-            <div className="flex items-center justify-between text-slate-400 text-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider">Catalog Health</span>
-              <ShieldCheck className="h-4 w-4 text-teal-500" />
-            </div>
-            <div className="mt-2 text-xl font-bold tracking-tight tabular-nums text-teal-600 dark:text-teal-400">
-              {inventoryOverview.catalog_health || "98.5%"}
-            </div>
-            <div className="mt-1 text-[11px] text-slate-400 dark:text-zinc-500">
-              Barcode & Tag coverage
-            </div>
-          </div>
-        </div>
-      </section>
-
+      
       {/* ========================================================================= */}
       {/* 02. STOCK SUMMARY                                                         */}
       {/* ========================================================================= */}
@@ -1231,7 +1124,7 @@ export function DashboardPage() {
           </div>
 
           <Link
-            to="/inventory/transactions"
+            to="/inventory/operations/movements"
             className="pt-2 text-xs font-semibold text-purple-600 hover:text-purple-700 dark:text-purple-400 flex items-center justify-center gap-1 border-t border-slate-100 dark:border-zinc-800 cursor-pointer"
           >
             <span>View All Stock Transactions</span>
@@ -1259,6 +1152,12 @@ export function DashboardPage() {
           </div>
           <div className="flex items-center gap-2">
             <Link
+              to="/inventory/notifications"
+              className="text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 flex items-center gap-1 cursor-pointer"
+            >
+              Notifications & Alerts <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+            <Link
               to="/inventory/control/batches"
               className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 cursor-pointer"
             >
@@ -1268,6 +1167,11 @@ export function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {alerts.length === 0 && (
+            <div className="col-span-full rounded-xl border border-slate-200 dark:border-zinc-800 p-6 text-center text-xs text-slate-500 dark:text-zinc-400">
+              No active alerts. Open <Link to="/inventory/notifications" className="font-semibold text-rose-600 hover:underline dark:text-rose-400">Notifications &amp; Alerts</Link> to manage alert settings.
+            </div>
+          )}
           {alerts.map((alert) => (
             <div
               key={alert.id}

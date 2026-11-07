@@ -142,7 +142,7 @@ export function GoodsReceiptSettingsPage() {
   return (
     <GrnPage
       title="Goods Receipt & Inspection Settings"
-      subtitle="Independently versioned settings for each submodule. Changes are stored in PostgreSQL, enforced by the server and audited."
+  
       icon={Settings2}
     >
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-200 dark:border-zinc-800 text-xs">

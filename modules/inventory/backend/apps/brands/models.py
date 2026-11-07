@@ -4,6 +4,8 @@ class Brand(models.Model):
     code = models.CharField(max_length=40, unique=True, db_index=True)
     name = models.CharField(max_length=150)
     country = models.CharField(max_length=80, blank=True)
+    website = models.URLField(max_length=255, blank=True)
+    logo_file_id = models.CharField(max_length=120, blank=True)
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

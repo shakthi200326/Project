@@ -35,22 +35,27 @@ import {
   deleteBin,
   fetchWarehouses,
   fetchLocations,
+  fetchWarehouseZones,
   fetchWarehouseConfig,
 } from "../services/api";
+import { WarehouseZonesPage } from "./WarehouseZonesPage.jsx";
 
 const STATUS_OPTIONS = ["Active", "Inactive", "Blocked"];
 
 export function RackBinPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState(
-    searchParams.get("tab") === "bins" ? "bins" : "racks"
+    ["zones", "racks", "bins"].includes(requestedTab) ? requestedTab : "zones"
   );
 
   const [racks, setRacks] = useState([]);
   const [bins, setBins] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [zones, setZones] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [zoneActions, setZoneActions] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
   const [copiedCode, setCopiedCode] = useState(null);
 
@@ -96,6 +101,10 @@ export function RackBinPage() {
     rack: "",
     rack_id: "",
     rack_level: 1,
+    zone: "",
+    zone_id: "",
+    bin_type: "Standard",
+    max_quantity: "",
     barcode: "",
     status: "Active",
   });
@@ -111,19 +120,27 @@ export function RackBinPage() {
     });
   }, []);
 
+  useEffect(() => {
+    if (["zones", "racks", "bins"].includes(requestedTab) && requestedTab !== activeTab) {
+      setActiveTab(requestedTab);
+    }
+  }, [requestedTab]);
+
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const [racksData, binsData, whData, locData] = await Promise.all([
+      const [racksData, binsData, whData, locData, zoneData] = await Promise.all([
         fetchRacks(),
         fetchBins(),
         fetchWarehouses(),
         fetchLocations(),
+        fetchWarehouseZones(),
       ]);
       setRacks(racksData || []);
       setBins(binsData || []);
       setWarehouses(whData || []);
       setLocations(locData || []);
+      setZones(zoneData || []);
     } catch (e) {
       console.error("Failed to load racks & bins data", e);
     } finally {
@@ -225,6 +242,8 @@ export function RackBinPage() {
         (!defaultLoc || (r.location_code || r.location) === defaultLoc)
     );
     const defaultRack = availableRacks[0]?.code || "";
+    const defaultRackObj = availableRacks[0];
+    const defaultZone = defaultRackObj?.zone_code || defaultRackObj?.zone || "";
     const binCode = generateBinCode();
 
     setBinFormData({
@@ -237,6 +256,10 @@ export function RackBinPage() {
       rack: defaultRack,
       rack_id: availableRacks[0]?.id || "",
       rack_level: 1,
+      zone: defaultZone,
+      zone_id: defaultRackObj?.zone || "",
+      bin_type: "Standard",
+      max_quantity: "",
       barcode: generateBinBarcode(binCode),
       status: "Active",
     });
@@ -265,6 +288,10 @@ export function RackBinPage() {
       rack: b.rack_code || b.rack || rackObj?.code || "",
       rack_id: rackObj?.id || "",
       rack_level: b.rack_level || 1,
+      zone: b.rack_zone_code || rackObj?.zone_code || rackObj?.zone || "",
+      zone_id: rackObj?.zone || "",
+      bin_type: b.bin_type || "Standard",
+      max_quantity: b.max_quantity ?? "",
       barcode: b.barcode || "",
       status: b.status || "Active",
     });
@@ -528,7 +555,8 @@ export function RackBinPage() {
   const binModalRacks = racks.filter(
     (r) =>
       (r.warehouse_code || r.warehouse) === binFormData.warehouse &&
-      (!binFormData.location || (r.location_code || r.location) === binFormData.location)
+      (!binFormData.zone ||
+        String(r.zone_code || r.zone || "") === String(binFormData.zone))
   );
 
   const selectedBinRackObj = racks.find(
@@ -551,10 +579,10 @@ export function RackBinPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Rack & Bin Management
+              Zone & Rack & Bin Management
             </h1>
             <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/40">
-              {racks.length} Racks • {bins.length} Bins
+              {zones.length} Zones • {racks.length} Racks • {bins.length} Bins
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
@@ -564,14 +592,22 @@ export function RackBinPage() {
 
         <div className="flex items-center gap-2.5">
           <button
-            onClick={loadAllData}
+            onClick={() => activeTab === "zones" ? zoneActions?.refresh?.() : loadAllData()}
             className="p-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300 transition-colors cursor-pointer"
             title="Refresh Registry"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </button>
 
-          {activeTab === "racks" ? (
+          {activeTab === "zones" ? (
+            <button
+              onClick={() => zoneActions?.openCreate?.()}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold shadow-xs hover:shadow-blue-500/25 cursor-pointer transition-all"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Create Zone</span>
+            </button>
+          ) : activeTab === "racks" ? (
             <button
               onClick={handleOpenCreateRackModal}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold shadow-xs hover:shadow-blue-500/25 cursor-pointer transition-all"
@@ -595,27 +631,27 @@ export function RackBinPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Total Racks</span>
+            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">{activeTab === "zones" ? "Total Zones" : "Total Racks"}</span>
             <Layers className="h-4 w-4 text-blue-500" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight font-mono text-slate-900 dark:text-white">
-            {racks.length}
+            {activeTab === "zones" ? zones.length : racks.length}
           </div>
           <div className="mt-1 text-[11px] text-slate-400 dark:text-zinc-500">
-            Across {warehouses.length} facilities
+            {activeTab === "zones" ? "Across warehouse facilities" : `Across ${warehouses.length} facilities`}
           </div>
         </div>
 
         <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Registered Bins</span>
+            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">{activeTab === "zones" ? "Registered Racks" : "Registered Bins"}</span>
             <Boxes className="h-4 w-4 text-indigo-500" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight font-mono text-indigo-600 dark:text-indigo-400">
-            {bins.length}
+            {activeTab === "zones" ? racks.length : bins.length}
           </div>
           <div className="mt-1 text-[11px] text-slate-400 dark:text-zinc-500">
-            Discrete picking addresses
+            {activeTab === "zones" ? "Storage rack structure" : "Discrete picking addresses"}
           </div>
         </div>
 
@@ -625,8 +661,10 @@ export function RackBinPage() {
             <ShieldCheck className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight font-mono text-emerald-600 dark:text-emerald-400">
-            {racks.filter((r) => (r.status || "Active").toLowerCase() === "active").length +
-             bins.filter((b) => (b.status || "Active").toLowerCase() === "active").length}
+            {activeTab === "zones"
+              ? zones.filter((z) => z.is_active !== false).length
+              : racks.filter((r) => (r.status || "Active").toLowerCase() === "active").length +
+                bins.filter((b) => (b.status || "Active").toLowerCase() === "active").length}
           </div>
           <div className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
             Available for replenishment
@@ -639,11 +677,13 @@ export function RackBinPage() {
             <Ban className="h-4 w-4 text-rose-500" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight font-mono text-rose-600 dark:text-rose-400">
-            {racks.filter((r) => (r.status || "").toLowerCase() === "blocked").length +
-             bins.filter((b) => (b.status || "").toLowerCase() === "blocked").length}
+            {activeTab === "zones"
+              ? zones.filter((z) => z.is_active === false).length
+              : racks.filter((r) => (r.status || "").toLowerCase() === "blocked").length +
+                bins.filter((b) => (b.status || "").toLowerCase() === "blocked").length}
           </div>
           <div className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium">
-            Restricted quarantine cells
+            {activeTab === "zones" ? "Inactive storage zones" : "Restricted quarantine cells"}
           </div>
         </div>
       </div>
@@ -652,7 +692,32 @@ export function RackBinPage() {
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800">
         <div className="flex space-x-1">
           <button
-            onClick={() => setActiveTab("racks")}
+            onClick={() => {
+              setActiveTab("zones");
+              setSearchParams({ ...Object.fromEntries(searchParams), tab: "zones" });
+            }}
+            className={`flex items-center gap-2 px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+              activeTab === "zones"
+                ? "border-blue-600 text-blue-600 dark:text-blue-400"
+                : "border-transparent text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+            }`}
+          >
+            <MapPin className="h-4 w-4" />
+            <span>Zone Management</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] ${
+              activeTab === "zones"
+                ? "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-semibold"
+                : "bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400"
+            }`}>
+              {zones.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab("racks");
+              setSearchParams({ ...Object.fromEntries(searchParams), tab: "racks" });
+            }}
             className={`flex items-center gap-2 px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${
               activeTab === "racks"
                 ? "border-blue-600 text-blue-600 dark:text-blue-400"
@@ -671,7 +736,10 @@ export function RackBinPage() {
           </button>
 
           <button
-            onClick={() => setActiveTab("bins")}
+            onClick={() => {
+              setActiveTab("bins");
+              setSearchParams({ ...Object.fromEntries(searchParams), tab: "bins" });
+            }}
             className={`flex items-center gap-2 px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${
               activeTab === "bins"
                 ? "border-blue-600 text-blue-600 dark:text-blue-400"
@@ -698,7 +766,9 @@ export function RackBinPage() {
           <input
             type="text"
             placeholder={
-              activeTab === "racks"
+              activeTab === "zones"
+                ? "Search zones by code or name..."
+                : activeTab === "racks"
                 ? "Search racks by code, name, location..."
                 : "Search bins by code, name, barcode, rack..."
             }
@@ -750,6 +820,18 @@ export function RackBinPage() {
           </select>
         </div>
       </div>
+
+      {activeTab === "zones" && (
+        <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 overflow-hidden bg-white dark:bg-zinc-900">
+          <WarehouseZonesPage
+            compact
+            externalSearch={search}
+            externalWarehouse={selectedWarehouse}
+            externalStatus={selectedStatus}
+            onRegisterActions={setZoneActions}
+          />
+        </div>
+      )}
 
       {/* Tab 1: Racks Table */}
       {activeTab === "racks" && (
@@ -871,9 +953,11 @@ export function RackBinPage() {
                   <th className="py-3 px-4">Bin Code</th>
                   <th className="py-3 px-4">Bin Name</th>
                   <th className="py-3 px-4">Warehouse</th>
-                  <th className="py-3 px-4">Storage Location</th>
+                  <th className="py-3 px-4">Zone</th>
                   <th className="py-3 px-4">Rack</th>
-                  <th className="py-3 px-4">Rack Level</th>
+                  <th className="py-3 px-4">Shelf</th>
+                  <th className="py-3 px-4">Bin Type</th>
+                  <th className="py-3 px-4">Capacity</th>
                   <th className="py-3 px-4">Barcode</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4 text-right">Actions</th>
@@ -884,6 +968,8 @@ export function RackBinPage() {
                   const whCode = b.warehouse_code || b.warehouse;
                   const locCode = b.location_code || b.location;
                   const rackCode = b.rack_code || b.rack;
+                  const rackObj = racks.find((r) => r.code === rackCode || r.id === b.rack);
+                  const zoneCode = b.rack_zone_code || rackObj?.zone_code || rackObj?.zone || "—";
 
                   return (
                     <tr
@@ -907,7 +993,7 @@ export function RackBinPage() {
                       <td className="py-3.5 px-4 text-slate-600 dark:text-zinc-300">
                         <div className="flex items-center gap-1.5">
                           <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                          <span>{locCode || "—"}</span>
+                          <span>{zoneCode}</span>
                         </div>
                       </td>
                       <td className="py-3.5 px-4">
@@ -917,8 +1003,14 @@ export function RackBinPage() {
                       </td>
                       <td className="py-3.5 px-4">
                         <span className="inline-flex items-center gap-1 font-mono font-bold text-slate-800 dark:text-zinc-200 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md">
-                          Lvl {b.rack_level || 1}
+                          Shelf {b.rack_level || 1}
                         </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-700 dark:text-zinc-300">
+                        {b.bin_type || "Standard"}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-slate-700 dark:text-zinc-300">
+                        {b.max_quantity ? `${b.max_quantity}` : "—"}
                       </td>
                       <td className="py-3.5 px-4">
                         {b.barcode ? (
@@ -1251,11 +1343,14 @@ export function RackBinPage() {
                           (r.warehouse_code || r.warehouse) === newWh &&
                           (!defaultLoc || (r.location_code || r.location) === defaultLoc)
                       );
+                      const defaultRack = validRacks[0];
                       setBinFormData({
                         ...binFormData,
                         warehouse: newWh,
                         location: defaultLoc,
-                        rack: validRacks[0]?.code || "",
+                        zone: defaultRack?.zone_code || defaultRack?.zone || "",
+                        rack: defaultRack?.code || "",
+                        rack_id: defaultRack?.id || "",
                       });
                     }}
                     className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-medium"
@@ -1268,33 +1363,35 @@ export function RackBinPage() {
                   </select>
                 </div>
 
-                {/* Storage Location (Dropdown, Required) */}
+                {/* Zone (Dropdown, Optional until rack hierarchy is configured) */}
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Storage Location *
+                    Zone
                   </label>
                   <select
-                    required
-                    value={binFormData.location}
+                    value={binFormData.zone}
                     onChange={(e) => {
-                      const newLoc = e.target.value;
+                      const newZone = e.target.value;
                       const validRacks = racks.filter(
                         (r) =>
                           (r.warehouse_code || r.warehouse) === binFormData.warehouse &&
-                          (!newLoc || (r.location_code || r.location) === newLoc)
+                          (!newZone || String(r.zone_code || r.zone || "") === String(newZone))
                       );
                       setBinFormData({
                         ...binFormData,
-                        location: newLoc,
+                        zone: newZone,
+                        zone_id: zones.find((z) => (z.code || z.id) === newZone)?.id || "",
                         rack: validRacks[0]?.code || "",
                       });
                     }}
                     className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-medium"
                   >
-                    <option value="">Select Location...</option>
-                    {binModalLocations.map((loc) => (
-                      <option key={loc.code || loc.id} value={loc.code}>
-                        {loc.name} ({loc.code})
+                    <option value="">Select Zone...</option>
+                    {zones.filter((z) =>
+                      String(z.warehouse_code || z.warehouse || "") === String(binFormData.warehouse)
+                    ).map((z) => (
+                      <option key={z.code || z.id} value={z.code || z.id}>
+                        {z.name} ({z.code})
                       </option>
                     ))}
                   </select>
@@ -1310,7 +1407,15 @@ export function RackBinPage() {
                   <select
                     required
                     value={binFormData.rack}
-                    onChange={(e) => setBinFormData({ ...binFormData, rack: e.target.value })}
+                    onChange={(e) => {
+                      const rack = racks.find((r) => r.code === e.target.value || r.id === e.target.value);
+                      setBinFormData({
+                        ...binFormData,
+                        rack: e.target.value,
+                        rack_id: rack?.id || "",
+                        zone: rack?.zone_code || rack?.zone || binFormData.zone,
+                      });
+                    }}
                     className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-medium"
                   >
                     <option value="">Select Rack...</option>
@@ -1325,7 +1430,7 @@ export function RackBinPage() {
                 {/* Rack Level (Dropdown / Number, Required) */}
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Rack Level *
+                    Shelf *
                   </label>
                   <select
                     required
@@ -1344,6 +1449,41 @@ export function RackBinPage() {
                       </option>
                     ))}
                   </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                    Bin Type *
+                  </label>
+                  <select
+                    required
+                    value={binFormData.bin_type}
+                    onChange={(e) => setBinFormData({ ...binFormData, bin_type: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-medium"
+                  >
+                    <option value="Standard">Standard</option>
+                    <option value="Pallet">Pallet</option>
+                    <option value="Shelf">Shelf Bin</option>
+                    <option value="Picking">Picking Bin</option>
+                    <option value="Bulk">Bulk Storage</option>
+                    <option value="Cold">Cold Storage</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                    Capacity
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={binFormData.max_quantity}
+                    onChange={(e) => setBinFormData({ ...binFormData, max_quantity: e.target.value })}
+                    placeholder="Maximum quantity"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white"
+                  />
                 </div>
               </div>
 
@@ -1471,4 +1611,3 @@ export function RackBinPage() {
     </div>
   );
 }
-

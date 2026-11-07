@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, ScanSearch } from "lucide-react";
 import {
   ATTACHMENT_OWNERS,
@@ -63,7 +63,7 @@ export function useWarehouses() {
 export function PendingInspectionQueue({ selected, onSelect, reloadKey }) {
   const warehouses = useWarehouses();
   const { data, loading, error, filters, setFilter, reload } = usePagedQuery(
-    (params) => fetchReceiptLines("pending_inspection", params),
+    (params) => fetchReceiptLines("pending_inspection", { ...params, page_size: 200 }),
     ["receipt", "search", "warehouse", "date_from", "date_to"]
   );
   useEffect(() => {
@@ -81,13 +81,13 @@ export function PendingInspectionQueue({ selected, onSelect, reloadKey }) {
 
   const columns = [
     { key: "receipt_number", label: "Receipt", render: (r) => <ReceiptLink id={r.receipt_id} number={r.receipt_number} /> },
-    { key: "receipt_date", label: "Date", render: (r) => fmtDate(r.receipt_date) },
+    { key: "receipt_date", label: "Date", render: (r) => <span className="whitespace-nowrap">{fmtDate(r.receipt_date)}</span> },
     {
       key: "item",
       label: "Item / Variant",
       render: (r) => (
-        <div>
-          <div className="font-semibold">{r.item_name}</div>
+        <div className="min-w-0 max-w-[260px] 2xl:max-w-[340px]">
+          <div className="font-semibold truncate" title={r.item_name}>{r.item_name}</div>
           <div className="text-[10px] font-mono text-slate-400">
             {r.sku}
             {r.batch_number ? ` · ${r.batch_number}` : ""}
@@ -95,10 +95,10 @@ export function PendingInspectionQueue({ selected, onSelect, reloadKey }) {
         </div>
       ),
     },
-    { key: "received_quantity", label: "Received", align: "right", render: (r) => `${fmtQty(r.received_quantity)} ${r.uom}` },
-    { key: "inspected", label: "Inspected", align: "right", render: (r) => fmtQty(Number(r.accepted_quantity) + Number(r.rejected_quantity)) },
-    { key: "pending_inspection_quantity", label: "Pending", align: "right", render: (r) => fmtQty(r.pending_inspection_quantity) },
-    { key: "warehouse_code", label: "Warehouse" },
+    { key: "received_quantity", label: "Received", align: "right", render: (r) => <span className="whitespace-nowrap font-medium">{fmtQty(r.received_quantity)} {r.uom}</span> },
+    { key: "inspected", label: "Inspected", align: "right", render: (r) => <span className="whitespace-nowrap">{fmtQty(Number(r.accepted_quantity) + Number(r.rejected_quantity))}</span> },
+    { key: "pending_inspection_quantity", label: "Pending", align: "right", render: (r) => <span className="whitespace-nowrap font-semibold text-amber-600 dark:text-amber-400">{fmtQty(r.pending_inspection_quantity)}</span> },
+    { key: "warehouse_code", label: "Warehouse", render: (r) => <span className="whitespace-nowrap font-mono text-[11px]">{r.warehouse_code || "—"}</span> },
   ];
 
   return (
@@ -136,31 +136,33 @@ export function PendingInspectionQueue({ selected, onSelect, reloadKey }) {
 function InspectionWorkspace({ grn }) {
   const [selected, setSelected] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [latestInspection, setLatestInspection] = useState(null);
   const [toastNode, toast] = useToast();
+  const inspectionLogRef = useRef(null);
+  useEffect(() => {
+    if (latestInspection) {
+      inspectionLogRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [latestInspection]);
   return (
     <div className="space-y-5">
       {toastNode}
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
-        <div className="xl:col-span-3">
-          <PendingInspectionQueue selected={selected} onSelect={setSelected} reloadKey={reloadKey} />
-        </div>
-        <div className="xl:col-span-2">
-          {selected ? (
-            <InspectionForm
-              key={selected.id}
-              line={selected}
-              grn={grn}
-              onSaved={(rec) => {
-                toast(`${rec.inspection_number} recorded: ${fmtQty(rec.accepted_quantity)} accepted, ${fmtQty(rec.rejected_quantity)} rejected.`);
-                setReloadKey((k) => k + 1);
-              }}
-            />
-          ) : (
-            <Notice tone="blue">Select a line from the queue to record an inspection.</Notice>
-          )}
-        </div>
-      </div>
-      <InspectionLog reloadKey={reloadKey} />
+      <PendingInspectionQueue selected={selected} onSelect={setSelected} reloadKey={reloadKey} />
+      {selected ? (
+        <InspectionForm
+          key={selected.id}
+          line={selected}
+          grn={grn}
+          onSaved={(rec) => {
+            setLatestInspection(rec);
+            toast(`${rec.inspection_number} recorded: ${fmtQty(rec.accepted_quantity)} accepted, ${fmtQty(rec.rejected_quantity)} rejected.`);
+            setReloadKey((k) => k + 1);
+          }}
+        />
+      ) : (
+        <Notice tone="blue">Select a line from the queue to record an inspection.</Notice>
+      )}
+      <InspectionLog ref={inspectionLogRef} reloadKey={reloadKey} latestInspection={latestInspection} />
     </div>
   );
 }
@@ -217,7 +219,10 @@ function InspectionForm({ line, grn, onSaved }) {
     const e = validate();
     setErrors(e);
     setError(null);
-    if (Object.keys(e).length) return;
+    if (Object.keys(e).length) {
+      setError({ message: Object.values(e)[0] });
+      return;
+    }
     setBusy(true);
     try {
       const rec = await recordInspection({
@@ -233,11 +238,24 @@ function InspectionForm({ line, grn, onSaved }) {
         inspection_date: form.inspection_date,
         remarks: form.remarks,
       });
-      for (const f of files) await uploadAttachment(ATTACHMENT_OWNERS.inspection, rec.id, f, grn.username);
       onSaved(rec);
+      setForm({
+        accepted_quantity: "",
+        rejected_quantity: "",
+        rejection_reason: "",
+        rejection_disposition: rejCfg.default_disposition || "",
+        rejected_serial_numbers: [],
+        inspector: grn.username,
+        inspection_date: today(),
+        remarks: "",
+      });
+      setErrors({});
+      for (const f of files) await uploadAttachment(ATTACHMENT_OWNERS.inspection, rec.id, f, grn.username);
+      setFiles([]);
     } catch (err) {
       setErrors(err.errors || {});
       setError(err);
+    } finally {
       setBusy(false);
     }
   };
@@ -259,10 +277,10 @@ function InspectionForm({ line, grn, onSaved }) {
         )}
         <div className="grid grid-cols-3 gap-3">
           <Field label="Accepted Qty" error={errors.accepted_quantity}>
-            <input type="number" min="0" step="any" className={cls("accepted_quantity")} value={form.accepted_quantity} onChange={(e) => set("accepted_quantity", e.target.value)} />
+            <input type="number" min="0" max={Math.max(0, pending - rej)} step="any" className={cls("accepted_quantity")} value={form.accepted_quantity} onChange={(e) => set("accepted_quantity", e.target.value)} />
           </Field>
           <Field label="Rejected Qty" error={errors.rejected_quantity}>
-            <input type="number" min="0" step="any" className={cls("rejected_quantity")} value={form.rejected_quantity} onChange={(e) => set("rejected_quantity", e.target.value)} />
+            <input type="number" min="0" max={Math.max(0, pending - acc)} step="any" className={cls("rejected_quantity")} value={form.rejected_quantity} onChange={(e) => set("rejected_quantity", e.target.value)} />
           </Field>
           <ReadOnly label="Inspection Qty" value={fmtQty(inspected)} />
         </div>
@@ -340,16 +358,46 @@ function InspectionForm({ line, grn, onSaved }) {
   );
 }
 
-function InspectionLog({ reloadKey }) {
+const withLatestInspection = (data, latestInspection) => {
+  if (!latestInspection) return data;
+  const results = data.results || [];
+  if (results.some((record) => record.id === latestInspection.id)) return data;
+  return {
+    ...data,
+    count: Math.max(data.count || 0, results.length + 1),
+    results: [latestInspection, ...results],
+  };
+};
+
+const InspectionLog = React.forwardRef(function InspectionLog({ reloadKey, latestInspection }, ref) {
   const [page, setPage] = useState(1);
+  const [retryKey, setRetryKey] = useState(0);
   const [state, setState] = useState({ data: null, error: null, loading: true });
   const [expanded, setExpanded] = useState(null);
   useEffect(() => {
-    setState((s) => ({ ...s, loading: true }));
+    if (latestInspection) setPage(1);
+  }, [latestInspection]);
+  useEffect(() => {
+    let active = true;
+    setState((current) => ({
+      ...current,
+      data: latestInspection
+        ? withLatestInspection(current.data || { count: 0, results: [] }, latestInspection)
+        : current.data,
+      error: null,
+      loading: !current.data && !latestInspection,
+    }));
     fetchInspections({ page })
-      .then((data) => setState({ data, error: null, loading: false }))
-      .catch((error) => setState({ data: null, error, loading: false }));
-  }, [page, reloadKey]);
+      .then((data) => {
+        if (active) setState({ data: withLatestInspection(data, latestInspection), error: null, loading: false });
+      })
+      .catch((error) => {
+        if (active) setState((current) => ({ ...current, error, loading: false }));
+      });
+    return () => {
+      active = false;
+    };
+  }, [page, reloadKey, retryKey, latestInspection]);
   const columns = [
     { key: "inspection_number", label: "Inspection No.", render: (r) => <span className="font-mono">{r.inspection_number}</span> },
     { key: "receipt_number", label: "Receipt", render: (r) => <ReceiptLink id={r.receipt} number={r.receipt_number} /> },
@@ -363,22 +411,28 @@ function InspectionLog({ reloadKey }) {
     { key: "inspection_date", label: "Date", render: (r) => fmtDate(r.inspection_date) },
   ];
   return (
-    <Card title="Inspection Log">
-      <div className="space-y-3">
-        <DataTable
-          columns={columns}
-          rows={state.data?.results}
-          loading={state.loading}
-          error={state.error}
-          onRowClick={(r) => setExpanded(expanded === r.id ? null : r.id)}
-          selectedKey={expanded}
-          empty="No inspections recorded yet."
-        />
-        {expanded && <Attachments ownerType={ATTACHMENT_OWNERS.inspection} ownerId={expanded} title="Inspection attachments" />}
-        <Pagination data={state.data} page={page} onPage={setPage} />
-      </div>
-    </Card>
+    <div ref={ref} className="scroll-mt-4">
+      <Card title="Inspection Log">
+        <div className="space-y-3">
+          {state.error && state.data?.results?.length > 0 && (
+            <ErrorBanner error={state.error} onRetry={() => setRetryKey((key) => key + 1)} />
+          )}
+          <DataTable
+            columns={columns}
+            rows={state.data?.results}
+            loading={state.loading}
+            error={state.data?.results?.length ? null : state.error}
+            onRetry={() => setRetryKey((key) => key + 1)}
+            onRowClick={(r) => setExpanded(expanded === r.id ? null : r.id)}
+            selectedKey={expanded}
+            empty="No inspections recorded yet."
+          />
+          {expanded && <Attachments ownerType={ATTACHMENT_OWNERS.inspection} ownerId={expanded} title="Inspection attachments" />}
+          <Pagination data={state.data} page={page} onPage={setPage} />
+        </div>
+      </Card>
+    </div>
   );
-}
+});
 
 export default ReceiptInspectionPage;

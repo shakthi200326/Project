@@ -5,6 +5,8 @@ class InventoryCategory(models.Model):
     code = models.CharField(max_length=40, db_index=True)
     name = models.CharField(max_length=120)
     description = models.TextField(blank=True)
+    image_file_id = models.CharField(max_length=120, blank=True)
+    is_active = models.BooleanField(default=True)
     parent = models.ForeignKey(
         "self",
         on_delete=models.PROTECT,
@@ -32,4 +34,3 @@ class InventoryCategory(models.Model):
 
     def __str__(self):
         return f"{self.code} – {self.name}"
-

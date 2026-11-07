@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   FileSpreadsheet,
   FileText,
-  Printer,
   Filter,
   RotateCcw,
   Search,
@@ -20,6 +19,7 @@ import {
   fetchProducts,
   fetchLocations,
 } from "../services/api";
+import { downloadReportPdf } from "../utils/pdfExport";
 
 const BADGE_TONES = {
   emerald: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800",
@@ -54,6 +54,7 @@ export function ReportShell({
   const [selectedLocation, setSelectedLocation] = useState("ALL");
   const [selectedStatus, setSelectedStatus] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
+  const [pdfError, setPdfError] = useState("");
 
   useEffect(() => {
     fetchWarehouses().then((res) => setWarehouses(res || []));
@@ -124,8 +125,37 @@ export function ReportShell({
     document.body.removeChild(link);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleExportPdf = () => {
+    setPdfError("");
+    try {
+      downloadReportPdf({
+        title,
+        subtitle,
+        fileName,
+        sections: [
+          {
+            title: "Applied Filters",
+            rows: [
+              ["Date From", dateFrom || "All"],
+              ["Date To", dateTo || "All"],
+              ["Product", selectedProduct],
+              ["Category", selectedCategory],
+              ["Warehouse", selectedWarehouse],
+              ["Storage Location", selectedLocation],
+              ["Stock Status", selectedStatus],
+              ["Search", searchQuery || "None"],
+            ],
+          },
+          {
+            title: "Report Data",
+            headers: columns.map((column) => column.header),
+            rows: data.map((row) => columns.map((column) => column.accessor(row))),
+          },
+        ],
+      });
+    } catch (exportError) {
+      setPdfError(exportError?.message || "Unable to generate the PDF. Please try again.");
+    }
   };
 
   return (
@@ -148,7 +178,7 @@ export function ReportShell({
           <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">{subtitle}</p>
         </div>
 
-        {/* 4 Required Actions: Apply Filters (in filter bar), Export Excel, Export PDF, Print */}
+        {/* Export actions */}
         <div className="flex shrink-0 items-center gap-2 print:hidden flex-wrap">
           <button
             type="button"
@@ -160,22 +190,20 @@ export function ReportShell({
           </button>
           <button
             type="button"
-            onClick={handlePrint}
+            onClick={handleExportPdf}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 transition-colors shadow-2xs cursor-pointer"
           >
             <FileText className="h-3.5 w-3.5" />
             Export PDF
           </button>
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border border-slate-300 dark:border-zinc-700 hover:bg-slate-200 transition-colors shadow-2xs cursor-pointer"
-          >
-            <Printer className="h-3.5 w-3.5" />
-            Print
-          </button>
         </div>
       </div>
+
+      {pdfError && (
+        <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-200">
+          {pdfError}
+        </div>
+      )}
 
       {/* Common Filters Container */}
       <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-4 shadow-xs print:hidden space-y-3">

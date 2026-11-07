@@ -1,859 +1,954 @@
-import React, { useState, useEffect, useMemo } from "react";
-import {
-  Cpu,
-  Search,
-  Plus,
-  Filter,
-  Download,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  ShieldAlert,
-  ShieldCheck,
-  X,
-  Warehouse as WarehouseIcon,
-  MapPin,
-  Calendar,
-  Layers,
-  ArrowRight,
-  RefreshCw,
-  QrCode,
-  Tag,
-  Barcode,
-} from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
 import {
   fetchSerialNumbers,
-  createSerialNumber,
-  updateSerialNumberStatus,
-  fetchProducts,
+  createSerialNumbers,
+  fetchSerialDetail,
+  fetchSerialMovements,
   fetchWarehouses,
-  fetchLocations,
-  fetchBatches,
-} from "@/services/api";
+  fetchItems,
+  fetchBatchesFiltered,
+} from "../services/api";
 
-export function SerialManagementPage() {
-  const navigate = useNavigate();
-  const [serials, setSerials] = useState([]);
-  const [products, setProducts] = useState([]);
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+const STATUS_STYLES = {
+  Available:   "bg-green-100  text-green-800  dark:bg-green-900/40  dark:text-green-300",
+  Reserved:    "bg-blue-100   text-blue-800   dark:bg-blue-900/40   dark:text-blue-300",
+  Issued:      "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
+  "In Transit":"bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
+  Returned:    "bg-gray-100   text-gray-700   dark:bg-gray-700/40   dark:text-gray-300",
+  Quarantined: "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300",
+  Blocked:     "bg-red-100    text-red-800    dark:bg-red-900/40    dark:text-red-300",
+  Damaged:     "bg-red-100    text-red-800    dark:bg-red-900/40    dark:text-red-300",
+  Scrapped:    "bg-slate-100  text-slate-700  dark:bg-slate-700/40  dark:text-slate-300",
+};
+
+function StatusBadge({ status }) {
+  const cls = STATUS_STYLES[status] || "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300";
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>
+      {status || "—"}
+    </span>
+  );
+}
+
+function fmt(val) {
+  if (!val) return "—";
+  if (typeof val === "string" && val.includes("T")) return val.split("T")[0];
+  return val;
+}
+
+function Spinner() {
+  return (
+    <div className="flex justify-center items-center py-10">
+      <div className="animate-spin h-8 w-8 rounded-full border-4 border-indigo-500 border-t-transparent" />
+    </div>
+  );
+}
+
+function ErrorMsg({ msg }) {
+  if (!msg) return null;
+  return (
+    <div className="rounded-md bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 p-3 text-sm text-red-700 dark:text-red-300">
+      {msg}
+    </div>
+  );
+}
+
+function SuccessMsg({ msg }) {
+  if (!msg) return null;
+  return (
+    <div className="rounded-md bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 p-3 text-sm text-green-700 dark:text-green-300">
+      {msg}
+    </div>
+  );
+}
+
+const TABS = [
+  "Serial List",
+  "Register Serials",
+  "Serial-wise Stock",
+  "Serial Details",
+  "Serial Movement History",
+];
+
+// ─── Tab 1: Serial List ──────────────────────────────────────────────────────
+
+function SerialListTab() {
+  const [rows, setRows]           = useState([]);
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState("");
+  const [search, setSearch]       = useState("");
+  const [filterStatus, setFilterStatus]       = useState("");
+  const [filterWarehouse, setFilterWarehouse] = useState("");
+  const [filterItem, setFilterItem]           = useState("");
+  const [page, setPage]           = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [warehouses, setWarehouses] = useState([]);
-  const [locations, setLocations] = useState([]);
-  const [batches, setBatches] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems]           = useState([]);
 
-  // Filters
-  const [searchTerm, setSearchTerm] = useState("");
-  const [productFilter, setProductFilter] = useState("");
-  const [warehouseFilter, setWarehouseFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const PAGE_SIZE = 10;
 
-  // Modal State
-  const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  useEffect(() => {
+    fetchWarehouses().then((d) => setWarehouses(d?.results || d || [])).catch(() => {});
+    fetchItems().then((d) => setItems(d?.results || d || [])).catch(() => {});
+  }, []);
 
-  // Scanner simulation modal
-  const [showScannerModal, setShowScannerModal] = useState(false);
-  const [scannedInput, setScannedInput] = useState("");
-
-  // Form State - Exactly the 8 Phase 5 fields
-  const [formData, setFormData] = useState({
-    serial_number: "",
-    product: "",
-    sku: "",
-    batch_number: "",
-    warehouse: "",
-    storage_location: "",
-    received_date: new Date().toISOString().split("T")[0],
-    serial_status: "Available",
-  });
-
-  const loadData = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
+    setError("");
     try {
-      const [sRes, prodRes, whRes, locRes, bRes] = await Promise.all([
-        fetchSerialNumbers(),
-        fetchProducts(),
-        fetchWarehouses(),
-        fetchLocations(),
-        fetchBatches(),
-      ]);
-      setSerials(sRes.results || sRes || []);
-      setProducts(prodRes.results || prodRes || []);
-      setWarehouses(whRes.results || whRes || []);
-      setLocations(locRes.results || locRes || []);
-      setBatches(bRes.results || bRes || []);
-    } catch (err) {
-      console.error("Failed to load serial management data", err);
+      const params = {
+        page,
+        page_size: PAGE_SIZE,
+      };
+      if (search)          params.search    = search;
+      if (filterStatus)    params.status    = filterStatus;
+      if (filterWarehouse) params.warehouse = filterWarehouse;
+      if (filterItem)      params.item      = filterItem;
+
+      const data = await fetchSerialNumbers(params);
+      setRows(data?.results || data || []);
+      setTotalCount(data?.count ?? (data?.results?.length ?? (data?.length ?? 0)));
+    } catch (e) {
+      setError(e?.message || "Failed to load serial numbers.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, search, filterStatus, filterWarehouse, filterItem]);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { load(); }, [load]);
 
-  const handleProductChange = (e) => {
-    const prodId = e.target.value;
-    const prod = products.find((p) => String(p.id) === String(prodId));
-    setFormData((prev) => ({
-      ...prev,
-      product: prodId,
-      sku: prod ? prod.sku || prod.code || "" : "",
-      batch_number: "",
-    }));
-  };
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-  // Batches for selected product
-  const modalProductBatches = useMemo(() => {
-    if (!formData.product) return batches;
-    return batches.filter(
-      (b) =>
-        String(b.product) === String(formData.product) ||
-        (b.product_name && b.product_name === formData.product)
-    );
-  }, [batches, formData.product]);
-
-  // Locations for selected warehouse
-  const modalWarehouseLocations = useMemo(() => {
-    if (!formData.warehouse) return locations;
-    return locations.filter(
-      (l) =>
-        String(l.warehouse) === String(formData.warehouse) ||
-        String(l.warehouse_id) === String(formData.warehouse) ||
-        l.warehouse_name === formData.warehouse
-    );
-  }, [locations, formData.warehouse]);
-
-  const handleGenerateSerial = () => {
-    const prefix = formData.sku ? formData.sku.slice(0, 4).toUpperCase() : "SN";
-    const rand = Math.floor(100000 + Math.random() * 900000);
-    setFormData((prev) => ({ ...prev, serial_number: `${prefix}-${rand}` }));
-  };
-
-  const handleRegisterSerial = async (e) => {
-    e.preventDefault();
-    if (!formData.serial_number.trim()) {
-      setErrorMsg("Serial Number is required.");
-      return;
-    }
-    if (!formData.product) {
-      setErrorMsg("Product is required.");
-      return;
-    }
-    if (!formData.warehouse) {
-      setErrorMsg("Warehouse is required.");
-      return;
-    }
-    if (!formData.storage_location) {
-      setErrorMsg("Storage Location is required.");
-      return;
-    }
-
-    setSubmitting(true);
-    setErrorMsg("");
-    try {
-      await createSerialNumber({
-        serial_number: formData.serial_number.trim(),
-        product: formData.product,
-        sku: formData.sku,
-        batch: formData.batch_number || null,
-        warehouse: formData.warehouse,
-        location: formData.storage_location,
-        received_date: formData.received_date,
-        status: formData.serial_status,
-      });
-
-      setShowRegisterModal(false);
-      setFormData({
-        serial_number: "",
-        product: "",
-        sku: "",
-        batch_number: "",
-        warehouse: "",
-        storage_location: "",
-        received_date: new Date().toISOString().split("T")[0],
-        serial_status: "Available",
-      });
-      loadData();
-    } catch (err) {
-      setErrorMsg(err.message || "Failed to register serial number.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleStatusChange = async (id, newStatus) => {
-    try {
-      await updateSerialNumberStatus(id, newStatus);
-      loadData();
-    } catch (err) {
-      console.error("Failed to update status", err);
-    }
-  };
-
-  const filteredSerials = useMemo(() => {
-    return serials.filter((s) => {
-      const q = searchTerm.toLowerCase();
-      const matchSearch =
-        !searchTerm ||
-        (s.serial_number && s.serial_number.toLowerCase().includes(q)) ||
-        (s.product_name && s.product_name.toLowerCase().includes(q)) ||
-        (s.sku && s.sku.toLowerCase().includes(q));
-
-      const matchProduct = !productFilter || String(s.product) === String(productFilter) || s.product_name === productFilter;
-      const matchWarehouse = !warehouseFilter || String(s.warehouse) === String(warehouseFilter) || s.warehouse_name === warehouseFilter;
-      const matchStatus = !statusFilter || s.status === statusFilter;
-
-      return matchSearch && matchProduct && matchWarehouse && matchStatus;
-    });
-  }, [serials, searchTerm, productFilter, warehouseFilter, statusFilter]);
-
-  // KPIs
-  const totalCount = serials.length;
-  const availableCount = serials.filter((s) => s.status === "Available" || s.status === "IN_STOCK").length;
-  const reservedCount = serials.filter((s) => s.status === "Reserved").length;
-  const inTransitOrIssued = serials.filter(
-    (s) => s.status === "Issued" || s.status === "In Transit" || s.status === "DISPATCHED"
-  ).length;
-  const quarantinedOrScrapped = serials.filter(
-    (s) => s.status === "Quarantined" || s.status === "Scrapped" || s.status === "DEFECTIVE"
-  ).length;
-
-  const exportCSV = () => {
-    const headers = [
-      "Serial Number",
-      "Product Name",
-      "SKU",
-      "Batch Number",
-      "Warehouse",
-      "Storage Location",
-      "Received Date",
-      "Serial Status",
-    ];
-    const rows = filteredSerials.map((s) => [
-      s.serial_number,
-      s.product_name || "",
-      s.sku || "",
-      s.batch_number || "",
-      s.warehouse_name || s.warehouse || "",
-      s.location_name || s.location || "",
-      s.received_date || "",
-      s.status || "Available",
-    ]);
-
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      [headers.join(","), ...rows.map((e) => e.map(x => `"${x}"`).join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `serials_export_${new Date().toISOString().split("T")[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const getStatusBadge = (status) => {
-    const s = String(status || "Available").toUpperCase();
-    if (s === "AVAILABLE" || s === "IN_STOCK") {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-          <CheckCircle className="h-3 w-3" /> Available
-        </span>
-      );
-    }
-    if (s === "RESERVED") {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-          <Clock className="h-3 w-3" /> Reserved
-        </span>
-      );
-    }
-    if (s === "ISSUED" || s === "DISPATCHED") {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
-          Issued
-        </span>
-      );
-    }
-    if (s === "IN TRANSIT" || s === "IN_TRANSIT") {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-400 border border-sky-200 dark:border-sky-800">
-          In Transit
-        </span>
-      );
-    }
-    if (s === "RETURNED") {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
-          Returned
-        </span>
-      );
-    }
-    if (s === "QUARANTINED") {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-          <ShieldAlert className="h-3 w-3" /> Quarantined
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
-        <AlertTriangle className="h-3 w-3" /> Scrapped
-      </span>
-    );
-  };
+  const handleSearch = (e) => { e.preventDefault(); setPage(1); };
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Serial Number Management
-            </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-              Unit Traceability
-            </span>
-          </div>
-          <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
-            Track each individual unit using a unique serial number, barcode verification, and lifecycle state.
-          </p>
+    <div className="space-y-4">
+      {/* Filters */}
+      <form onSubmit={handleSearch} className="flex flex-wrap gap-3 items-end">
+        <div className="flex-1 min-w-[180px]">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Search</label>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Serial number, notes…"
+            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={exportCSV}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors shadow-xs"
+
+        <div className="min-w-[140px]">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</label>
+          <select
+            value={filterStatus}
+            onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <Download className="h-3.5 w-3.5" />
-            Export CSV
-          </button>
-          <button
-            onClick={() => setShowRegisterModal(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-colors"
+            <option value="">All Statuses</option>
+            {Object.keys(STATUS_STYLES).map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="min-w-[160px]">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Warehouse</label>
+          <select
+            value={filterWarehouse}
+            onChange={(e) => { setFilterWarehouse(e.target.value); setPage(1); }}
+            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <Plus className="h-4 w-4" />
-            Register Serial Number
-          </button>
-        </div>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Total Registered</span>
-            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400">
-              <Cpu className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">{totalCount}</span>
-            <span className="text-xs text-slate-400">Units</span>
-          </div>
+            <option value="">All Warehouses</option>
+            {warehouses.map((w) => (
+              <option key={w.id} value={w.id}>{w.name}</option>
+            ))}
+          </select>
         </div>
 
-        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Available</span>
-            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400">
-              <CheckCircle className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{availableCount}</span>
-            <span className="text-xs text-slate-400">Ready to issue</span>
-          </div>
+        <div className="min-w-[160px]">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Item</label>
+          <select
+            value={filterItem}
+            onChange={(e) => { setFilterItem(e.target.value); setPage(1); }}
+            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">All Items</option>
+            {items.map((it) => (
+              <option key={it.id} value={it.id}>{it.name}</option>
+            ))}
+          </select>
         </div>
 
-        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">Reserved</span>
-            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400">
-              <Clock className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">{reservedCount}</span>
-            <span className="text-xs text-slate-400">Allocated</span>
-          </div>
-        </div>
+        <button
+          type="submit"
+          className="rounded-md bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-sm font-medium"
+        >
+          Search
+        </button>
+      </form>
 
-        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-purple-600 dark:text-purple-400">Issued / In Transit</span>
-            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/70 text-purple-600 dark:text-purple-400">
-              <ArrowRight className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-purple-600 dark:text-purple-400 tabular-nums">{inTransitOrIssued}</span>
-            <span className="text-xs text-slate-400">Dispatched</span>
-          </div>
-        </div>
+      <ErrorMsg msg={error} />
 
-        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">Quarantine / Scrapped</span>
-            <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/70 text-rose-600 dark:text-rose-400">
-              <ShieldAlert className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-rose-600 dark:text-rose-400 tabular-nums">{quarantinedOrScrapped}</span>
-            <span className="text-xs text-slate-400">Blocked</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter Toolbar */}
-      <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search serial #, product, or SKU..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-            />
-          </div>
-
-          <div>
-            <select
-              value={productFilter}
-              onChange={(e) => setProductFilter(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Products</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.name || p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <select
-              value={warehouseFilter}
-              onChange={(e) => setWarehouseFilter(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Warehouses</option>
-              {warehouses.map((w) => (
-                <option key={w.id} value={w.name || w.id}>
-                  {w.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Statuses</option>
-              <option value="Available">Available</option>
-              <option value="Reserved">Reserved</option>
-              <option value="Issued">Issued</option>
-              <option value="In Transit">In Transit</option>
-              <option value="Returned">Returned</option>
-              <option value="Quarantined">Quarantined</option>
-              <option value="Scrapped">Scrapped</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Serials Table */}
-      <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-zinc-800/50 text-slate-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-200 dark:border-zinc-800 whitespace-nowrap">
-              <tr>
-                <th className="py-3 px-4">Serial Number</th>
-                <th className="py-3 px-4">Product & SKU</th>
-                <th className="py-3 px-4">Batch Number</th>
-                <th className="py-3 px-4">Warehouse & Location</th>
-                <th className="py-3 px-4">Received Date</th>
-                <th className="py-3 px-4">Serial Status</th>
-                <th className="py-3 px-4 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/70">
-              {loading ? (
+      {loading ? <Spinner /> : (
+        <>
+          <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+              <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400 dark:text-zinc-500">
-                    <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-blue-500" />
-                    Loading serialized unit inventory...
-                  </td>
+                  {["Serial Number","Item","SKU","Batch Ref","Warehouse","Location","Status","Warranty Until","Last Seen","Notes"].map((h) => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                      {h}
+                    </th>
+                  ))}
                 </tr>
-              ) : filteredSerials.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400 dark:text-zinc-500">
-                    No serialized units found matching filter criteria.
-                  </td>
-                </tr>
-              ) : (
-                filteredSerials.map((s) => (
-                  <tr key={s.id || s.serial_number} className="hover:bg-slate-50/60 dark:hover:bg-zinc-800/40 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-blue-600 dark:text-blue-400">
-                      <span className="inline-flex items-center gap-2 whitespace-nowrap">
-                        <Barcode className="h-3.5 w-3.5 text-slate-400" />
-                        {s.serial_number}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-slate-900 dark:text-white">
-                        {s.product_name || "Product Unit"}
-                      </div>
-                      <div className="text-[10px] font-mono text-slate-400 dark:text-zinc-500">
-                        SKU: {s.sku || "N/A"}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600 dark:text-zinc-400">
-                      {s.batch_number ? (
-                        <Link
-                          to={`/inventory/tracking/batches?search=${encodeURIComponent(s.batch_number)}`}
-                          className="hover:text-blue-600 hover:underline"
-                        >
-                          {s.batch_number}
-                        </Link>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="text-slate-800 dark:text-zinc-200">
-                        {s.warehouse_name || s.warehouse || "Warehouse"}
-                      </div>
-                      <div className="text-[10px] text-slate-400 dark:text-zinc-500">
-                        {s.location_name || s.location || "Storage Location"}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600 dark:text-zinc-400">
-                      {s.received_date || "—"}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      {getStatusBadge(s.status)}
-                    </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <Link
-                          to={`/inventory/tracking/serial-movements?serial=${encodeURIComponent(s.serial_number)}`}
-                          title="View Unit Movements"
-                          className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                        >
-                          <ArrowRight className="h-4 w-4" />
-                        </Link>
-                        <select
-                          value={s.status}
-                          onChange={(e) => handleStatusChange(s.id, e.target.value)}
-                          className="text-[10px] px-2 py-1 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 focus:outline-none"
-                          title="Update unit status"
-                        >
-                          <option value="Available">Available</option>
-                          <option value="Reserved">Reserved</option>
-                          <option value="Issued">Issued</option>
-                          <option value="In Transit">In Transit</option>
-                          <option value="Returned">Returned</option>
-                          <option value="Quarantined">Quarantined</option>
-                          <option value="Scrapped">Scrapped</option>
-                        </select>
-                      </div>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
+                {rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
+                      No serial numbers found.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : rows.map((r) => (
+                  <tr key={r.id ?? r.serial_number} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                    <td className="px-4 py-3 font-mono text-xs text-gray-900 dark:text-gray-100 whitespace-nowrap">{r.serial_number || "—"}</td>
+                    <td className="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.item_name || r.item || "—"}</td>
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{r.sku || "—"}</td>
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{r.batch_ref || r.batch || "—"}</td>
+                    <td className="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.warehouse_name || r.warehouse || "—"}</td>
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{r.location || "—"}</td>
+                    <td className="px-4 py-3 whitespace-nowrap"><StatusBadge status={r.status} /></td>
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmt(r.warranty_until)}</td>
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmt(r.last_seen)}</td>
+                    <td className="px-4 py-3 text-gray-400 dark:text-gray-500 max-w-[180px] truncate">{r.notes || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+            <span>
+              Page {page} of {totalPages} &nbsp;·&nbsp; {totalCount} records
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                ← Prev
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── Tab 2: Register Serials ─────────────────────────────────────────────────
+
+const REGISTER_MODES = ["Single", "Bulk Range", "CSV Paste"];
+
+function RegisterSerialsTab() {
+  const [mode, setMode]         = useState("Single");
+  const [items, setItems]       = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
+  const [batches, setBatches]   = useState([]);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState("");
+  const [success, setSuccess]   = useState("");
+
+  // Single
+  const [single, setSingle] = useState({
+    serial_number: "", item: "", warehouse: "", batch: "",
+    manufacturing_date: "", warranty_start_date: "", warranty_until: "", notes: "",
+  });
+
+  // Bulk Range
+  const [bulk, setBulk] = useState({
+    prefix: "", start: "", end: "", item: "", warehouse: "", batch: "", warranty_until: "",
+  });
+  const [bulkProgress, setBulkProgress] = useState(null); // { done, total }
+
+  // CSV Paste
+  const [csv, setCsv] = useState({
+    text: "", item: "", warehouse: "", batch: "", warranty_until: "",
+  });
+  const [csvResults, setCsvResults] = useState([]); // [{serial, status}]
+
+  // Shared item/warehouse for bulk/csv
+  const [selectedItem, setSelectedItem] = useState("");
+
+  useEffect(() => {
+    fetchItems().then((d) => setItems(d?.results || d || [])).catch(() => {});
+    fetchWarehouses().then((d) => setWarehouses(d?.results || d || [])).catch(() => {});
+  }, []);
+
+  // Fetch batches when item changes (for Single mode)
+  useEffect(() => {
+    if (single.item) {
+      fetchBatchesFiltered({ item: single.item })
+        .then((d) => setBatches(d?.results || d || []))
+        .catch(() => setBatches([]));
+    } else {
+      setBatches([]);
+    }
+  }, [single.item]);
+
+  // Fetch batches for bulk/csv by shared item
+  const [bulkBatches, setBulkBatches] = useState([]);
+  useEffect(() => {
+    if (bulk.item) {
+      fetchBatchesFiltered({ item: bulk.item })
+        .then((d) => setBulkBatches(d?.results || d || []))
+        .catch(() => setBulkBatches([]));
+    } else {
+      setBulkBatches([]);
+    }
+  }, [bulk.item]);
+
+  const [csvBatches, setCsvBatches] = useState([]);
+  useEffect(() => {
+    if (csv.item) {
+      fetchBatchesFiltered({ item: csv.item })
+        .then((d) => setCsvBatches(d?.results || d || []))
+        .catch(() => setCsvBatches([]));
+    } else {
+      setCsvBatches([]);
+    }
+  }, [csv.item]);
+
+  function resetMessages() { setError(""); setSuccess(""); }
+
+  // ── Single Submit ──
+  async function handleSingleSubmit(e) {
+    e.preventDefault();
+    resetMessages();
+    if (!single.serial_number.trim()) { setError("Serial Number is required."); return; }
+    if (!single.item)                 { setError("Item is required.");          return; }
+    if (!single.warehouse)            { setError("Warehouse is required.");     return; }
+    setLoading(true);
+    try {
+      const payload = {
+        serial_number:      single.serial_number.trim(),
+        item:               single.item,
+        warehouse:          single.warehouse,
+        batch:              single.batch || undefined,
+        manufacturing_date: single.manufacturing_date || undefined,
+        warranty_start_date: single.warranty_start_date || undefined,
+        warranty_until:     single.warranty_until || undefined,
+        notes:              single.notes || undefined,
+      };
+      await createSerialNumbers(payload);
+      setSuccess(`Serial "${single.serial_number.trim()}" registered successfully.`);
+      setSingle({ serial_number: "", item: "", warehouse: "", batch: "", manufacturing_date: "", warranty_start_date: "", warranty_until: "", notes: "" });
+    } catch (err) {
+      setError(err?.message || "Failed to create serial number.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── Bulk Range Submit ──
+  async function handleBulkSubmit(e) {
+    e.preventDefault();
+    resetMessages();
+    const start = parseInt(bulk.start, 10);
+    const end   = parseInt(bulk.end,   10);
+    if (!bulk.prefix)   { setError("Prefix is required.");         return; }
+    if (isNaN(start))   { setError("Start Number is required.");   return; }
+    if (isNaN(end))     { setError("End Number is required.");     return; }
+    if (end < start)    { setError("End must be ≥ Start.");        return; }
+    if (!bulk.item)     { setError("Item is required.");           return; }
+    if (!bulk.warehouse){ setError("Warehouse is required.");      return; }
+    const count = end - start + 1;
+    setBulkProgress({ done: 0, total: count });
+    setLoading(true);
+    let done = 0;
+    const errors = [];
+    for (let i = start; i <= end; i++) {
+      const serial_number = `${bulk.prefix}${i}`;
+      try {
+        await createSerialNumbers({
+          serial_number,
+          item:          bulk.item,
+          warehouse:     bulk.warehouse,
+          batch:         bulk.batch || undefined,
+          warranty_until: bulk.warranty_until || undefined,
+        });
+        done++;
+        setBulkProgress({ done, total: count });
+      } catch (err) {
+        errors.push(serial_number);
+      }
+    }
+    setLoading(false);
+    if (errors.length === 0) {
+      setSuccess(`All ${count} serials registered successfully.`);
+    } else {
+      setSuccess(`${done} of ${count} registered. ${errors.length} failed: ${errors.slice(0,5).join(", ")}${errors.length > 5 ? "…" : ""}`);
+    }
+    setBulkProgress(null);
+  }
+
+  // ── CSV Submit ──
+  async function handleCsvSubmit(e) {
+    e.preventDefault();
+    resetMessages();
+    if (!csv.item)      { setError("Item is required.");      return; }
+    if (!csv.warehouse) { setError("Warehouse is required."); return; }
+    const lines = csv.text
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    const unique = [...new Set(lines)];
+    if (unique.length === 0) { setError("No serial numbers found in input."); return; }
+    setLoading(true);
+    const results = [];
+    for (const sn of unique) {
+      try {
+        await createSerialNumbers({
+          serial_number: sn,
+          item:          csv.item,
+          warehouse:     csv.warehouse,
+          batch:         csv.batch || undefined,
+          warranty_until: csv.warranty_until || undefined,
+        });
+        results.push({ serial: sn, status: "Created", ok: true });
+      } catch (err) {
+        results.push({ serial: sn, status: err?.message || "Error", ok: false });
+      }
+    }
+    setCsvResults(results);
+    setLoading(false);
+    const ok = results.filter((r) => r.ok).length;
+    setSuccess(`${ok} of ${unique.length} serial(s) created.`);
+  }
+
+  const bulkCount =
+    !isNaN(parseInt(bulk.start, 10)) && !isNaN(parseInt(bulk.end, 10))
+      ? Math.max(0, parseInt(bulk.end, 10) - parseInt(bulk.start, 10) + 1)
+      : 0;
+
+  const inputCls =
+    "w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500";
+  const labelCls = "block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1";
+
+  return (
+    <div className="space-y-5 max-w-3xl">
+      {/* Mode Selector */}
+      <div className="flex gap-4">
+        {REGISTER_MODES.map((m) => (
+          <label key={m} className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="register_mode"
+              value={m}
+              checked={mode === m}
+              onChange={() => { setMode(m); resetMessages(); setCsvResults([]); setBulkProgress(null); }}
+              className="accent-indigo-600"
+            />
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{m}</span>
+          </label>
+        ))}
       </div>
 
-      {/* Modal: Register Serial Number Form (Exact 8 Phase 5 fields) */}
-      {showRegisterModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="w-full max-w-xl rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl overflow-hidden my-8">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/50">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
-                  <Cpu className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Register Serial Number Form
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-zinc-400">
-                    Register an individually traceable unit with unique serial identification.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowRegisterModal(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+      <ErrorMsg msg={error} />
+      <SuccessMsg msg={success} />
 
-            <form onSubmit={handleRegisterSerial} className="p-6 space-y-4 text-xs">
-              {errorMsg && (
-                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300 font-medium">
-                  {errorMsg}
-                </div>
-              )}
-
-              <div className="space-y-4">
-                {/* 1. Serial Number (Text / Scan, Required) */}
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Serial Number <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="e.g. SN-BRG-849102"
-                      value={formData.serial_number}
-                      onChange={(e) => setFormData({ ...formData, serial_number: e.target.value })}
-                      required
-                      className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleGenerateSerial}
-                      className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700 font-medium"
-                    >
-                      Generate
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowScannerModal(true)}
-                      className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-colors"
-                      title="Scan Barcode"
-                    >
-                      <Barcode className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* 2. Product (Dropdown, Required) */}
-                  <div>
-                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                      Product <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      value={formData.product}
-                      onChange={handleProductChange}
-                      required
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select product...</option>
-                      {products.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* 3. SKU (Auto-filled, Required) */}
-                  <div>
-                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                      SKU (Auto-filled)
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.sku}
-                      readOnly
-                      placeholder="Product SKU"
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-100/70 dark:bg-zinc-800/30 text-slate-600 dark:text-zinc-400 font-mono cursor-not-allowed"
-                    />
-                  </div>
-                </div>
-
-                {/* 4. Batch Number (Dropdown, Optional) */}
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Batch Number (Optional)
-                  </label>
-                  <select
-                    value={formData.batch_number}
-                    onChange={(e) => setFormData({ ...formData, batch_number: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">None / Not linked to batch</option>
-                    {modalProductBatches.map((b) => (
-                      <option key={b.id || b.batch_number} value={b.batch_number}>
-                        {b.batch_number} (Exp: {b.expiry_date || "N/A"})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* 5. Warehouse (Dropdown, Required) */}
-                  <div>
-                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                      Warehouse <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      value={formData.warehouse}
-                      onChange={(e) => setFormData({ ...formData, warehouse: e.target.value, storage_location: "" })}
-                      required
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select warehouse...</option>
-                      {warehouses.map((w) => (
-                        <option key={w.id} value={w.id}>
-                          {w.name} ({w.code})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* 6. Storage Location (Dropdown, Required) */}
-                  <div>
-                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                      Storage Location <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      value={formData.storage_location}
-                      onChange={(e) => setFormData({ ...formData, storage_location: e.target.value })}
-                      required
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select location...</option>
-                      {modalWarehouseLocations.map((l) => (
-                        <option key={l.id} value={l.id}>
-                          {l.name || l.code}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* 7. Received Date (Date, Required) */}
-                  <div>
-                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                      Received Date <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.received_date}
-                      onChange={(e) => setFormData({ ...formData, received_date: e.target.value })}
-                      required
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  {/* 8. Serial Status (Dropdown, Required) */}
-                  <div>
-                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                      Serial Status <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      value={formData.serial_status}
-                      onChange={(e) => setFormData({ ...formData, serial_status: e.target.value })}
-                      required
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="Available">Available</option>
-                      <option value="Reserved">Reserved</option>
-                      <option value="Issued">Issued</option>
-                      <option value="In Transit">In Transit</option>
-                      <option value="Returned">Returned</option>
-                      <option value="Quarantined">Quarantined</option>
-                      <option value="Scrapped">Scrapped</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setShowRegisterModal(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 font-medium transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors disabled:opacity-50"
-                >
-                  {submitting ? "Registering..." : "Register Serial"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Barcode Scanner Modal */}
-      {showScannerModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl p-6 text-center space-y-4">
-            <div className="p-3 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 w-fit mx-auto">
-              <Barcode className="h-8 w-8" />
+      {/* ── Single ── */}
+      {mode === "Single" && (
+        <form onSubmit={handleSingleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Serial Number *</label>
+              <input type="text" value={single.serial_number} onChange={(e) => setSingle({ ...single, serial_number: e.target.value })} className={inputCls} placeholder="e.g. SN-001234" required />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Scan Barcode / QR</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Enter or scan the unit serial barcode using a handheld scanner or keyboard entry.
-              </p>
+              <label className={labelCls}>Item *</label>
+              <select value={single.item} onChange={(e) => setSingle({ ...single, item: e.target.value, batch: "" })} className={inputCls} required>
+                <option value="">Select Item…</option>
+                {items.map((it) => <option key={it.id} value={it.id}>{it.name}</option>)}
+              </select>
             </div>
-            <input
-              type="text"
-              autoFocus
-              placeholder="Scan or type serial number..."
-              value={scannedInput}
-              onChange={(e) => setScannedInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && scannedInput.trim()) {
-                  setFormData((prev) => ({ ...prev, serial_number: scannedInput.trim() }));
-                  setShowScannerModal(false);
-                  setScannedInput("");
-                }
-              }}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-center font-mono text-slate-900 dark:text-white"
-            />
-            <div className="flex gap-2 justify-center">
-              <button
-                type="button"
-                onClick={() => {
-                  if (scannedInput.trim()) {
-                    setFormData((prev) => ({ ...prev, serial_number: scannedInput.trim() }));
-                  }
-                  setShowScannerModal(false);
-                  setScannedInput("");
-                }}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
-              >
-                Apply Serial
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowScannerModal(false)}
-                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 text-xs font-semibold"
-              >
-                Cancel
-              </button>
+            <div>
+              <label className={labelCls}>Warehouse *</label>
+              <select value={single.warehouse} onChange={(e) => setSingle({ ...single, warehouse: e.target.value })} className={inputCls} required>
+                <option value="">Select Warehouse…</option>
+                {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Batch Reference</label>
+              <select value={single.batch} onChange={(e) => setSingle({ ...single, batch: e.target.value })} className={inputCls} disabled={!single.item}>
+                <option value="">No Batch / Select…</option>
+                {batches.map((b) => <option key={b.id} value={b.id}>{b.batch_number || b.name || b.id}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Manufacturing Date</label>
+              <input type="date" value={single.manufacturing_date} onChange={(e) => setSingle({ ...single, manufacturing_date: e.target.value })} className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Warranty Start Date</label>
+              <input type="date" value={single.warranty_start_date} onChange={(e) => setSingle({ ...single, warranty_start_date: e.target.value })} className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Warranty Until Date</label>
+              <input type="date" value={single.warranty_until} onChange={(e) => setSingle({ ...single, warranty_until: e.target.value })} className={inputCls} />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={labelCls}>Notes</label>
+              <textarea value={single.notes} onChange={(e) => setSingle({ ...single, notes: e.target.value })} className={inputCls} rows={2} placeholder="Optional notes…" />
             </div>
           </div>
+          <button type="submit" disabled={loading} className="rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white px-5 py-2 text-sm font-medium">
+            {loading ? "Saving…" : "Register Serial"}
+          </button>
+        </form>
+      )}
+
+      {/* ── Bulk Range ── */}
+      {mode === "Bulk Range" && (
+        <form onSubmit={handleBulkSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Prefix *</label>
+              <input type="text" value={bulk.prefix} onChange={(e) => setBulk({ ...bulk, prefix: e.target.value })} className={inputCls} placeholder="e.g. SN-" />
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className={labelCls}>Start Number *</label>
+                <input type="number" min="0" value={bulk.start} onChange={(e) => setBulk({ ...bulk, start: e.target.value })} className={inputCls} />
+              </div>
+              <div className="flex-1">
+                <label className={labelCls}>End Number *</label>
+                <input type="number" min="0" value={bulk.end} onChange={(e) => setBulk({ ...bulk, end: e.target.value })} className={inputCls} />
+              </div>
+            </div>
+          </div>
+
+          {bulkCount > 0 && (
+            <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">
+              Preview: {bulk.prefix}{bulk.start} → {bulk.prefix}{bulk.end} &nbsp;·&nbsp; <strong>{bulkCount}</strong> serial{bulkCount !== 1 ? "s" : ""}
+            </p>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Item *</label>
+              <select value={bulk.item} onChange={(e) => setBulk({ ...bulk, item: e.target.value, batch: "" })} className={inputCls}>
+                <option value="">Select Item…</option>
+                {items.map((it) => <option key={it.id} value={it.id}>{it.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Warehouse *</label>
+              <select value={bulk.warehouse} onChange={(e) => setBulk({ ...bulk, warehouse: e.target.value })} className={inputCls}>
+                <option value="">Select Warehouse…</option>
+                {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Batch Reference</label>
+              <select value={bulk.batch} onChange={(e) => setBulk({ ...bulk, batch: e.target.value })} className={inputCls} disabled={!bulk.item}>
+                <option value="">No Batch / Select…</option>
+                {bulkBatches.map((b) => <option key={b.id} value={b.id}>{b.batch_number || b.name || b.id}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Warranty Until</label>
+              <input type="date" value={bulk.warranty_until} onChange={(e) => setBulk({ ...bulk, warranty_until: e.target.value })} className={inputCls} />
+            </div>
+          </div>
+
+          {bulkProgress && (
+            <div className="space-y-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Registering… {bulkProgress.done} / {bulkProgress.total}
+              </p>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div
+                  className="bg-indigo-600 h-2 rounded-full transition-all"
+                  style={{ width: `${Math.round((bulkProgress.done / bulkProgress.total) * 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          <button type="submit" disabled={loading} className="rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white px-5 py-2 text-sm font-medium">
+            {loading ? "Processing…" : `Register ${bulkCount || ""} Serials`}
+          </button>
+        </form>
+      )}
+
+      {/* ── CSV Paste ── */}
+      {mode === "CSV Paste" && (
+        <form onSubmit={handleCsvSubmit} className="space-y-4">
+          <div>
+            <label className={labelCls}>Serial Numbers (one per line) *</label>
+            <textarea
+              value={csv.text}
+              onChange={(e) => setCsv({ ...csv, text: e.target.value })}
+              className={`${inputCls} font-mono`}
+              rows={8}
+              placeholder={"SN-100001\nSN-100002\nSN-100003"}
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Item *</label>
+              <select value={csv.item} onChange={(e) => setCsv({ ...csv, item: e.target.value, batch: "" })} className={inputCls}>
+                <option value="">Select Item…</option>
+                {items.map((it) => <option key={it.id} value={it.id}>{it.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Warehouse *</label>
+              <select value={csv.warehouse} onChange={(e) => setCsv({ ...csv, warehouse: e.target.value })} className={inputCls}>
+                <option value="">Select Warehouse…</option>
+                {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Batch Reference</label>
+              <select value={csv.batch} onChange={(e) => setCsv({ ...csv, batch: e.target.value })} className={inputCls} disabled={!csv.item}>
+                <option value="">No Batch / Select…</option>
+                {csvBatches.map((b) => <option key={b.id} value={b.id}>{b.batch_number || b.name || b.id}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Warranty Until</label>
+              <input type="date" value={csv.warranty_until} onChange={(e) => setCsv({ ...csv, warranty_until: e.target.value })} className={inputCls} />
+            </div>
+          </div>
+
+          <button type="submit" disabled={loading} className="rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white px-5 py-2 text-sm font-medium">
+            {loading ? "Processing…" : "Register Serials"}
+          </button>
+
+          {csvResults.length > 0 && (
+            <div className="mt-4 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+              <table className="min-w-full text-sm divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Serial Number</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Result</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
+                  {csvResults.map((r) => (
+                    <tr key={r.serial}>
+                      <td className="px-4 py-2 font-mono text-xs text-gray-900 dark:text-gray-100">{r.serial}</td>
+                      <td className="px-4 py-2">
+                        <span className={`text-xs font-medium ${r.ok ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                          {r.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </form>
+      )}
+    </div>
+  );
+}
+
+// ─── Tab 3: Serial-wise Stock ────────────────────────────────────────────────
+
+function SerialStockTab() {
+  const [rows, setRows]       = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState("");
+
+  useEffect(() => {
+    setLoading(true);
+    fetchSerialNumbers({ page_size: 50 })
+      .then((d) => setRows(d?.results || d || []))
+      .catch((e) => setError(e?.message || "Failed to load data."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-gray-500 dark:text-gray-400">Read-only view of serial-level stock positions (up to 50 records).</p>
+      <ErrorMsg msg={error} />
+      {loading ? <Spinner /> : (
+        <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+            <thead className="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                {["Serial Number","Item","SKU","Batch Ref","Warehouse","Location","Status","Last Movement","Reference"].map((h) => (
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">No data available.</td>
+                </tr>
+              ) : rows.map((r) => (
+                <tr key={r.id ?? r.serial_number} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                  <td className="px-4 py-3 font-mono text-xs text-gray-900 dark:text-gray-100 whitespace-nowrap">{r.serial_number || "—"}</td>
+                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.item_name || r.item || "—"}</td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{r.sku || "—"}</td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{r.batch_ref || r.batch || "—"}</td>
+                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.warehouse_name || r.warehouse || "—"}</td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{r.location || "—"}</td>
+                  <td className="px-4 py-3 whitespace-nowrap"><StatusBadge status={r.status} /></td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmt(r.last_movement_date || r.last_movement)}</td>
+                  <td className="px-4 py-3 text-gray-400 dark:text-gray-500 whitespace-nowrap">{r.reference || r.last_reference || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
   );
 }
-export default SerialManagementPage;
 
+// ─── Tab 4: Serial Details ───────────────────────────────────────────────────
+
+function DetailRow({ label, value }) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-start gap-1 py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
+      <span className="sm:w-52 shrink-0 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{label}</span>
+      <span className="text-sm text-gray-900 dark:text-gray-100 break-all">{fmt(value)}</span>
+    </div>
+  );
+}
+
+function SerialDetailsTab() {
+  const [query, setQuery]     = useState("");
+  const [detail, setDetail]   = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState("");
+
+  async function handleSearch(e) {
+    e.preventDefault();
+    if (!query.trim()) return;
+    setLoading(true);
+    setError("");
+    setDetail(null);
+    try {
+      const data = await fetchSerialDetail(query.trim());
+      setDetail(data);
+    } catch (err) {
+      setError(err?.message || "Serial not found.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-5 max-w-2xl">
+      <form onSubmit={handleSearch} className="flex gap-3">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Enter Serial Number…"
+          className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+        <button
+          type="submit"
+          disabled={loading || !query.trim()}
+          className="rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white px-4 py-2 text-sm font-medium"
+        >
+          {loading ? "Searching…" : "Search"}
+        </button>
+      </form>
+
+      <ErrorMsg msg={error} />
+
+      {loading && <Spinner />}
+
+      {detail && (
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5 space-y-1">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 font-mono">
+              {detail.serial_number}
+            </h3>
+            <StatusBadge status={detail.status} />
+          </div>
+
+          <DetailRow label="Item"                   value={detail.item_name || detail.item} />
+          <DetailRow label="SKU"                    value={detail.sku} />
+          <DetailRow label="Batch Reference"        value={detail.batch_ref || detail.batch} />
+          <DetailRow label="Warehouse"              value={detail.warehouse_name || detail.warehouse} />
+          <DetailRow label="Location"               value={detail.location} />
+          <DetailRow label="Manufacturing Date"     value={detail.manufacturing_date} />
+          <DetailRow label="Warranty Start Date"    value={detail.warranty_start_date} />
+          <DetailRow label="Warranty Until"         value={detail.warranty_until} />
+          <DetailRow label="Supplier Serial Ref"   value={detail.supplier_serial_reference} />
+          <DetailRow label="Goods Receipt Ref"     value={detail.goods_receipt_ref} />
+          <DetailRow label="Last Seen"             value={detail.last_seen} />
+          <DetailRow label="Notes"                 value={detail.notes} />
+          <DetailRow label="Created At"            value={detail.created_at} />
+          <DetailRow label="Updated At"            value={detail.updated_at} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Tab 5: Serial Movement History ─────────────────────────────────────────
+
+function MovementHistoryTab() {
+  const [query, setQuery]       = useState("");
+  const [rows, setRows]         = useState([]);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState("");
+  const [searched, setSearched] = useState(false);
+
+  async function handleSearch(e) {
+    e.preventDefault();
+    if (!query.trim()) return;
+    setLoading(true);
+    setError("");
+    setRows([]);
+    setSearched(false);
+    try {
+      const data = await fetchSerialMovements({ serial_number: query.trim() });
+      setRows(data?.results || data || []);
+      setSearched(true);
+    } catch (err) {
+      setError(err?.message || "Failed to load movement history.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      <form onSubmit={handleSearch} className="flex gap-3 max-w-xl">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Enter Serial Number…"
+          className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+        <button
+          type="submit"
+          disabled={loading || !query.trim()}
+          className="rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white px-4 py-2 text-sm font-medium"
+        >
+          {loading ? "Loading…" : "Load History"}
+        </button>
+      </form>
+
+      <ErrorMsg msg={error} />
+      {loading && <Spinner />}
+
+      {searched && !loading && (
+        <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+            <thead className="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                {["Date","Transaction Type","Direction","Reference","Warehouse","Quantity","Notes"].map((h) => (
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
+                    No movement records found for "{query}".
+                  </td>
+                </tr>
+              ) : rows.map((r, idx) => {
+                const direction = r.direction || r.movement_direction || "";
+                const dirCls = direction === "IN"
+                  ? "text-green-600 dark:text-green-400 font-semibold"
+                  : direction === "OUT"
+                    ? "text-red-600 dark:text-red-400 font-semibold"
+                    : "text-gray-600 dark:text-gray-400";
+                return (
+                  <tr key={r.id ?? idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                    <td className="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{fmt(r.date || r.movement_date || r.created_at)}</td>
+                    <td className="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.transaction_type || r.type || "—"}</td>
+                    <td className={`px-4 py-3 whitespace-nowrap ${dirCls}`}>{direction || "—"}</td>
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{r.reference || "—"}</td>
+                    <td className="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.warehouse_name || r.warehouse || "—"}</td>
+                    <td className="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap text-right">{r.quantity ?? "—"}</td>
+                    <td className="px-4 py-3 text-gray-400 dark:text-gray-500 max-w-[200px] truncate">{r.notes || "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Page ───────────────────────────────────────────────────────────────
+
+export function SerialManagementPage() {
+  const [activeTab, setActiveTab] = useState(0);
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Serial Number Management</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Track, register, and audit individual serialized items across your inventory.
+          </p>
+        </div>
+
+        {/* Tab Bar */}
+        <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+          <nav className="-mb-px flex gap-1 overflow-x-auto" aria-label="Tabs">
+            {TABS.map((tab, idx) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(idx)}
+                className={`
+                  whitespace-nowrap py-3 px-4 text-sm font-medium border-b-2 transition-colors
+                  ${activeTab === idx
+                    ? "border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                  }
+                `}
+              >
+                {tab}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Tab Content */}
+        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          {activeTab === 0 && <SerialListTab />}
+          {activeTab === 1 && <RegisterSerialsTab />}
+          {activeTab === 2 && <SerialStockTab />}
+          {activeTab === 3 && <SerialDetailsTab />}
+          {activeTab === 4 && <MovementHistoryTab />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default SerialManagementPage;

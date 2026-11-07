@@ -151,7 +151,7 @@ export function StockReleasePage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Toast */}
       {toastMessage && (
         <div
@@ -475,4 +475,3 @@ export function StockReleasePage() {
 }
 
 export default StockReleasePage;
-

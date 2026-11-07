@@ -47,23 +47,24 @@ function updateApiStatus(connected) {
 
   }
 
-  async function fetchAllPages(url, signal) {
-    const records = [];
-    let nextUrl = url;
-    while (nextUrl) {
-      const res = await fetch(nextUrl, { signal });
-      if (!res.ok) throw new Error(`Request failed (${res.status}).`);
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        records.push(...data);
-        break;
-      }
-      records.push(...(data.results || []));
-      nextUrl = data.next;
-    }
-    return records;
-  }
+}
 
+
+async function fetchAllPages(url, signal) {
+  const records = [];
+  let nextUrl = url;
+  while (nextUrl) {
+    const res = await fetch(nextUrl, { signal });
+    if (!res.ok) throw new Error(`Request failed (${res.status}).`);
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      records.push(...data);
+      break;
+    }
+    records.push(...(data.results || []));
+    nextUrl = data.next;
+  }
+  return records;
 }
 
 
@@ -1876,7 +1877,7 @@ const ITEM_WRITE_FIELDS = [
   "item_type", "classification", "brand", "manufacturer", "model_number", "country_of_origin",
   "status", "is_active", "track_inventory", "is_stockable", "is_purchasable", "is_salable",
   "allow_negative_stock", "tracking", "batch_tracking_required", "serial_tracking_required",
-  "expiry_tracking_required", "has_variants", "base_unit", "reorder_point", "reorder_quantity",
+  "expiry_tracking_required", "has_variants", "variant_attribute_ids", "base_unit", "reorder_point", "reorder_quantity",
   "valuation_method", "standard_cost", "list_price", "net_weight", "gross_weight", "length",
   "width", "height", "volume", "min_order_qty", "lead_time_days", "purchase_tax_code",
   "sales_tax_code", "barcode",
@@ -1963,6 +1964,10 @@ function normalizeApiProduct(p) {
     reorder_quantity: parseFloat(p.reorder_quantity ?? 0) || 0,
     stock_status: onHand <= 0 ? "OUT_OF_STOCK" : available <= reorderPoint ? "LOW_STOCK" : "IN_STOCK",
   };
+}
+
+export async function fetchItems(params = {}) {
+  return fetchProducts(params);
 }
 
 export async function fetchProducts(params = {}) {
@@ -3245,6 +3250,12 @@ export async function createBin(payload) {
 
         barcode: payload.barcode || "",
 
+        bin_type: payload.bin_type || "Standard",
+
+        max_quantity: payload.max_quantity === "" || payload.max_quantity == null
+          ? null
+          : parseFloat(payload.max_quantity),
+
         status: payload.status || "Active",
 
       }),
@@ -3345,7 +3356,20 @@ export async function updateBin(id, payload) {
 
       headers: { "Content-Type": "application/json" },
 
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        warehouse: payload.warehouse_id || payload.warehouse,
+        location: payload.location_id || payload.location || null,
+        rack: payload.rack_id || payload.rack || null,
+        code: payload.code,
+        name: payload.name,
+        rack_level: parseInt(payload.rack_level, 10) || 1,
+        barcode: payload.barcode || "",
+        bin_type: payload.bin_type || "Standard",
+        max_quantity: payload.max_quantity === "" || payload.max_quantity == null
+          ? null
+          : parseFloat(payload.max_quantity),
+        status: payload.status || "Active",
+      }),
 
     });
 
@@ -3725,7 +3749,7 @@ export async function fetchStockMovements(params = {}) {
 
 
 
-export async function postStockTransaction(payload, action = "post") {
+export async function postStockTransaction(payload, action = "post", { strict = false } = {}) {
 
   const docNum = payload.document_number || `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
@@ -3801,7 +3825,20 @@ export async function postStockTransaction(payload, action = "post") {
 
         notes: payload.remarks || payload.notes || "",
 
-        lines: [
+        lines: Array.isArray(payload.lines) && payload.lines.length ? payload.lines.map((line) => ({
+            item: line.item ?? line.item_id ?? line.itemId ?? line.product_id ?? 1,
+            variant: line.variant ?? line.variant_id ?? null,
+            location: line.location_id ?? line.location ?? null,
+            destination_location: line.destination_location_id ?? line.destination_location ?? null,
+            quantity: Number(line.quantity ?? line.transfer_quantity ?? 0),
+            unit_cost: Number(line.unit_cost ?? line.unitCost ?? 0),
+            batch_number: line.batch_number ?? line.batchNumber ?? "",
+            expiry_date: line.expiry_date ?? line.expiryDate ?? null,
+            serial_numbers: line.serial_numbers ?? (line.serial_number ? [String(line.serial_number)] : []),
+            actual_quantity: Number(line.actual_quantity ?? 0),
+            system_quantity: Number(line.system_quantity ?? 0),
+            difference_quantity: Number(line.difference_quantity ?? 0),
+          })) : [
 
           {
 
@@ -3839,7 +3876,12 @@ export async function postStockTransaction(payload, action = "post") {
 
       updateApiStatus(true);
 
-      created = await res.json();
+      if (strict) {
+        created = await res.json();
+        if (!created?.id) throw new Error("The stock transaction was not created by the server.");
+      } else {
+        created = await res.json();
+      }
 
       if (action !== "save_draft" && created && created.id) {
 
@@ -3851,19 +3893,58 @@ export async function postStockTransaction(payload, action = "post") {
 
           if (actRes.ok) {
 
-            created = await actRes.json();
-
+            if (strict) {
+              const responseText = await actRes.text();
+              let actionResult = {};
+              if (responseText) {
+                try {
+                  const parsedResult = JSON.parse(responseText);
+                  actionResult = parsedResult && typeof parsedResult === "object" && !Array.isArray(parsedResult)
+                    ? parsedResult
+                    : {};
+                } catch {
+                  throw new Error("The stock posting service returned an unreadable response.");
+                }
+              }
+              if (actionResult.status && String(actionResult.status).toUpperCase() !== targetStatus) {
+                throw new Error(`The stock transaction was not ${targetStatus.toLowerCase()} by the server.`);
+              }
+              created = { ...created, ...actionResult, status: actionResult.status || targetStatus };
+            } else {
+              created = await actRes.json();
+            }
+          } else if (strict) {
+            const responseText = await actRes.text();
+            let responseBody;
+            try {
+              responseBody = JSON.parse(responseText);
+            } catch {
+              responseBody = responseText;
+            }
+            const detail = responseBody?.detail || responseBody?.error || responseBody?.message || responseText;
+            throw new Error(detail || `Stock transaction ${action} failed (${actRes.status}).`);
           }
 
-        } catch (e) {}
-
+        } catch (e) {
+          if (strict) throw e;
+        }
       }
-
+    } else if (strict) {
+      const responseText = await res.text();
+      let responseBody;
+      try {
+        responseBody = JSON.parse(responseText);
+      } catch {
+        responseBody = responseText;
+      }
+      const detail = responseBody?.detail || responseBody?.error || responseBody?.message || responseText;
+      throw new Error(detail || `Stock transaction creation failed (${res.status}).`);
     }
 
   } catch (e) {
 
     updateApiStatus(false);
+    if (strict) throw e;
 
   }
 
@@ -4096,120 +4177,36 @@ export async function updateStockTransactionStatus(id, action = "submit") {
 // ---------------------------------------------------------------------------
 
 export async function fetchStockBalances(params = {}) {
-
-  let fetchedList = [];
-
   try {
-
     const query = new URLSearchParams(params).toString();
-
     const res = await fetch(`${API_BASE}/inventory/balances/?${query}`);
-
     if (res.ok) {
-
       updateApiStatus(true);
-
       const data = await res.json();
-
-      fetchedList = data.results || data;
-
+      const list = data.results || data || [];
+      return {
+        count: data.count !== undefined ? data.count : list.length,
+        results: list.map((raw) => ({
+          ...raw,
+          current_stock: Number(raw.current_stock !== undefined ? raw.current_stock : (raw.on_hand_qty || 0)),
+          total_stock: Number(raw.total_stock !== undefined ? raw.total_stock : (raw.on_hand_qty || 0)),
+          available_stock: Number(raw.available_stock !== undefined ? raw.available_stock : (raw.available_qty || 0)),
+          reserved_stock: Number(raw.reserved_stock !== undefined ? raw.reserved_stock : (raw.reserved_qty || 0)),
+          damaged_stock: Number(raw.damaged_stock !== undefined ? raw.damaged_stock : (raw.damaged_qty || 0)),
+          blocked_stock: Number(raw.blocked_stock !== undefined ? raw.blocked_stock : (raw.blocked_qty || 0)),
+          quarantined_stock: Number(raw.quarantined_stock !== undefined ? raw.quarantined_stock : (raw.quarantined_qty || 0)),
+          safety_stock: Number(raw.safety_stock || 0),
+          min_stock: Number(raw.min_stock || 0),
+          max_stock: Number(raw.max_stock || 0),
+          reorder_point: Number(raw.reorder_point || 20),
+        })),
+      };
     }
-
-  } catch (e) {}
-
-
-
-  const base = fetchedList.length > 0 ? fetchedList : [
-
-    { id: "bal-1", item_name: "Industrial Ball Bearing 6205-2RS", item_code: "BRG-6205-2RS", product_name: "Industrial Ball Bearing 6205-2RS", sku: "BRG-6205-2RS", warehouse_name: "Main Central Hub", location_name: "LOC-499 - Aisle 3", location_code: "A3-RB", bin_name: "BIN-A3-01", category_name: "Mechanical Components", on_hand_qty: 450, total_stock: 450, reserved_qty: 45, reserved_stock: 45, blocked_qty: 0, damaged_stock: 0, available_qty: 405, available_stock: 405, stock_status: "In Stock", unit: "EA" },
-
-    { id: "bal-2", item_name: "Hydraulic Solenoid Valve 24V DC", item_code: "HYD-SV-24V", product_name: "Hydraulic Solenoid Valve 24V DC", sku: "HYD-SV-24V", warehouse_name: "Main Central Hub", location_name: "LOC-499 - Aisle 1", location_code: "A1-B4", bin_name: "BIN-A1-04", category_name: "Hydraulics & Pneumatics", on_hand_qty: 18, total_stock: 18, reserved_qty: 6, reserved_stock: 6, blocked_qty: 2, damaged_stock: 2, available_qty: 10, available_stock: 10, stock_status: "Low Stock", unit: "EA" },
-
-    { id: "bal-3", item_name: "Polyurethane Timing Belt T10-1200", item_code: "BELT-T10-1200", product_name: "Polyurethane Timing Belt T10-1200", sku: "BELT-T10-1200", warehouse_name: "Main Central Hub", location_name: "LOC-499 - Aisle 2", location_code: "B2-BAY", bin_name: "BIN-B2-02", category_name: "Power Transmission", on_hand_qty: 280, total_stock: 280, reserved_qty: 20, reserved_stock: 20, blocked_qty: 4, damaged_stock: 4, available_qty: 256, available_stock: 256, stock_status: "In Stock", unit: "EA" },
-
-    { id: "bal-4", item_name: "Optical Rotary Encoder 1024 PPR", item_code: "ENC-OPT-1024", product_name: "Optical Rotary Encoder 1024 PPR", sku: "ENC-OPT-1024", warehouse_name: "Main Central Hub", location_name: "LOC-499 - Aisle 1", location_code: "A1-B4", bin_name: "BIN-A1-02", category_name: "Sensors & Automation", on_hand_qty: 0, total_stock: 0, reserved_qty: 0, reserved_stock: 0, blocked_qty: 0, damaged_stock: 0, available_qty: 0, available_stock: 0, stock_status: "Out of Stock", unit: "EA" },
-
-    { id: "bal-5", item_name: "Synthetic Compressor Lubricant ISO VG 46", item_code: "LUB-SYN-VG46", product_name: "Synthetic Compressor Lubricant ISO VG 46", sku: "LUB-SYN-VG46", warehouse_name: "Main Central Hub", location_name: "VAULT-CHEM", location_code: "VAULT-CHEM", bin_name: "BIN-V-01", category_name: "Chemicals & Fluids", on_hand_qty: 1250, total_stock: 1250, reserved_qty: 100, reserved_stock: 100, blocked_qty: 15, damaged_stock: 15, available_qty: 1135, available_stock: 1135, stock_status: "In Stock", unit: "LTR" },
-
-  ];
-
-
-
-  const local = getLocalEntities("balances");
-
-  const seen = new Set();
-
-  const merged = [];
-
-
-
-  for (const raw of [...local, ...base]) {
-
-    const key = (raw.item_code || raw.sku || raw.item_name || raw.id).toLowerCase();
-
-    if (!seen.has(key)) {
-
-      seen.add(key);
-
-      const totalStock = Number(raw.total_stock !== undefined ? raw.total_stock : (raw.on_hand_qty || 0));
-
-      const reservedStock = Number(raw.reserved_stock !== undefined ? raw.reserved_stock : (raw.reserved_qty || 0));
-
-      const damagedStock = Number(raw.damaged_stock !== undefined ? raw.damaged_stock : (raw.blocked_qty || 0));
-
-      const availableStock = Number(raw.available_stock !== undefined ? raw.available_stock : (raw.available_qty !== undefined ? raw.available_qty : Math.max(0, totalStock - reservedStock - damagedStock)));
-
-      const status = raw.stock_status || (availableStock <= 0 ? "Out of Stock" : availableStock <= 20 ? "Low Stock" : "In Stock");
-
-
-
-      merged.push({
-
-        ...raw,
-
-        product_name: raw.product_name || raw.item_name || raw.item || "Industrial Item",
-
-        sku: raw.sku || raw.item_code || raw.code || "SKU-000",
-
-        warehouse_name: raw.warehouse_name || (typeof raw.warehouse === "string" ? raw.warehouse : "Main Central Hub"),
-
-        location_name: raw.location_name || raw.location_code || (typeof raw.location === "string" ? raw.location : "General Storage"),
-
-        bin_name: raw.bin_name || raw.bin_code || (typeof raw.bin === "string" ? raw.bin : "Default Bin"),
-
-        category_name: raw.category_name || (typeof raw.category === "string" ? raw.category : "Mechanical Components"),
-
-        total_stock: totalStock,
-
-        reserved_stock: reservedStock,
-
-        damaged_stock: damagedStock,
-
-        available_stock: availableStock,
-
-        stock_status: status,
-
-        unit: raw.unit || "EA",
-
-      });
-
-    }
-
+  } catch (e) {
+    updateApiStatus(false);
   }
-
-
-
-  return { results: merged, count: merged.length };
-
+  return { count: 0, results: [] };
 }
-
-
-
-// ---------------------------------------------------------------------------
-
-// Stock Ledger API & In/Out History
-
-// ---------------------------------------------------------------------------
 
 export async function fetchStockLedger(params = {}) {
 
@@ -4412,6 +4409,7 @@ export async function createReservation(payload) {
         reference_doc: payload.reference_number || resNum,
 
         item: payload.item_id || payload.item || 1,
+        variant: payload.variant_id || payload.variant || null,
 
         warehouse: payload.warehouse_id || payload.warehouse || 1,
 
@@ -4572,140 +4570,23 @@ export const releaseStockReservation = releaseReservation;
 // ---------------------------------------------------------------------------
 
 export async function fetchReconciliations(params = {}) {
-
-  let fetchedList = [];
-
   try {
-
     const query = new URLSearchParams(params).toString();
-
     const res = await fetch(`${API_BASE}/inventory/reconciliation/?${query}`);
-
     if (res.ok) {
-
       updateApiStatus(true);
-
       const data = await res.json();
-
-      fetchedList = data.results || data;
-
+      const list = data.results || data || [];
+      return {
+        count: data.count !== undefined ? data.count : list.length,
+        results: list,
+      };
     }
-
-  } catch (e) {}
-
-
-
-  const base = fetchedList.length > 0 ? fetchedList : [
-
-    {
-
-      id: "cnt-1",
-
-      reconciliation_number: "REC-2026-0001",
-
-      count_number: "REC-2026-0001",
-
-      reconciliation_date: "2026-10-25",
-
-      warehouse_name: "Main Central Hub",
-
-      warehouse_code: "WH-MAIN",
-
-      location_name: "LOC-499 - Aisle 3",
-
-      product_name: "Industrial Ball Bearing 6205-2RS",
-
-      sku: "BRG-6205-2RS",
-
-      system_quantity: 450,
-
-      physical_quantity: 448,
-
-      difference_quantity: -2,
-
-      reason: "Physical Count Difference",
-
-      remarks: "Variance during quarterly shelf audit",
-
-      status: "APPROVED",
-
-      adjustment_document_number: "ADJ-2026-7278",
-
-    },
-
-    {
-
-      id: "cnt-2",
-
-      reconciliation_number: "REC-2026-0002",
-
-      count_number: "REC-2026-0002",
-
-      reconciliation_date: "2026-10-28",
-
-      warehouse_name: "East Coast Terminal",
-
-      warehouse_code: "WH-EAST",
-
-      location_name: "LOC-499 - Aisle 1",
-
-      product_name: "Hydraulic Solenoid Valve 24V DC",
-
-      sku: "HYD-SV-24V",
-
-      system_quantity: 15,
-
-      physical_quantity: 18,
-
-      difference_quantity: 3,
-
-      reason: "Found Stock",
-
-      remarks: "Unpacked pallet discovered in receiving buffer",
-
-      status: "DRAFT",
-
-      adjustment_document_number: "",
-
-    },
-
-  ];
-
-
-
-  const local = getLocalEntities("reconciliation");
-
-  const seen = new Set();
-
-  const merged = [];
-
-
-
-  for (const item of [...local, ...base]) {
-
-    const key = (item.reconciliation_number || item.count_number || item.id).toLowerCase();
-
-    if (!seen.has(key)) {
-
-      seen.add(key);
-
-      merged.push(item);
-
-    }
-
+  } catch (e) {
+    updateApiStatus(false);
   }
-
-
-
-  return { results: merged, count: merged.length };
-
+  return { count: 0, results: [] };
 }
-
-
-
-export const fetchReconciliationCounts = fetchReconciliations;
-
-
 
 export async function createReconciliation(payload) {
 
@@ -5234,170 +5115,34 @@ export async function disposeDamagedStock(id) {
 // ---------------------------------------------------------------------------
 
 export async function fetchStockInTransit(params = {}) {
-
-  let fetchedList = [];
-
   try {
-
     const query = new URLSearchParams(params).toString();
-
     const res = await fetch(`${API_BASE}/inventory/transit/?${query}`);
-
     if (res.ok) {
-
       updateApiStatus(true);
-
       const data = await res.json();
-
-      fetchedList = data.results || data;
-
+      const list = data.results || data || [];
+      return {
+        count: data.count !== undefined ? data.count : list.length,
+        results: list,
+      };
     }
-
-  } catch (e) {}
-
-
-
-  const base = fetchedList.length > 0 ? fetchedList : [
-
-    {
-
-      id: "trf-101",
-
-      transfer_number: "TRF-2026-4410",
-
-      document_number: "TRF-2026-4410",
-
-      transfer_date: "2026-10-30",
-
-      source_warehouse: "Main Central Hub",
-
-      source_warehouse_code: "WH-MAIN",
-
-      destination_warehouse: "East Coast Terminal",
-
-      destination_warehouse_name: "East Coast Terminal",
-
-      destination_warehouse_code: "WH-EAST",
-
-      product: "Optical Rotary Encoder 1024 PPR",
-
-      product_name: "Optical Rotary Encoder 1024 PPR",
-
-      sku: "ENC-OPT-1024",
-
-      dispatched_quantity: 40,
-
-      received_quantity: 0,
-
-      pending_quantity: 40,
-
-      status: "In Transit",
-
-      transit_status: "In Transit",
-
-    },
-
-    {
-
-      id: "trf-102",
-
-      transfer_number: "TRF-2026-4415",
-
-      document_number: "TRF-2026-4415",
-
-      transfer_date: "2026-10-28",
-
-      source_warehouse: "Main Central Hub",
-
-      source_warehouse_code: "WH-MAIN",
-
-      destination_warehouse: "Cold Storage Facility",
-
-      destination_warehouse_name: "Cold Storage Facility",
-
-      destination_warehouse_code: "WH-COLD",
-
-      product: "Synthetic Compressor Lubricant ISO VG 46",
-
-      product_name: "Synthetic Compressor Lubricant ISO VG 46",
-
-      sku: "LUB-SYN-VG46",
-
-      dispatched_quantity: 120,
-
-      received_quantity: 60,
-
-      pending_quantity: 60,
-
-      status: "Partially Received",
-
-      transit_status: "Partially Received",
-
-    },
-
-    {
-
-      id: "trf-103",
-
-      transfer_number: "TRF-2026-4390",
-
-      document_number: "TRF-2026-4390",
-
-      transfer_date: "2026-10-25",
-
-      source_warehouse: "East Coast Terminal",
-
-      source_warehouse_code: "WH-EAST",
-
-      destination_warehouse: "Main Central Hub",
-
-      destination_warehouse_name: "Main Central Hub",
-
-      destination_warehouse_code: "WH-MAIN",
-
-      product: "Industrial Ball Bearing 6205-2RS",
-
-      product_name: "Industrial Ball Bearing 6205-2RS",
-
-      sku: "BRG-6205-2RS",
-
-      dispatched_quantity: 100,
-
-      received_quantity: 100,
-
-      pending_quantity: 0,
-
-      status: "Received",
-
-      transit_status: "Received",
-
-    },
-
-  ];
-
-
-
-  return { results: base, count: base.length };
-
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  return { count: 0, results: [] };
 }
-
-
-
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-
-// Batch Tracking & Lifecycle API with Live Persistence
-
-// ---------------------------------------------------------------------------
 
 export async function fetchBatches(params = {}) {
 
   let fetchedList = [];
 
   try {
-
-    const query = new URLSearchParams(params).toString();
+    const normalizedParams = { ...params };
+    if (normalizedParams.tracking_type) {
+      normalizedParams.tracking_type = String(normalizedParams.tracking_type).toUpperCase();
+    }
+    const query = new URLSearchParams(normalizedParams).toString();
 
     const res = await fetch(`${API_BASE}/inventory/batches/?${query}`);
 
@@ -5434,6 +5179,9 @@ export async function fetchBatches(params = {}) {
           product: b.product_name || b.item_name || "Industrial Component",
 
           product_name: b.product_name || b.item_name || "Industrial Component",
+          variant_name: b.variant_name || b.variant_sku || (typeof b.variant === "object" ? (b.variant.variant_name || b.variant.sku) : ""),
+          variant_sku: b.variant_sku || b.variant_code || (typeof b.variant === "object" ? b.variant.sku : ""),
+          tracking_type: String(b.tracking_type || "BATCH").toUpperCase() === "LOT" ? "Lot" : "Batch",
 
           initial_quantity: Number(b.initial_quantity || b.quantity || 100),
 
@@ -5712,14 +5460,20 @@ export async function createBatch(payload) {
       body: JSON.stringify({
 
         batch_number: payload.batch_number,
+        tracking_type: String(payload.tracking_type || "Batch").toUpperCase() === "LOT" ? "LOT" : "BATCH",
 
         item: payload.item_id || payload.item || 1,
+        variant: payload.variant_id || payload.variant || null,
 
         warehouse: payload.warehouse_id || payload.warehouse || 1,
 
         location: payload.location_id || payload.location || null,
 
         supplier: payload.supplier || "",
+        manufacturer: payload.manufacturer || "",
+        supplier_lot_number: payload.supplier_lot_number || payload.supplier_lot || "",
+        supplier_lot: payload.supplier_lot_number || payload.supplier_lot || "",
+        goods_receipt_ref: payload.goods_receipt_ref || "",
 
         manufacturing_date: payload.manufacturing_date || payload.manufacture_date || null,
 
@@ -5734,6 +5488,7 @@ export async function createBatch(payload) {
         batch_status: payload.batch_status || "Pending Inspection",
 
         status: payload.batch_status === "Quarantined" ? "QUARANTINED" : "HEALTHY",
+        notes: payload.notes || "",
 
       }),
 
@@ -5776,6 +5531,9 @@ export async function createBatch(payload) {
       product: payload.product_name || payload.item_name || "Industrial Ball Bearing 6205-2RS",
 
       product_name: payload.product_name || payload.item_name || "Industrial Ball Bearing 6205-2RS",
+      variant_name: payload.variant_name || payload.variant_sku || "",
+      variant_sku: payload.variant_sku || "",
+      tracking_type: String(payload.tracking_type || "Batch").toUpperCase() === "LOT" ? "Lot" : "Batch",
 
       warehouse: payload.warehouse || "Main Central Fulfillment Hub",
 
@@ -6644,6 +6402,333 @@ export async function fetchSerialMovements(params = {}) {
 
 
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Tracking Module API: Batches, Serials, Expiry, Allocation, Traceability
+// ---------------------------------------------------------------------------
+
+export async function fetchBatchesFiltered(params = {}) {
+  return fetchBatches(params);
+}
+
+export async function createBatchRecord(payload) {
+  return createBatch(payload);
+}
+
+export async function updateBatchRecord(id, payload) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/batches/${id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+    const err = await res.json();
+    throw new Error(err.detail || err.error || JSON.stringify(err));
+  } catch (e) {
+    console.error("updateBatchRecord failed:", e);
+    throw e;
+  }
+}
+
+export async function fetchBatchDetail(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/batches/${id}/`);
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {}
+  const all = await fetchBatches();
+  return (all.results || all).find((b) => String(b.id) === String(id)) || null;
+}
+
+export async function createSerialNumbers(payload) {
+  if (Array.isArray(payload)) {
+    const results = [];
+    for (const item of payload) {
+      const created = await createSerialNumber(item);
+      results.push(created);
+    }
+    return results;
+  }
+  return createSerialNumber(payload);
+}
+
+export async function fetchSerialDetail(id) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/serials/${id}/`);
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {}
+  const all = await fetchSerialNumbers();
+  return (all.results || all).find((s) => String(s.id) === String(id)) || null;
+}
+
+// --- Date & Shelf Life Management ---
+export async function fetchShelfLifePolicies(params = {}) {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/tracking/shelf-life-policies/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      return Array.isArray(data) ? data : (data.results || []);
+    }
+  } catch (e) {
+    console.error("fetchShelfLifePolicies error:", e);
+  }
+  return [];
+}
+
+export async function createShelfLifePolicy(payload) {
+  const res = await fetch(`${API_BASE}/inventory/tracking/shelf-life-policies/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (res.ok) {
+    updateApiStatus(true);
+    return await res.json();
+  }
+  const err = await res.json();
+  throw new Error(err.detail || err.error || JSON.stringify(err));
+}
+
+export async function updateShelfLifePolicy(id, payload) {
+  const res = await fetch(`${API_BASE}/inventory/tracking/shelf-life-policies/${id}/`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (res.ok) {
+    updateApiStatus(true);
+    return await res.json();
+  }
+  const err = await res.json();
+  throw new Error(err.detail || err.error || JSON.stringify(err));
+}
+
+export async function deleteShelfLifePolicy(id) {
+  const res = await fetch(`${API_BASE}/inventory/tracking/shelf-life-policies/${id}/`, {
+    method: "DELETE",
+  });
+  if (res.ok) {
+    updateApiStatus(true);
+    return true;
+  }
+  throw new Error("Failed to delete shelf life policy");
+}
+
+export async function fetchNearExpiryBatches(params = {}) {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/tracking/shelf-life-policies/near-expiry/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      return data.results || [];
+    }
+  } catch (e) {
+    console.error("fetchNearExpiryBatches error:", e);
+  }
+  const all = await fetchBatches();
+  return (all.results || all).filter((b) => b.expiry_status === "Expiring Soon");
+}
+
+export async function fetchExpiredBatches(params = {}) {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/tracking/shelf-life-policies/expired/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      return data.results || [];
+    }
+  } catch (e) {
+    console.error("fetchExpiredBatches error:", e);
+  }
+  const all = await fetchBatches();
+  return (all.results || all).filter((b) => b.expiry_status === "Expired");
+}
+
+// --- Stock Allocation ---
+export async function fetchAllocationRecords(params = {}) {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/tracking/allocations/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      return Array.isArray(data) ? data : (data.results || []);
+    }
+  } catch (e) {
+    console.error("fetchAllocationRecords error:", e);
+  }
+  return [];
+}
+
+export async function fetchAllocationPreview(payload) {
+  const res = await fetch(`${API_BASE}/inventory/tracking/allocations/preview/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (res.ok) {
+    updateApiStatus(true);
+    return await res.json();
+  }
+  const err = await res.json();
+  throw new Error(err.detail || err.error || JSON.stringify(err));
+}
+
+export async function createAllocation(payload) {
+  const res = await fetch(`${API_BASE}/inventory/tracking/allocations/allocate/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (res.ok) {
+    updateApiStatus(true);
+    return await res.json();
+  }
+  const err = await res.json();
+  throw new Error(err.detail || err.error || JSON.stringify(err));
+}
+
+// --- Traceability & Product Recall ---
+export async function fetchForwardTraceability(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  const res = await fetch(`${API_BASE}/inventory/tracking/traceability/forward/?${query}`);
+  if (res.ok) {
+    updateApiStatus(true);
+    return await res.json();
+  }
+  const err = await res.json();
+  throw new Error(err.detail || err.error || "Failed to fetch forward traceability");
+}
+
+export async function fetchBackwardTraceability(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  const res = await fetch(`${API_BASE}/inventory/tracking/traceability/backward/?${query}`);
+  if (res.ok) {
+    updateApiStatus(true);
+    return await res.json();
+  }
+  const err = await res.json();
+  throw new Error(err.detail || err.error || "Failed to fetch backward traceability");
+}
+
+export async function fetchMovementTimeline(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  const res = await fetch(`${API_BASE}/inventory/tracking/traceability/timeline/?${query}`);
+  if (res.ok) {
+    updateApiStatus(true);
+    return await res.json();
+  }
+  const err = await res.json();
+  throw new Error(err.detail || err.error || "Failed to fetch movement timeline");
+}
+
+export async function fetchProductRecalls(params = {}) {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/tracking/recalls/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      return Array.isArray(data) ? data : (data.results || []);
+    }
+  } catch (e) {
+    console.error("fetchProductRecalls error:", e);
+  }
+  return [];
+}
+
+export async function createProductRecall(payload) {
+  const res = await fetch(`${API_BASE}/inventory/tracking/recalls/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (res.ok) {
+    updateApiStatus(true);
+    return await res.json();
+  }
+  const err = await res.json();
+  throw new Error(err.detail || err.error || JSON.stringify(err));
+}
+
+export async function initiateRecall(id, payload = {}) {
+  const res = await fetch(`${API_BASE}/inventory/tracking/recalls/${id}/initiate/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (res.ok) {
+    updateApiStatus(true);
+    return await res.json();
+  }
+  const err = await res.json();
+  throw new Error(err.detail || err.error || JSON.stringify(err));
+}
+
+export async function quarantineRecallBatches(id, payload = {}) {
+  const res = await fetch(`${API_BASE}/inventory/tracking/recalls/${id}/quarantine-affected/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (res.ok) {
+    updateApiStatus(true);
+    return await res.json();
+  }
+  const err = await res.json();
+  throw new Error(err.detail || err.error || JSON.stringify(err));
+}
+
+export async function recordRecallReturn(id, payload = {}) {
+  const res = await fetch(`${API_BASE}/inventory/tracking/recalls/${id}/record-action/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...payload, action_type: "RETURN_RECEIVED" }),
+  });
+  if (res.ok) {
+    updateApiStatus(true);
+    return await res.json();
+  }
+  const err = await res.json();
+  throw new Error(err.detail || err.error || JSON.stringify(err));
+}
+
+export async function closeRecall(id, payload = {}) {
+  const res = await fetch(`${API_BASE}/inventory/tracking/recalls/${id}/close-recall/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (res.ok) {
+    updateApiStatus(true);
+    return await res.json();
+  }
+  const err = await res.json();
+  throw new Error(err.detail || err.error || JSON.stringify(err));
+}
+
+export async function fetchRecallActions(recallId) {
+  try {
+    const recalls = await fetchProductRecalls();
+    const r = recalls.find((x) => String(x.id) === String(recallId));
+    return r ? (r.actions || []) : [];
+  } catch (e) {
+    return [];
+  }
+}
 
 // Valuation API
 
@@ -8684,34 +8769,19 @@ export async function fetchLowStockReport(params = {}) {
 
 
 export async function fetchStockAgeingReport(params = {}) {
-
   try {
-
     const query = new URLSearchParams(params).toString();
-
     const res = await fetch(`${API_BASE}/inventory/reports/ageing/?${query}`);
-
     if (res.ok) {
-
       updateApiStatus(true);
-
       const data = await res.json();
-
       return data.results || data || [];
-
     }
-
   } catch (e) {
-
     updateApiStatus(false);
-
   }
-
-  return DEMO_STOCK_AGEING_REPORT;
-
+  return [];
 }
-
-
 
 export async function fetchExpiryReport(params = {}) {
 
@@ -9158,15 +9228,60 @@ export async function generateProductVariants(itemId, payload) {
   return await res.json();
 }
 
-export async function fetchAttributes() {
+export async function fetchAttributes({ throwOnError = false } = {}) {
   try {
     const data = await fetchAllPages(`${API_BASE}/inventory/attributes/`);
     updateApiStatus(true);
     return data;
-  } catch (e) {
+  } catch (error) {
     updateApiStatus(false);
+    if (throwOnError) throw error;
+    return [];
   }
-  return [];
+}
+
+export async function seedStandardAttributes(itemId = null) {
+  const res = await fetch(`${API_BASE}/inventory/attributes/seed-standard/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(itemId ? { item: itemId } : {}),
+  });
+  if (!res.ok) {
+    throw new Error(await readApiError(res, "Unable to seed standard attributes."));
+  }
+  updateApiStatus(true);
+  return await res.json();
+}
+
+export async function fetchVariantAttributeCatalogue() {
+  const data = await fetchAllPages(
+    `${API_BASE}/inventory/attributes/?is_variant_generator=true&is_active=true`
+  );
+  updateApiStatus(true);
+  return data.filter(
+    (attribute) =>
+      attribute.is_active &&
+      attribute.is_variant_generator &&
+      (attribute.values || []).some((value) => value.is_active)
+  );
+}
+
+export async function assignVariantAttributesToItem(itemId, attributeIds) {
+  const res = await fetch(
+    `${API_BASE}/inventory/items/${encodeURIComponent(itemId)}/`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ variant_attribute_ids: attributeIds }),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(
+      await readApiError(res, "Unable to assign variant attributes to this item.")
+    );
+  }
+  updateApiStatus(true);
+  return await res.json();
 }
 
 export async function createAttribute(payload) {
@@ -9175,7 +9290,23 @@ export async function createAttribute(payload) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error("Failed to create attribute.");
+  if (!res.ok) {
+    throw new Error(await readApiError(res, "Failed to create attribute."));
+  }
+  updateApiStatus(true);
+  return await res.json();
+}
+
+export async function updateAttribute(attributeId, payload) {
+  const res = await fetch(`${API_BASE}/inventory/attributes/${attributeId}/`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    throw new Error(await readApiError(res, "Failed to update attribute."));
+  }
+  updateApiStatus(true);
   return await res.json();
 }
 
@@ -9185,7 +9316,10 @@ export async function addAttributeValue(attrId, value) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ value }),
   });
-  if (!res.ok) throw new Error("Failed to add attribute value.");
+  if (!res.ok) {
+    throw new Error(await readApiError(res, "Failed to add attribute value."));
+  }
+  updateApiStatus(true);
   return await res.json();
 }
 
@@ -9288,6 +9422,102 @@ export async function fetchVariants(params = {}) {
   return { results: data, count: data.length };
 }
 
+export async function fetchVariantsPage(params = {}) {
+  const q = new URLSearchParams(params).toString();
+  const res = await fetch(`${API_BASE}/inventory/variants/${q ? "?" + q : ""}`);
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || data.error || "Failed to fetch product variants.");
+  }
+  updateApiStatus(true);
+  return await res.json();
+}
+export async function fetchVariantEligibleItems() {
+  const data = await fetchAllPages(`${API_BASE}/inventory/items/`);
+  updateApiStatus(true);
+  return data.filter((item) => {
+    const status = String(item.status || "").toUpperCase();
+    return (
+      item.is_active !== false &&
+      (!status || status === "ACTIVE")
+    );
+  });
+}
+export async function enableItemVariants(itemId) {
+  const res = await fetch(`${API_BASE}/inventory/items/${encodeURIComponent(itemId)}/`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ has_variants: true }),
+  });
+  if (!res.ok) {
+    throw new Error(await readApiError(res, "Unable to enable variants for this item."));
+  }
+  updateApiStatus(true);
+  return await res.json();
+}
+export async function fetchVariantParentItems() {
+  const data = await fetchAllPages(
+    `${API_BASE}/inventory/items/?has_variants=true`
+  );
+  updateApiStatus(true);
+  return data.filter((item) => item.has_variants);
+}
+export async function fetchVariantAttributes(itemId) {
+  if (!itemId) return [];
+  const res = await fetch(
+    `${API_BASE}/inventory/items/${encodeURIComponent(itemId)}/variant-attributes/`
+  );
+  if (!res.ok) {
+    throw new Error(await readApiError(res, "Failed to fetch item variant attributes."));
+  }
+  const data = await res.json();
+  updateApiStatus(true);
+  return (Array.isArray(data) ? data : data.results || []).filter(
+    (attribute) => attribute.is_active && (attribute.values || []).some((value) => value.is_active)
+  );
+}
+export async function previewVariantSku(payload) {
+  const res = await fetch(`${API_BASE}/inventory/variants/sku-preview/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const detail = Object.values(data).flat().find((message) => typeof message === "string");
+    throw new Error(detail || "Unable to generate a variant SKU preview.");
+  }
+  updateApiStatus(true);
+  return data;
+}
+export async function createVariant(payload) {
+  const res = await fetch(`${API_BASE}/inventory/variants/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const detail = Object.values(data).flat().find((message) => typeof message === "string");
+    throw new Error(detail || "Failed to create variant.");
+  }
+  updateApiStatus(true);
+  return data;
+}
+export async function updateVariant(id, payload) {
+  const res = await fetch(`${API_BASE}/inventory/variants/${id}/`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const detail = Object.values(data).flat().find((message) => typeof message === "string");
+    throw new Error(detail || "Failed to update variant.");
+  }
+  updateApiStatus(true);
+  return data;
+}
 export async function toggleVariantActive(id) {
   const res = await fetch(`${API_BASE}/inventory/variants/${id}/toggle_active/`, {
     method: "POST",
@@ -10458,7 +10688,7 @@ export async function fetchReceiptLines(outcome, params = {}) {
     const res = await fetch(`${API_BASE}/inventory/goods-receipt/lines/?${query}`);
     if (res.ok) {
       const data = await res.json();
-      if (data && (data.count > 0 || (Array.isArray(data.results) && data.results.length > 0))) return data;
+      if (data && Array.isArray(data.results)) return data;
     }
   } catch (e) {}
 
@@ -10501,7 +10731,7 @@ export async function fetchInspections(params = {}) {
     const res = await fetch(`${API_BASE}/inventory/goods-receipt/inspections/?${query}`);
     if (res.ok) {
       const data = await res.json();
-      if (data && (data.count > 0 || (Array.isArray(data.results) && data.results.length > 0))) return data;
+      if (data && Array.isArray(data.results)) return data;
     }
   } catch (e) {}
   return { count: DEMO_INSPECTIONS.length, next: null, previous: null, results: DEMO_INSPECTIONS };
@@ -10676,4 +10906,37 @@ export async function fetchGrnSettingsHistory(submodule) {
     if (res.ok) return await res.json();
   } catch (e) {}
   return [];
+}
+
+
+export async function fetchReorderMonitoring(params = {}) {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/stock-levels/monitoring/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      return await res.json();
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  return { count: 0, results: [], critical_count: 0, reorder_needed_count: 0, healthy_count: 0 };
+}
+
+export async function fetchStockHistory(params = {}) {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/inventory/ledger/?${query}`);
+    if (res.ok) {
+      updateApiStatus(true);
+      const data = await res.json();
+      return {
+        count: data.count !== undefined ? data.count : (data.results ? data.results.length : (Array.isArray(data) ? data.length : 0)),
+        results: data.results || (Array.isArray(data) ? data : []),
+      };
+    }
+  } catch (e) {
+    updateApiStatus(false);
+  }
+  return { count: 0, results: [] };
 }

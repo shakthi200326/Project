@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import {
   Package,
   Plus,
@@ -78,7 +78,6 @@ const RADIAL_HEALTH_DATA = [
 const isProductActive = (p) => (p.status ? String(p.status).toUpperCase() === "ACTIVE" : !!p.is_active);
 
 export function ProductsPage() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -88,6 +87,8 @@ export function ProductsPage() {
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [selectedIds, setSelectedIds] = useState([]);
   const [toastMessage, setToastMessage] = useState(null);
+  const [pendingStatusChange, setPendingStatusChange] = useState(null);
+  const [isStatusChangeRunning, setIsStatusChangeRunning] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -282,25 +283,13 @@ export function ProductsPage() {
     }
   };
 
-  const handleToggleStatus = async (p, e) => {
+  const handleToggleStatus = (p, e) => {
     if (e) e.stopPropagation();
-    try {
-      if (isProductActive(p)) {
-        const next = await deactivateProduct(p.id);
-        setProducts((prev) =>
-          prev.map((item) => (item.id === p.id ? { ...item, ...next } : item))
-        );
-        showToast(`Product ${p.sku} deactivated.`);
-      } else {
-        const next = await activateProduct(p.id);
-        setProducts((prev) =>
-          prev.map((item) => (item.id === p.id ? { ...item, ...next } : item))
-        );
-        showToast(`Product ${p.sku} activated.`);
-      }
-    } catch (err) {
-      showToast(`Status update failed: ${err.message}`);
-    }
+    setPendingStatusChange({
+      action: isProductActive(p) ? "deactivate" : "activate",
+      ids: [p.id],
+      isBulk: false,
+    });
   };
 
   const handleDeleteProduct = async (p, e) => {
@@ -333,18 +322,11 @@ export function ProductsPage() {
     showToast(`Streaming ${format.toUpperCase()} export download...`);
   };
 
-  const handleBulkPrintBarcodes = () => {
-    showToast(`Directing ${selectedIds.length} items to Barcode Generator...`);
-    setTimeout(() => {
-      navigate("/inventory/barcodes");
-    }, 600);
-  };
-
   // Apply activate/deactivate to each selected product; only the ones the server accepted change on screen.
-  const runBulkStatus = async (apiCall, verb) => {
+  const runBulkStatus = async (apiCall, verb, ids, clearSelection = false) => {
     const changed = new Map();
     let failed = 0;
-    for (const id of selectedIds) {
+    for (const id of ids) {
       try {
         changed.set(id, await apiCall(id));
       } catch (e) {
@@ -354,7 +336,7 @@ export function ProductsPage() {
     setProducts((prev) =>
       prev.map((p) => (changed.has(p.id) ? { ...p, ...changed.get(p.id) } : p))
     );
-    setSelectedIds([]);
+    if (clearSelection) setSelectedIds([]);
     showToast(
       failed > 0
         ? `${changed.size} products ${verb}, ${failed} failed.`
@@ -362,9 +344,28 @@ export function ProductsPage() {
     );
   };
 
-  const handleBulkActivate = () => runBulkStatus(activateProduct, "activated");
+  const handleConfirmStatusChange = async () => {
+    if (!pendingStatusChange || isStatusChangeRunning) return;
+    const { action, ids, isBulk } = pendingStatusChange;
+    setIsStatusChangeRunning(true);
+    try {
+      await runBulkStatus(
+        action === "activate" ? activateProduct : deactivateProduct,
+        action === "activate" ? "activated" : "deactivated",
+        ids,
+        isBulk
+      );
+      setPendingStatusChange(null);
+    } finally {
+      setIsStatusChangeRunning(false);
+    }
+  };
 
-  const handleBulkDeactivate = () => runBulkStatus(deactivateProduct, "deactivated");
+  const handleBulkActivate = () =>
+    setPendingStatusChange({ action: "activate", ids: [...selectedIds], isBulk: true });
+
+  const handleBulkDeactivate = () =>
+    setPendingStatusChange({ action: "deactivate", ids: [...selectedIds], isBulk: true });
 
   const handleBulkArchive = async () => {
     if (
@@ -443,6 +444,77 @@ export function ProductsPage() {
         <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-900 dark:bg-zinc-800 text-white text-xs font-semibold shadow-2xl border border-slate-700 animate-in slide-in-from-top-2">
           <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {pendingStatusChange && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/60 p-4">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="item-status-confirm-title"
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <div className="flex items-start gap-3">
+              <div className={`mt-0.5 rounded-full p-2 ${
+                pendingStatusChange.action === "activate"
+                  ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
+                  : "bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
+              }`}>
+                {pendingStatusChange.action === "activate" ? (
+                  <Power className="h-5 w-5" />
+                ) : (
+                  <PowerOff className="h-5 w-5" />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 id="item-status-confirm-title" className="text-base font-bold text-slate-900 dark:text-white">
+                  {pendingStatusChange.action === "activate" ? "Activate item?" : "Deactivate item?"}
+                </h2>
+                <p className="mt-1 text-sm text-slate-600 dark:text-zinc-300">
+                  {pendingStatusChange.isBulk
+                    ? `This will ${pendingStatusChange.action} ${pendingStatusChange.ids.length} selected items.`
+                    : `Are you sure you want to ${pendingStatusChange.action} ${
+                        products.find((product) => product.id === pendingStatusChange.ids[0])?.sku || "this item"
+                      }?`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPendingStatusChange(null)}
+                aria-label="Close confirmation"
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingStatusChange(null)}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmStatusChange}
+                disabled={isStatusChangeRunning}
+                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 ${
+                  pendingStatusChange.action === "activate"
+                    ? "bg-emerald-600 hover:bg-emerald-700"
+                    : "bg-amber-600 hover:bg-amber-700"
+                }`}
+              >
+                {pendingStatusChange.action === "activate" ? (
+                  <Power className="h-4 w-4" />
+                ) : (
+                  <PowerOff className="h-4 w-4" />
+                )}
+                {pendingStatusChange.action === "activate" ? "Activate" : "Deactivate"}
+              </button>
+            </div>
+          </section>
         </div>
       )}
 
@@ -835,12 +907,6 @@ export function ProductsPage() {
             >
               <PowerOff className="h-3 w-3 text-slate-500" />
               <span>Deactivate</span>
-            </button>
-            <button
-              onClick={handleBulkPrintBarcodes}
-              className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-semibold hover:bg-blue-100 dark:hover:bg-zinc-800 cursor-pointer shadow-xs transition-colors"
-            >
-              Print Barcodes
             </button>
             <button
               onClick={handleBulkArchive}

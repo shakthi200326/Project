@@ -337,10 +337,10 @@ export function useToast() {
 // ------------------------------------------------------------------- tables
 export function FilterBar({ children, count }) {
   return (
-    <div className="p-3 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs flex flex-wrap items-center gap-2.5">
-      {children}
+    <div className="grn-filter-bar">
+      <div className="grn-filter-controls">{children}</div>
       {count !== undefined && (
-        <span className="ml-auto text-xs text-slate-400 dark:text-zinc-500 font-mono tabular-nums">{count} records</span>
+        <span className="grn-filter-count">{count} records</span>
       )}
     </div>
   );
@@ -351,7 +351,7 @@ export function SearchInput({ value, onChange, placeholder }) {
   useEffect(() => setText(value || ""), [value]);
   return (
     <form
-      className="relative min-w-[220px] flex-1 max-w-sm"
+      className="grn-filter-search relative"
       onSubmit={(e) => {
         e.preventDefault();
         onChange(text.trim());
@@ -359,11 +359,12 @@ export function SearchInput({ value, onChange, placeholder }) {
     >
       <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
       <input
+        type="search"
         value={text}
         onChange={(e) => setText(e.target.value)}
         onBlur={() => text.trim() !== (value || "") && onChange(text.trim())}
         placeholder={placeholder}
-        className={`${inputCls} pl-8`}
+        className={`${inputCls} h-9 pl-9 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-800/50 border-slate-200 dark:border-zinc-800`}
       />
     </form>
   );
@@ -371,7 +372,7 @@ export function SearchInput({ value, onChange, placeholder }) {
 
 export function SelectFilter({ value, onChange, options, allLabel }) {
   return (
-    <select value={value || ""} onChange={(e) => onChange(e.target.value)} className={`${inputCls} w-auto font-semibold`}>
+    <select value={value || ""} onChange={(e) => onChange(e.target.value)} className={`grn-filter-select ${inputCls} h-9 w-full py-2 rounded-xl bg-slate-50 dark:bg-zinc-800/50 border-slate-200 dark:border-zinc-800 font-semibold`}>
       <option value="">{allLabel}</option>
       {options.map((o) => (
         <option key={o.value} value={o.value}>
@@ -384,15 +385,38 @@ export function SelectFilter({ value, onChange, options, allLabel }) {
 
 export function DateRange({ from, to, onFrom, onTo }) {
   return (
-    <div className="flex items-center gap-1.5">
-      <input type="date" value={from || ""} onChange={(e) => onFrom(e.target.value)} className={`${inputCls} w-auto`} aria-label="From date" />
-      <span className="text-xs text-slate-400">to</span>
-      <input type="date" value={to || ""} onChange={(e) => onTo(e.target.value)} className={`${inputCls} w-auto`} aria-label="To date" />
+    <div className="grn-filter-date flex items-center gap-1.5 shrink-0">
+      <input
+        type="date"
+        value={from || ""}
+        onChange={(e) => onFrom(e.target.value)}
+        className={`${inputCls} !w-[130px] shrink-0 text-xs`}
+        aria-label="From date"
+      />
+      <span className="text-xs text-slate-400 shrink-0">to</span>
+      <input
+        type="date"
+        value={to || ""}
+        onChange={(e) => onTo(e.target.value)}
+        className={`${inputCls} !w-[130px] shrink-0 text-xs`}
+        aria-label="To date"
+      />
     </div>
   );
 }
 
-export function DataTable({ columns, rows, loading, error, onRetry, empty = "No records found.", rowKey = "id", onRowClick, selectedKey }) {
+export function DataTable({
+  columns,
+  rows,
+  loading,
+  error,
+  onRetry,
+  empty = "No records found.",
+  rowKey = "id",
+  onRowClick,
+  selectedKey,
+  minWidth,
+}) {
   return (
     <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
       {error ? (
@@ -401,7 +425,7 @@ export function DataTable({ columns, rows, loading, error, onRetry, empty = "No 
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs" style={minWidth ? { minWidth } : undefined}>
             <thead>
               <tr className="whitespace-nowrap border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400">
                 {columns.map((c) => (

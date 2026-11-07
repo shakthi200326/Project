@@ -22,7 +22,10 @@ from apps.integration.serializers import (
     IntegrationSettingsSerializer,
     IntegrationErrorSerializer,
     StockInTransitSerializer,
+    NotificationSettingsSerializer,
+    InventoryAlertSerializer,
 )
+from apps.integration.models import InventoryAlert, NotificationSettings
 from apps.integration.services.outbox_service import OutboxService
 from apps.integration.services.inbox_service import InboxConsumerService
 from apps.integration.services.event_contracts import CloudEventSchema
@@ -161,6 +164,65 @@ class IntegrationSettingsView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class NotificationSettingsView(APIView):
+    def get(self, request):
+        config = NotificationSettings.get_settings()
+        return Response(NotificationSettingsSerializer(config).data)
+
+    def put(self, request):
+        config = NotificationSettings.get_settings()
+        serializer = NotificationSettingsSerializer(config, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class InventoryAlertListView(APIView):
+    def get(self, request):
+        config = NotificationSettings.get_settings()
+        if not config.channels.get("in_app", True):
+            return Response({"count": 0, "next": None, "previous": None, "results": [], "unread_count": 0})
+        alerts = InventoryAlert.objects.all()
+        alert_type = request.query_params.get("type")
+        active = request.query_params.get("active")
+        unread = request.query_params.get("unread")
+        if alert_type:
+            alerts = alerts.filter(alert_type=alert_type)
+        if active in ("true", "false"):
+            alerts = alerts.filter(is_active=active == "true")
+        if unread == "true":
+            alerts = alerts.filter(is_read=False)
+        alerts = alerts.order_by("-last_seen_at", "-id")
+        page = self.paginate_queryset(alerts, request)
+        data = InventoryAlertSerializer(page, many=True).data
+        response = self.get_paginated_response(data)
+        response.data["unread_count"] = InventoryAlert.objects.filter(is_read=False, is_active=True).count()
+        return response
+
+    def paginate_queryset(self, queryset, request):
+        from rest_framework.pagination import PageNumberPagination
+        self.paginator = PageNumberPagination()
+        self.paginator.page_size = 50
+        return self.paginator.paginate_queryset(queryset, request, view=self)
+
+    def get_paginated_response(self, data):
+        return self.paginator.get_paginated_response(data)
+
+
+class InventoryAlertReadView(APIView):
+    def post(self, request, alert_id=None):
+        if alert_id is None:
+            InventoryAlert.objects.filter(is_read=False).update(is_read=True)
+            return Response({"marked_read": "all"})
+        alert = InventoryAlert.objects.filter(pk=alert_id).first()
+        if alert is None:
+            return Response({"detail": "Alert not found."}, status=status.HTTP_404_NOT_FOUND)
+        alert.is_read = True
+        alert.save(update_fields=["is_read"])
+        return Response(InventoryAlertSerializer(alert).data)
+
+
 class StockInTransitViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = StockInTransit.objects.select_related("item", "source_warehouse", "destination_warehouse").order_by("-dispatched_at")
     serializer_class = StockInTransitSerializer
@@ -214,4 +276,3 @@ class SimulateIntegrationEventView(APIView):
 
         result = InboxConsumerService.receive_event(packet)
         return Response(result)
-

@@ -53,26 +53,20 @@ function QualityWorkspace({ grn }) {
   return (
     <div className="space-y-5">
       {toastNode}
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
-        <div className="xl:col-span-3">
-          <PendingInspectionQueue selected={selected} onSelect={setSelected} reloadKey={reloadKey} />
-        </div>
-        <div className="xl:col-span-2">
-          {selected ? (
-            <QualityForm
-              key={selected.id}
-              line={selected}
-              grn={grn}
-              onSaved={(rec) => {
-                toast(`${rec.inspection_number}: quality result ${rec.quality_result}.`, rec.quality_result === "FAIL" ? "error" : "success");
-                setReloadKey((k) => k + 1);
-              }}
-            />
-          ) : (
-            <Notice tone="blue">Select a line from the queue to record a quality inspection.</Notice>
-          )}
-        </div>
-      </div>
+      <PendingInspectionQueue selected={selected} onSelect={setSelected} reloadKey={reloadKey} />
+      {selected ? (
+        <QualityForm
+          key={selected.id}
+          line={selected}
+          grn={grn}
+          onSaved={(rec) => {
+            toast(`${rec.inspection_number}: quality result ${rec.quality_result}.`, rec.quality_result === "FAIL" ? "error" : "success");
+            setReloadKey((k) => k + 1);
+          }}
+        />
+      ) : (
+        <Notice tone="blue">Select a line from the queue to record a quality inspection.</Notice>
+      )}
       <QualityLog reloadKey={reloadKey} />
     </div>
   );

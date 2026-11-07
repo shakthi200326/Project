@@ -1,1233 +1,1255 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+
 import {
+
   Boxes,
+
   Search,
+
   Filter,
+
   Download,
-  ArrowUpDown,
-  Warehouse,
-  ShieldAlert,
+
   CheckCircle2,
-  Layers,
-  Activity,
-  CheckCircle,
+
   AlertTriangle,
-  Zap,
-  Scan,
-  Barcode,
-  Eye,
+
+  ShieldCheck,
+
+  ShieldAlert,
+
+  Lock,
+
+  Layers,
+
+  Warehouse as WarehouseIcon,
+
+  MapPin,
+
+  RefreshCw,
+
+  QrCode,
+
   X,
-  Package,
-  Camera,
+
   Sparkles,
+
+  ArrowRight,
+
+  Eye,
+
+  SlidersHorizontal,
+
 } from "lucide-react";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ComposedChart,
-  Line,
-  ReferenceLine,
-} from "recharts";
-import {
-  fetchStockBalances,
-  fetchProducts,
-  playScanBeep,
-  lookupProductByBarcode,
-} from "../services/api";
+
+import { fetchStockBalances, fetchProducts, fetchWarehouses } from "../services/api";
+
+
 
 export function StockBalancesPage() {
-  const navigate = useNavigate();
+
   const [balances, setBalances] = useState([]);
+
   const [products, setProducts] = useState([]);
+
+  const [warehouses, setWarehouses] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+
+
+
+  // Filters
+
   const [search, setSearch] = useState("");
+
   const [warehouseFilter, setWarehouseFilter] = useState("ALL");
-  const [categoryFilter, setCategoryFilter] = useState("ALL");
-  const [locationFilter, setLocationFilter] = useState("ALL");
+
   const [statusFilter, setStatusFilter] = useState("ALL");
+
   const [toastMessage, setToastMessage] = useState(null);
 
-  // Barcode Scanner & Details Modal State
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
-  const [scannerInput, setScannerInput] = useState("");
+
+
+  // Scanner & Detail Modal State
+
   const [selectedDetail, setSelectedDetail] = useState(null);
 
-  useEffect(() => {
-    fetchStockBalances().then((res) => setBalances(res.results || []));
-    fetchProducts().then((res) => setProducts(res.results || res || []));
-  }, []);
+
 
   const showToast = (msg) => {
+
     setToastMessage(msg);
+
     setTimeout(() => setToastMessage(null), 3500);
+
   };
 
-  const productMap = useMemo(() => {
-    const map = {};
-    products.forEach((p) => {
-      const key = p.sku || p.code || p.id;
-      if (key) map[key] = p;
-    });
-    return map;
-  }, [products]);
 
-  const warehousesList = useMemo(() => {
-    const set = new Set();
-    balances.forEach((b) => {
-      const w = b.warehouse_name || b.warehouse;
-      if (w) set.add(w);
-    });
-    return Array.from(set);
-  }, [balances]);
 
-  const categoriesList = useMemo(() => {
-    const set = new Set();
-    balances.forEach((b) => {
-      const c = b.category_name || b.category;
-      if (c) set.add(c);
-    });
-    return Array.from(set);
-  }, [balances]);
+  const loadData = async () => {
 
-  const locationsList = useMemo(() => {
-    const set = new Set();
-    balances.forEach((b) => {
-      const l = b.location_name || b.location_code || b.location;
-      if (l) set.add(l);
-    });
-    return Array.from(set);
-  }, [balances]);
+    setLoading(true);
 
-  const handleExecuteScan = (rawCode) => {
-    const clean = rawCode?.trim();
-    if (!clean) return;
+    try {
 
-    // First try lookup in products catalog
-    const matchedProduct = lookupProductByBarcode(clean, products);
-    // Also try finding in balances
-    const matchedBalance = balances.find((b) =>
-      b.item_code?.toLowerCase() === clean.toLowerCase() ||
-      b.sku?.toLowerCase() === clean.toLowerCase() ||
-      b.item_name?.toLowerCase().includes(clean.toLowerCase()) ||
-      b.product_name?.toLowerCase().includes(clean.toLowerCase()) ||
-      (matchedProduct && (b.item_code?.toLowerCase() === matchedProduct.sku?.toLowerCase() || b.sku?.toLowerCase() === matchedProduct.sku?.toLowerCase()))
-    );
+      const [balRes, prodRes, whRes] = await Promise.all([
 
-    if (matchedProduct || matchedBalance) {
-      playScanBeep();
-      const code = matchedProduct?.sku || matchedBalance?.sku || matchedBalance?.item_code;
-      const prod = matchedProduct || productMap[code] || {};
-      const bal = matchedBalance || balances.find((b) => b.sku === code || b.item_code === code) || {};
+        fetchStockBalances(),
 
-      setSelectedDetail({
-        sku: code,
-        name: prod.name || bal.product_name || bal.item_name || "Catalog Product",
-        barcode: prod.barcode || clean,
-        warehouse: bal.warehouse_name || "Main Central Hub",
-        location: bal.location_name || bal.location_code || "A3-RB",
-        bin: bal.bin_name || "Default Bin",
-        on_hand: bal.total_stock ?? bal.on_hand_qty ?? prod.on_hand ?? 0,
-        reserved: bal.reserved_stock ?? bal.reserved_qty ?? prod.reserved ?? 0,
-        blocked: bal.damaged_stock ?? bal.blocked_qty ?? 0,
-        available: bal.available_stock ?? bal.available_qty ?? prod.available ?? 0,
-        unit: bal.unit || prod.unit || "EA",
-        unit_cost: prod.unit_cost || 14.85,
-        category: bal.category_name || prod.category || "Mechanical Components",
-        brand: prod.brand || "OEM Standard",
-        reorder_point: prod.reorder_point || 50,
-      });
+        fetchProducts(),
 
-      setSearch(code || clean);
-      setIsScannerOpen(false);
-      setScannerInput("");
-      showToast(`Scanned: ${prod.name || bal.product_name || bal.item_name} (${code})`);
-    } else {
-      showToast(`No stock balance or catalog item for barcode "${clean}".`);
+        fetchWarehouses(),
+
+      ]);
+
+      setBalances(balRes.results || balRes || []);
+
+      setProducts(prodRes.results || prodRes || []);
+
+      setWarehouses(whRes.results || whRes || []);
+
+    } catch (e) {
+
+      console.error("Failed to load balances", e);
+
+    } finally {
+
+      setLoading(false);
+
     }
+
   };
 
-  const handleSearchKeyDown = (e) => {
-    if (e.key === "Enter" && search.trim()) {
-      e.preventDefault();
-      handleExecuteScan(search);
-    }
-  };
 
-  const filtered = balances.filter((b) => {
-    const matchesWh = warehouseFilter === "ALL" || (b.warehouse_name || b.warehouse) === warehouseFilter;
-    const matchesCat = categoryFilter === "ALL" || (b.category_name || b.category) === categoryFilter;
-    const matchesLoc = locationFilter === "ALL" || (b.location_name || b.location_code || b.location) === locationFilter;
-    const currentStatus = b.stock_status || (Number(b.available_stock ?? b.available_qty ?? 0) <= 0 ? "Out of Stock" : Number(b.available_stock ?? b.available_qty ?? 0) <= 20 ? "Low Stock" : "In Stock");
-    const matchesStatus = statusFilter === "ALL" || currentStatus === statusFilter;
-    const q = search.trim().toLowerCase();
-    const productForCode = productMap[b.sku || b.item_code];
-    const matchesSearch =
-      !q ||
-      b.product_name?.toLowerCase().includes(q) ||
-      b.item_name?.toLowerCase().includes(q) ||
-      b.sku?.toLowerCase().includes(q) ||
-      b.item_code?.toLowerCase().includes(q) ||
-      (b.location_name && b.location_name.toLowerCase().includes(q)) ||
-      (b.bin_name && b.bin_name.toLowerCase().includes(q)) ||
-      (b.barcode && String(b.barcode).toLowerCase().includes(q)) ||
-      (productForCode?.barcode && String(productForCode.barcode).toLowerCase().includes(q));
-    return matchesWh && matchesCat && matchesLoc && matchesStatus && matchesSearch;
-  });
 
-  const totalProducts = new Set(filtered.map((b) => b.sku || b.item_code)).size;
-  const totalStockQty = filtered.reduce((acc, b) => acc + Number(b.total_stock !== undefined ? b.total_stock : (b.on_hand_qty || 0)), 0);
-  const totalOnHand = totalStockQty;
-  const totalReserved = filtered.reduce((acc, b) => acc + Number(b.reserved_stock !== undefined ? b.reserved_stock : (b.reserved_qty || 0)), 0);
-  const totalDamaged = filtered.reduce((acc, b) => acc + Number(b.damaged_stock !== undefined ? b.damaged_stock : (b.blocked_qty || 0)), 0);
-  const totalAvailable = filtered.reduce((acc, b) => acc + Number(b.available_stock !== undefined ? b.available_stock : (b.available_qty || 0)), 0);
-  const lowStockCount = filtered.filter((b) => {
-    const avail = Number(b.available_stock !== undefined ? b.available_stock : (b.available_qty || 0));
-    return b.stock_status === "Low Stock" || (avail > 0 && avail <= 20);
-  }).length;
-  const outOfStockCount = filtered.filter((b) => {
-    const avail = Number(b.available_stock !== undefined ? b.available_stock : (b.available_qty || 0));
-    return b.stock_status === "Out of Stock" || avail <= 0;
-  }).length;
+  useEffect(() => {
 
-  const facilityBreakdownData = useMemo(() => {
-    const facilitiesMap = {};
-    balances.forEach((b) => {
-      const wh = b.warehouse_name || "Main Central Hub";
-      if (!facilitiesMap[wh]) {
-        facilitiesMap[wh] = { facility: wh, available: 0, reserved: 0, blocked: 0 };
-      }
-      facilitiesMap[wh].available += b.available_qty || 0;
-      facilitiesMap[wh].reserved += b.reserved_qty || 0;
-      facilitiesMap[wh].blocked += b.blocked_qty || 0;
+    loadData();
+
+  }, []);
+
+
+
+  const filtered = useMemo(() => {
+
+    return balances.filter((b) => {
+
+      const q = search.trim().toLowerCase();
+
+      const matchesSearch =
+
+        !q ||
+
+        b.product_name?.toLowerCase().includes(q) ||
+
+        b.item_name?.toLowerCase().includes(q) ||
+
+        b.sku?.toLowerCase().includes(q) ||
+
+        b.item_code?.toLowerCase().includes(q) ||
+
+        (b.location_name && b.location_name.toLowerCase().includes(q)) ||
+
+        (b.warehouse_name && b.warehouse_name.toLowerCase().includes(q));
+
+
+
+      const matchesWh =
+
+        warehouseFilter === "ALL" ||
+
+        b.warehouse_name === warehouseFilter ||
+
+        b.warehouse_code === warehouseFilter ||
+
+        String(b.warehouse) === String(warehouseFilter);
+
+
+
+      const status = b.stock_status || (b.available_stock <= 0 ? "Out of Stock" : "In Stock");
+
+      const matchesStatus = statusFilter === "ALL" || status === statusFilter;
+
+
+
+      return matchesSearch && matchesWh && matchesStatus;
+
     });
 
-    const entries = Object.values(facilitiesMap);
-    if (entries.length > 0) return entries;
-    return [
-      { facility: "Main Central Hub", available: 1650, reserved: 120, blocked: 18 },
-      { facility: "East Coast Terminal", available: 1180, reserved: 85, blocked: 0 },
-      { facility: "West Coast Depot", available: 890, reserved: 45, blocked: 12 },
-    ];
-  }, [balances]);
+  }, [balances, search, warehouseFilter, statusFilter]);
 
-  const skuBufferData = useMemo(() => {
-    const metaMap = {
-      "BRG-6205-2RS": { sku: "BRG-6205", name: "Industrial Ball Bearing 6205-2RS", rpoint: 100, sfloor: 50, runway: "38 days" },
-      "HYD-SV-24V": { sku: "HYD-SV-24V", name: "Hydraulic Solenoid Valve 24V", rpoint: 25, sfloor: 10, runway: "5.4 days" },
-      "BELT-T10-1200": { sku: "BELT-T10", name: "Timing Belt T10-1200", rpoint: 80, sfloor: 30, runway: "24 days" },
-      "ENC-OPT-1024": { sku: "ENC-OPT", name: "Optical Rotary Encoder 1024", rpoint: 15, sfloor: 5, runway: "0 days (Stockout)" },
-      "LUB-SYN-VG46": { sku: "LUB-VG46", name: "Compressor Lubricant VG 46", rpoint: 300, sfloor: 120, runway: "45 days" },
+
+
+  // Aggregate the 9 Required Stock Metrics across the active filtered set
+
+  const metrics = useMemo(() => {
+
+    let current = 0;
+
+    let available = 0;
+
+    let reserved = 0;
+
+    let damaged = 0;
+
+    let blocked = 0;
+
+    let quarantined = 0;
+
+    let safety = 0;
+
+    let minStock = 0;
+
+    let maxStock = 0;
+
+
+
+    filtered.forEach((b) => {
+
+      current += Number(b.current_stock ?? b.total_stock ?? b.on_hand_qty ?? 0);
+
+      available += Number(b.available_stock ?? b.available_qty ?? 0);
+
+      reserved += Number(b.reserved_stock ?? b.reserved_qty ?? 0);
+
+      damaged += Number(b.damaged_stock ?? b.damaged_qty ?? 0);
+
+      blocked += Number(b.blocked_stock ?? b.blocked_qty ?? 0);
+
+      quarantined += Number(b.quarantined_stock ?? b.quarantined_qty ?? 0);
+
+      safety += Number(b.safety_stock ?? 0);
+
+      minStock += Number(b.min_stock ?? 0);
+
+      maxStock += Number(b.max_stock ?? 0);
+
+    });
+
+
+
+    return {
+
+      current,
+
+      available,
+
+      reserved,
+
+      damaged,
+
+      blocked,
+
+      quarantined,
+
+      safety,
+
+      minStock,
+
+      maxStock,
+
+      count: filtered.length,
+
     };
 
-    const result = [];
-    balances.forEach((b) => {
-      const code = b.item_code || "BRG-6205-2RS";
-      const meta = metaMap[code] || {
-        sku: code.slice(0, 8),
-        name: b.item_name || code,
-        rpoint: 50,
-        sfloor: 20,
-        runway: "15 days",
-      };
-      result.push({
-        id: b.id,
-        sku: meta.sku,
-        item_name: b.item_name || meta.name,
-        available: Number(b.available_qty || 0),
-        on_hand: Number(b.on_hand_qty || 0),
-        reserved: Number(b.reserved_qty || 0),
-        reorderPoint: meta.rpoint,
-        safetyFloor: meta.sfloor,
-        runway: meta.runway,
-      });
-    });
+  }, [filtered]);
 
-    if (result.length > 0) return result;
 
-    return [
-      { id: "1", sku: "BRG-6205", item_name: "Industrial Ball Bearing 6205-2RS", available: 440, on_hand: 450, reserved: 10, reorderPoint: 100, safetyFloor: 50, runway: "38 days" },
-      { id: "2", sku: "HYD-SV-24V", item_name: "Hydraulic Solenoid Valve 24V", available: 18, on_hand: 18, reserved: 0, reorderPoint: 25, safetyFloor: 10, runway: "5.4 days" },
-      { id: "3", sku: "BELT-T10", item_name: "Timing Belt T10-1200", available: 270, on_hand: 280, reserved: 10, reorderPoint: 80, safetyFloor: 30, runway: "24 days" },
-      { id: "4", sku: "ENC-OPT", item_name: "Optical Rotary Encoder 1024", available: 0, on_hand: 0, reserved: 0, reorderPoint: 15, safetyFloor: 5, runway: "0 days (Stockout)" },
-      { id: "5", sku: "LUB-VG46", item_name: "Compressor Lubricant VG 46", available: 1240, on_hand: 1250, reserved: 10, reorderPoint: 300, safetyFloor: 120, runway: "45 days" },
-    ];
-  }, [balances]);
-
-  const lowBufferCount = useMemo(
-    () => skuBufferData.filter((d) => d.available > 0 && d.available <= d.reorderPoint).length,
-    [skuBufferData]
-  );
-  const stockoutCount = useMemo(
-    () => skuBufferData.filter((d) => d.available <= 0).length,
-    [skuBufferData]
-  );
 
   const handleExportCSV = () => {
+
     const headers = [
-      "SKU Code",
-      "Product Description",
-      "Warehouse Hub",
-      "Location Code",
-      "Physical On-Hand",
-      "Reserved Qty",
-      "Blocked (QC) Qty",
-      "Free Available Qty",
-      "Unit",
+
+      "SKU",
+
+      "Product Name",
+
+      "Warehouse",
+
+      "Storage Location",
+
+      "Current Stock",
+
+      "Available Stock",
+
+      "Reserved Stock",
+
+      "Damaged Stock",
+
+      "Blocked Stock",
+
+      "Quarantined Stock",
+
+      "Safety Stock",
+
+      "Minimum Stock",
+
+      "Maximum Stock",
+
+      "UOM",
+
       "Status",
+
     ];
 
+
+
     const rows = filtered.map((b) => [
-      `"${b.item_code}"`,
-      `"${b.item_name}"`,
-      `"${b.warehouse_name}"`,
-      `"${b.location_code || "A3-RB"}"`,
-      b.on_hand_qty,
-      b.reserved_qty,
-      b.blocked_qty,
-      b.available_qty,
-      b.unit,
-      b.available_qty <= 0 ? "OUT OF STOCK" : b.available_qty < 25 ? "LOW STOCK" : "IN STOCK",
+
+      `"${b.sku || b.item_code || ""}"`,
+
+      `"${b.product_name || b.item_name || ""}"`,
+
+      `"${b.warehouse_name || ""}"`,
+
+      `"${b.location_name || ""}"`,
+
+      b.current_stock ?? b.total_stock ?? b.on_hand_qty ?? 0,
+
+      b.available_stock ?? b.available_qty ?? 0,
+
+      b.reserved_stock ?? b.reserved_qty ?? 0,
+
+      b.damaged_stock ?? b.damaged_qty ?? 0,
+
+      b.blocked_stock ?? b.blocked_qty ?? 0,
+
+      b.quarantined_stock ?? b.quarantined_qty ?? 0,
+
+      b.safety_stock ?? 0,
+
+      b.min_stock ?? 0,
+
+      b.max_stock ?? 0,
+
+      `"${b.unit || "EA"}"`,
+
+      `"${b.stock_status || "In Stock"}"`,
+
     ]);
 
+
+
     const csvContent =
+
       "data:text/csv;charset=utf-8," +
+
       [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+
     const encodedUri = encodeURI(csvContent);
+
     const link = document.createElement("a");
+
     link.setAttribute("href", encodedUri);
+
     link.setAttribute(
+
       "download",
-      `Stock_Balances_Report_${new Date().toISOString().split("T")[0]}.csv`
+
+      `stock_overview_and_levels_${new Date().toISOString().split("T")[0]}.csv`
+
     );
+
     document.body.appendChild(link);
+
     link.click();
+
     document.body.removeChild(link);
-    showToast("Stock balances report exported as CSV.");
+
+    showToast("Stock Overview exported as CSV.");
+
   };
 
+
+
   return (
-    <div className="space-y-5">
-      {/* Toast Notification */}
+
+    <div className="p-4 sm:p-6 space-y-5 sm:space-y-6">
+
       {toastMessage && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-slate-900/95 dark:bg-zinc-800/95 backdrop-blur-md text-white text-xs font-medium shadow-2xl border border-slate-700/60 animate-in slide-in-from-top-2">
-          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+
+        <div className="fixed bottom-6 right-6 z-50 flex items-center space-x-2 px-4 py-3 rounded-lg bg-emerald-600 text-white text-sm font-medium shadow-xl animate-in fade-in">
+
+          <CheckCircle2 className="w-5 h-5" />
+
           <span>{toastMessage}</span>
+
         </div>
+
       )}
 
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+
+
+      {/* Header */}
+
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Real-Time Stock Balances
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-zinc-400">
-            Multi-facility availability matrix: On-hand, Reserved (sales locks), Blocked (quarantine), and Free Available.
+
+          <div className="flex items-center space-x-2">
+
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+
+              Stock Overview & Levels
+
+            </h1>
+
+            <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+
+              Stock Control
+
+            </span>
+
+          </div>
+
+          <p className="max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300 mt-1">
+
+            Authoritative multi-facility inventory monitoring across all 9 operational stock classifications and configured buffers.
+
           </p>
+
         </div>
 
-        <button
-          onClick={handleExportCSV}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors shadow-2xs cursor-pointer"
-        >
-          <Download className="h-3.5 w-3.5" />
-          <span>Export Balance Sheet</span>
-        </button>
-      </div>
 
-      {/* 6 Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-            Total Products
-          </div>
-          <div className="text-xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums mt-1">
-            {totalProducts.toLocaleString()}
-          </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Active catalog SKUs</div>
-        </div>
 
-        <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-            Total Stock Quantity
-          </div>
-          <div className="text-xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums mt-1">
-            {totalStockQty.toLocaleString()}
-          </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Physical on-hand</div>
-        </div>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
 
-        <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-            Available Stock
-          </div>
-          <div className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums mt-1">
-            {totalAvailable.toLocaleString()}
-          </div>
-          <div className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">Usable quantity</div>
-        </div>
-
-        <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
-            Reserved Stock
-          </div>
-          <div className="text-xl font-bold tracking-tight text-purple-700 dark:text-purple-400 tabular-nums mt-1">
-            {totalReserved.toLocaleString()}
-          </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Allocated quantity</div>
-        </div>
-
-        <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-            Low Stock Items
-          </div>
-          <div className="text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400 tabular-nums mt-1">
-            {lowStockCount.toLocaleString()}
-          </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Below safety buffer</div>
-        </div>
-
-        <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
-            Out of Stock Items
-          </div>
-          <div className="text-xl font-bold tracking-tight text-rose-600 dark:text-rose-400 tabular-nums mt-1">
-            {outOfStockCount.toLocaleString()}
-          </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Zero stock level</div>
-        </div>
-      </div>
-
-      {/* High-Configuration Charts: Dual Fleet Allocation & Safety Buffer Deck */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Chart 1: Multi-Facility Stock State & Commitment Allocation Matrix */}
-        <div className="lg:col-span-6 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-                  Multi-Facility Stock State Allocation
-                </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40 shrink-0">
-                  Stacked State
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">
-                Free Dispatchable stock vs Committed Holds vs QC Quarantine per hub.
-              </p>
-            </div>
-            <div className="text-right shrink-0">
-              <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                {totalStockQty > 0 ? ((totalAvailable / totalStockQty) * 100).toFixed(1) : "100"}%
-              </span>
-              <span className="text-[10px] text-slate-400 block">Fleet Availability</span>
-            </div>
-          </div>
-
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={facilityBreakdownData}
-                margin={{ top: 15, right: 15, left: 0, bottom: 20 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.15} vertical={false} />
-                <XAxis
-                  dataKey="facility"
-                  stroke="#94a3b8"
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={{ stroke: "#64748b", opacity: 0.2 }}
-                />
-                <YAxis width="auto"
-                  stroke="#94a3b8"
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={{ stroke: "#64748b", opacity: 0.2 }}
-                  tickFormatter={(v) => `${v}`}
-                />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload || !payload.length) return null;
-                    const d = payload[0].payload;
-                    const totalHub = d.available + d.reserved + d.blocked;
-                    return (
-                      <div className="rounded-xl border border-slate-700/80 bg-slate-900/95 backdrop-blur-md px-3.5 py-2.5 text-white shadow-2xl text-xs space-y-1.5">
-                        <div className="font-semibold text-slate-200 border-b border-slate-700/60 pb-1 flex items-center justify-between gap-3">
-                          <span>{d.facility}</span>
-                          <span className="font-mono text-[10px] text-slate-400">
-                            {totalHub.toLocaleString()} Total EA
-                          </span>
-                        </div>
-                        <div className="space-y-1 pt-0.5">
-                          <div className="flex items-center justify-between gap-4 text-[11px]">
-                            <span className="text-emerald-300 flex items-center gap-1.5">
-                              <span className="h-2 w-2 rounded-sm bg-emerald-500 inline-block" />
-                              Free Available:
-                            </span>
-                            <span className="font-mono font-bold text-emerald-400">{d.available.toLocaleString()} EA</span>
-                          </div>
-                          <div className="flex items-center justify-between gap-4 text-[11px]">
-                            <span className="text-purple-300 flex items-center gap-1.5">
-                              <span className="h-2 w-2 rounded-sm bg-purple-500 inline-block" />
-                              Committed Holds:
-                            </span>
-                            <span className="font-mono font-bold text-purple-300">{d.reserved.toLocaleString()} EA</span>
-                          </div>
-                          <div className="flex items-center justify-between gap-4 text-[11px]">
-                            <span className="text-amber-300 flex items-center gap-1.5">
-                              <span className="h-2 w-2 rounded-sm bg-amber-500 inline-block" />
-                              QC Blocked:
-                            </span>
-                            <span className="font-mono font-bold text-amber-300">{d.blocked.toLocaleString()} EA</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }}
-                />
-                <Legend
-                  verticalAlign="top"
-                  align="right"
-                  height={32}
-                  iconType="circle"
-                  iconSize={8}
-                  formatter={(val) => (
-                    <span className="text-[11px] text-slate-600 dark:text-zinc-400 font-medium ml-1">
-                      {val}
-                    </span>
-                  )}
-                />
-                <Bar
-                  dataKey="available"
-                  name="Free Available"
-                  stackId="state"
-                  fill="#10b981"
-                  radius={[0, 0, 0, 0]}
-                  isAnimationActive={false}/>
-                <Bar
-                  dataKey="reserved"
-                  name="Committed Holds"
-                  stackId="state"
-                  fill="#8b5cf6"
-                  radius={[0, 0, 0, 0]}
-                  isAnimationActive={false}/>
-                <Bar
-                  dataKey="blocked"
-                  name="QC Quarantine"
-                  stackId="state"
-                  fill="#f59e0b"
-                  radius={[4, 4, 0, 0]}
-                  isAnimationActive={false}/>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Chart 2: SKU Safety Buffer vs Reorder Point (ROP) Threshold Matrix */}
-        <div className="lg:col-span-6 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-                  SKU Safety Buffer vs Reorder Point (ROP)
-                </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40 shrink-0">
-                  Buffer & ROP
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">
-                Available stock plotted against Reorder Point (amber) and Critical Safety Floor (red).
-              </p>
-            </div>
-            <div className="flex items-center gap-3 text-right shrink-0">
-              <div>
-                <span className="text-xs font-mono font-bold text-amber-500">
-                  {lowBufferCount} Reorder
-                </span>
-                <span className="text-[10px] text-slate-400 block">&le; ROP Point</span>
-              </div>
-              <div>
-                <span
-                  className={`text-xs font-mono font-bold ${
-                    stockoutCount === 0 ? "text-emerald-500" : "text-rose-500"
-                  }`}
-                >
-                  {stockoutCount} Outage
-                </span>
-                <span className="text-[10px] text-slate-400 block">Stockouts</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart
-                data={skuBufferData}
-                margin={{ top: 15, right: 15, left: 0, bottom: 25 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.15} vertical={false} />
-                <XAxis
-                  dataKey="sku"
-                  stroke="#94a3b8"
-                  fontSize={10}
-                  tickLine={false}
-                  axisLine={{ stroke: "#64748b", opacity: 0.2 }}
-                  angle={-15}
-                  textAnchor="end"
-                  height={35}
-                />
-                <YAxis width="auto"
-                  stroke="#94a3b8"
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={{ stroke: "#64748b", opacity: 0.2 }}
-                  tickFormatter={(v) => `${v}`}
-                />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload || !payload.length) return null;
-                    const d = payload[0].payload;
-                    const isStockout = d.available <= 0;
-                    const isBelowSafety = d.available > 0 && d.available <= d.safetyFloor;
-                    const isBelowROP = d.available > d.safetyFloor && d.available <= d.reorderPoint;
-                    return (
-                      <div className="rounded-xl border border-slate-700/80 bg-slate-900/95 backdrop-blur-md px-3.5 py-2.5 text-white shadow-2xl text-xs space-y-1.5">
-                        <div className="flex items-center justify-between gap-3 border-b border-slate-700/60 pb-1">
-                          <span className="font-mono text-xs font-bold text-blue-400">{d.sku}</span>
-                          <span
-                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                              isStockout
-                                ? "bg-rose-500/20 text-rose-300 border border-rose-500/40"
-                                : isBelowSafety
-                                ? "bg-rose-500/20 text-rose-300 border border-rose-500/40"
-                                : isBelowROP
-                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                                : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                            }`}
-                          >
-                            {isStockout
-                              ? "OUT OF STOCK"
-                              : isBelowSafety
-                              ? "BELOW SAFETY FLOOR"
-                              : isBelowROP
-                              ? "REORDER REQUIRED"
-                              : "HEALTHY BUFFER"}
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-slate-300 font-medium">{d.item_name}</div>
-                        <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
-                          <div>
-                            <span className="text-slate-400 block text-[10px]">Free Available:</span>
-                            <span className="font-mono font-bold text-white">{d.available} EA</span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 block text-[10px]">Total On-Hand:</span>
-                            <span className="font-mono text-slate-300">{d.on_hand} EA</span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 block text-[10px]">Reorder Point (ROP):</span>
-                            <span className="font-mono text-amber-400">{d.reorderPoint} EA</span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 block text-[10px]">Safety Floor:</span>
-                            <span className="font-mono text-rose-400">{d.safetyFloor} EA</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between border-t border-slate-700/60 pt-1 text-[11px]">
-                          <span className="text-slate-400">Estimated Runway:</span>
-                          <span className="font-mono font-bold text-indigo-300">{d.runway}</span>
-                        </div>
-                      </div>
-                    );
-                  }}
-                />
-                <Legend
-                  verticalAlign="top"
-                  align="right"
-                  height={32}
-                  iconType="circle"
-                  iconSize={8}
-                  formatter={(val) => (
-                    <span className="text-[11px] text-slate-600 dark:text-zinc-400 font-medium ml-1">
-                      {val}
-                    </span>
-                  )}
-                />
-                <Bar
-                  dataKey="available"
-                  name="Available Units"
-                  radius={[4, 4, 0, 0]}
-                  isAnimationActive={false}>
-                  {skuBufferData.map((entry) => (
-                    <Cell
-                      key={`cell-${entry.id}`}
-                      fill={
-                        entry.available <= entry.safetyFloor
-                          ? "#f43f5e"
-                          : entry.available <= entry.reorderPoint
-                          ? "#f59e0b"
-                          : "#10b981"
-                      }
-                    />
-                  ))}
-                </Bar>
-                <Line
-                  type="stepAfter"
-                  dataKey="reorderPoint"
-                  name="Reorder Point (ROP)"
-                  stroke="#f59e0b"
-                  strokeWidth={2}
-                  strokeDasharray="4 4"
-                  dot={{ r: 3, fill: "#f59e0b" }}
-                  isAnimationActive={false}/>
-                <Line
-                  type="stepAfter"
-                  dataKey="safetyFloor"
-                  name="Safety Floor"
-                  stroke="#ef4444"
-                  strokeWidth={1.5}
-                  strokeDasharray="2 2"
-                  dot={{ r: 2.5, fill: "#ef4444" }}
-                  isAnimationActive={false}/>
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* Stock Availability & Liquidity Health Rail */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Free Stock Liquidity</span>
-            <Activity className="h-4 w-4 text-emerald-500" />
-          </div>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
-              {totalStockQty > 0 ? ((totalAvailable / totalStockQty) * 100).toFixed(1) : "100"}%
-            </span>
-            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded">
-              High Liquidity
-            </span>
-          </div>
-          <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3">
-            <div
-              className="bg-emerald-500 h-full rounded-full"
-              style={{ width: `${totalStockQty > 0 ? (totalAvailable / totalStockQty) * 100 : 100}%` }}
-            />
-          </div>
-          <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2">
-            Uncommitted inventory immediately deliverable for order picking.
-          </p>
-        </div>
-
-        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Allocation Lock Pressure</span>
-            <Layers className="h-4 w-4 text-purple-500" />
-          </div>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-bold font-mono text-purple-600 dark:text-purple-400">
-              {totalStockQty > 0 ? ((totalReserved / totalStockQty) * 100).toFixed(1) : "0.0"}%
-            </span>
-            <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/60 px-1.5 py-0.5 rounded">
-              Sales Committed
-            </span>
-          </div>
-          <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3">
-            <div
-              className="bg-purple-600 h-full rounded-full"
-              style={{ width: `${totalStockQty > 0 ? (totalReserved / totalStockQty) * 100 : 0}%` }}
-            />
-          </div>
-          <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2">
-            Units reserved for B2B contracts & open manufacturing orders.
-          </p>
-        </div>
-
-        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-linear-to-br from-emerald-500/10 via-teal-500/5 to-transparent dark:from-emerald-950/30 dark:via-zinc-900 dark:to-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-              <CheckCircle className="h-4 w-4" />
-              <span className="text-xs font-bold">Replenishment Health</span>
-            </div>
-            <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded">
-              {lowBufferCount + stockoutCount} Action Triggers
-            </span>
-          </div>
-          <p className="text-[11px] text-slate-600 dark:text-zinc-400 mt-1.5">
-            Automated purchase reorder generated for <span className="font-semibold text-slate-900 dark:text-white">HYD-SV-24V</span>. Stockout expediting active for <span className="font-semibold text-slate-900 dark:text-white">ENC-OPT-1024</span>.
-          </p>
-        </div>
-      </div>
-
-      {/* Filters Toolbar */}
-      <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-        <div className="flex items-center gap-2 flex-1 max-w-md">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-              placeholder="Filter by Product Name or SKU..."
-              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/80 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500 font-medium"
-            />
-          </div>
           <button
-            type="button"
-            onClick={() => {
-              setIsScannerOpen(true);
-              setScannerInput("");
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-xs font-semibold cursor-pointer transition-colors shadow-xs shrink-0"
-            title="Scan Barcode to View Stock Balances & Specs"
+
+            onClick={loadData}
+
+            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+
           >
-            <Scan className="h-3.5 w-3.5" />
-            <span>Scan Barcode</span>
+
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+
+            <span>Refresh</span>
+
           </button>
+
+          <button
+
+            onClick={handleExportCSV}
+
+            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+
+          >
+
+            <Download className="w-4 h-4" />
+
+            <span>Export CSV</span>
+
+          </button>
+
         </div>
 
-        {/* 4 Dropdown Filters: Warehouse, Category, Location, Stock Status */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Warehouse Filter */}
-          <select
-            value={warehouseFilter}
-            onChange={(e) => setWarehouseFilter(e.target.value)}
-            className="px-2.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/80 dark:bg-zinc-800/60 text-xs font-medium text-slate-700 dark:text-zinc-300 focus:outline-hidden cursor-pointer"
-          >
-            <option value="ALL">All Warehouses</option>
-            {warehousesList.map((w) => (
-              <option key={w} value={w}>{w}</option>
-            ))}
-          </select>
-
-          {/* Category Filter */}
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="px-2.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/80 dark:bg-zinc-800/60 text-xs font-medium text-slate-700 dark:text-zinc-300 focus:outline-hidden cursor-pointer"
-          >
-            <option value="ALL">All Categories</option>
-            {categoriesList.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-
-          {/* Location Filter */}
-          <select
-            value={locationFilter}
-            onChange={(e) => setLocationFilter(e.target.value)}
-            className="px-2.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/80 dark:bg-zinc-800/60 text-xs font-medium text-slate-700 dark:text-zinc-300 focus:outline-hidden cursor-pointer"
-          >
-            <option value="ALL">All Locations</option>
-            {locationsList.map((l) => (
-              <option key={l} value={l}>{l}</option>
-            ))}
-          </select>
-
-          {/* Stock Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-2.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/80 dark:bg-zinc-800/60 text-xs font-medium text-slate-700 dark:text-zinc-300 focus:outline-hidden cursor-pointer"
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="In Stock">In Stock</option>
-            <option value="Low Stock">Low Stock</option>
-            <option value="Out of Stock">Out of Stock</option>
-          </select>
-        </div>
       </div>
 
-      {/* Stock Details Table */}
-      <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
+
+
+      {/* Exactly 9 Required Stock Metrics in Enterprise Cards */}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-9 gap-3">
+
+        {/* 1. Current Stock */}
+
+        <div className="min-h-28 flex flex-col justify-between gap-2 p-3.5 rounded-xl border border-blue-200 dark:border-blue-900/40 bg-blue-50/40 dark:bg-blue-950/20">
+
+          <div className="min-h-8 text-[10px] leading-4 font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">
+
+            1. Current Stock
+
+          </div>
+
+          <div className="text-xl font-bold tracking-tight text-blue-900 dark:text-blue-200 font-mono tabular-nums">
+
+            {metrics.current.toLocaleString()}
+
+          </div>
+
+          <div className="text-[11px] leading-4 text-blue-700 dark:text-blue-300">Physical On-Hand</div>
+
+        </div>
+
+
+
+        {/* 2. Available Stock */}
+
+        <div className="min-h-28 flex flex-col justify-between gap-2 p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/40 dark:bg-emerald-950/20">
+
+          <div className="min-h-8 text-[10px] leading-4 font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+
+            2. Available Stock
+
+          </div>
+
+          <div className="text-xl font-bold tracking-tight text-emerald-900 dark:text-emerald-200 font-mono tabular-nums">
+
+            {metrics.available.toLocaleString()}
+
+          </div>
+
+          <div className="text-[11px] leading-4 text-emerald-700 dark:text-emerald-300">Free for Allocation</div>
+
+        </div>
+
+
+
+        {/* 3. Reserved Stock */}
+
+        <div className="min-h-28 flex flex-col justify-between gap-2 p-3.5 rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20">
+
+          <div className="min-h-8 text-[10px] leading-4 font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+
+            3. Reserved Stock
+
+          </div>
+
+          <div className="text-xl font-bold tracking-tight text-amber-900 dark:text-amber-200 font-mono tabular-nums">
+
+            {metrics.reserved.toLocaleString()}
+
+          </div>
+
+          <div className="text-[11px] leading-4 text-amber-700 dark:text-amber-300">Active Reservations</div>
+
+        </div>
+
+
+
+        {/* 4. Damaged Stock */}
+
+        <div className="min-h-28 flex flex-col justify-between gap-2 p-3.5 rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/40 dark:bg-rose-950/20">
+
+          <div className="min-h-8 text-[10px] leading-4 font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300">
+
+            4. Damaged Stock
+
+          </div>
+
+          <div className="text-xl font-bold tracking-tight text-rose-900 dark:text-rose-200 font-mono tabular-nums">
+
+            {metrics.damaged.toLocaleString()}
+
+          </div>
+
+          <div className="text-[11px] leading-4 text-rose-700 dark:text-rose-300">Physical Damage</div>
+
+        </div>
+
+
+
+        {/* 5. Blocked Stock */}
+
+        <div className="min-h-28 flex flex-col justify-between gap-2 p-3.5 rounded-xl border border-red-200 dark:border-red-900/40 bg-red-50/40 dark:bg-red-950/20">
+
+          <div className="min-h-8 text-[10px] leading-4 font-bold uppercase tracking-wider text-red-700 dark:text-red-300">
+
+            5. Blocked Stock
+
+          </div>
+
+          <div className="text-xl font-bold tracking-tight text-red-900 dark:text-red-200 font-mono tabular-nums">
+
+            {metrics.blocked.toLocaleString()}
+
+          </div>
+
+          <div className="text-[11px] leading-4 text-red-700 dark:text-red-300">Operational Hold</div>
+
+        </div>
+
+
+
+        {/* 6. Quarantined Stock */}
+
+        <div className="min-h-28 flex flex-col justify-between gap-2 p-3.5 rounded-xl border border-purple-200 dark:border-purple-900/40 bg-purple-50/40 dark:bg-purple-950/20">
+
+          <div className="min-h-8 text-[10px] leading-4 font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300">
+
+            6. Quarantined
+
+          </div>
+
+          <div className="text-xl font-bold tracking-tight text-purple-900 dark:text-purple-200 font-mono tabular-nums">
+
+            {metrics.quarantined.toLocaleString()}
+
+          </div>
+
+          <div className="text-[11px] leading-4 text-purple-700 dark:text-purple-300">QC & Inspection</div>
+
+        </div>
+
+
+
+        {/* 7. Safety Stock */}
+
+        <div className="min-h-28 flex flex-col justify-between gap-2 p-3.5 rounded-xl border border-indigo-200 dark:border-indigo-900/40 bg-indigo-50/40 dark:bg-indigo-950/20">
+
+          <div className="min-h-8 text-[10px] leading-4 font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+
+            7. Safety Stock
+
+          </div>
+
+          <div className="text-xl font-bold tracking-tight text-indigo-900 dark:text-indigo-200 font-mono tabular-nums">
+
+            {metrics.safety.toLocaleString()}
+
+          </div>
+
+          <div className="text-[11px] leading-4 text-indigo-700 dark:text-indigo-300">Configured Floor</div>
+
+        </div>
+
+
+
+        {/* 8. Minimum Stock */}
+
+        <div className="min-h-28 flex flex-col justify-between gap-2 p-3.5 rounded-xl border border-cyan-200 dark:border-cyan-900/40 bg-cyan-50/40 dark:bg-cyan-950/20">
+
+          <div className="min-h-8 text-[10px] leading-4 font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+
+            8. Minimum Stock
+
+          </div>
+
+          <div className="text-xl font-bold tracking-tight text-cyan-900 dark:text-cyan-200 font-mono tabular-nums">
+
+            {metrics.minStock.toLocaleString()}
+
+          </div>
+
+          <div className="text-[11px] leading-4 text-cyan-700 dark:text-cyan-300">Threshold Target</div>
+
+        </div>
+
+
+
+        {/* 9. Maximum Stock */}
+
+        <div className="min-h-28 flex flex-col justify-between gap-2 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+
+          <div className="min-h-8 text-[10px] leading-4 font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+
+            9. Maximum Stock
+
+          </div>
+
+          <div className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100 font-mono tabular-nums">
+
+            {metrics.maxStock.toLocaleString()}
+
+          </div>
+
+          <div className="text-[11px] leading-4 text-slate-600 dark:text-slate-300">Capacity Ceiling</div>
+
+        </div>
+
+      </div>
+
+
+
+      {/* Filter Bar */}
+
+      <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col lg:flex-row gap-3 lg:gap-4 items-stretch lg:items-center justify-between">
+
+        <div className="flex w-full lg:flex-1 min-w-0 lg:max-w-md items-center relative">
+
+          <Search className="w-4 h-4 absolute left-3 text-slate-400 pointer-events-none" />
+
+          <input
+
+            type="text"
+
+            placeholder="Search by SKU, product name, location..."
+
+            value={search}
+
+            onChange={(e) => setSearch(e.target.value)}
+
+            className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+
+          />
+
+        </div>
+
+
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full lg:w-auto">
+
+          <select
+
+            value={warehouseFilter}
+
+            onChange={(e) => setWarehouseFilter(e.target.value)}
+
+            className="w-full min-w-0 px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+
+          >
+
+            <option value="ALL">All Facilities</option>
+
+            {warehouses.map((wh) => (
+
+              <option key={wh.id} value={wh.name}>
+
+                {wh.name}
+
+              </option>
+
+            ))}
+
+          </select>
+
+
+
+          <select
+
+            value={statusFilter}
+
+            onChange={(e) => setStatusFilter(e.target.value)}
+
+            className="w-full min-w-0 px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+
+          >
+
+            <option value="ALL">All Stock Statuses</option>
+
+            <option value="In Stock">In Stock</option>
+
+            <option value="Low Stock">Low Stock</option>
+
+            <option value="Critical">Critical</option>
+
+            <option value="Out of Stock">Out of Stock</option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+
+
+      {/* Main Stock Table */}
+
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400 whitespace-nowrap">
-                <th className="py-3.5 px-4 font-semibold">Product Name</th>
-                <th className="py-3.5 px-3 font-semibold">SKU</th>
-                <th className="py-3.5 px-3 font-semibold">Warehouse</th>
-                <th className="py-3.5 px-3 font-semibold">Storage Location</th>
-                <th className="py-3.5 px-3 font-semibold">Bin</th>
-                <th className="py-3.5 px-3 font-semibold text-right">Total Stock</th>
-                <th className="py-3.5 px-3 font-semibold text-right">Reserved Stock</th>
-                <th className="py-3.5 px-3 font-semibold text-right">Available Stock</th>
-                <th className="py-3.5 px-3 font-semibold text-right">Damaged Stock</th>
-                <th className="py-3.5 px-3 font-semibold text-center">Stock Status</th>
-                <th className="py-3.5 px-3 font-semibold text-center">Action</th>
+
+          <table className="w-full min-w-[1100px] text-left text-sm">
+
+            <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">
+
+              <tr>
+
+                <th className="px-4 py-3">Product / SKU</th>
+
+                <th className="px-4 py-3">Warehouse & Bin</th>
+
+                <th className="px-4 py-3 text-right">Current Stock</th>
+
+                <th className="px-4 py-3 text-right">Available Stock</th>
+
+                <th className="px-4 py-3 text-right">Reserved</th>
+
+                <th className="px-4 py-3 text-right">Damaged</th>
+
+                <th className="px-4 py-3 text-right">Blocked</th>
+
+                <th className="px-4 py-3 text-right">Quarantined</th>
+
+                <th className="px-4 py-3 text-right">Safety Buffer</th>
+
+                <th className="px-4 py-3 text-center">Status</th>
+
+                <th className="px-4 py-3 text-right">Action</th>
+
               </tr>
+
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
-              {filtered.length === 0 ? (
+
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+
+              {loading ? (
+
                 <tr>
-                  <td colSpan={11} className="py-10 text-center text-slate-400 dark:text-zinc-500">
-                    No stock records matching the current filters.
+
+                  <td colSpan={11} className="px-4 py-12 text-center text-slate-500">
+
+                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-emerald-500" />
+
+                    Loading live stock balances from PostgreSQL database...
+
                   </td>
+
                 </tr>
+
+              ) : filtered.length === 0 ? (
+
+                <tr>
+
+                  <td colSpan={11} className="px-4 py-12 text-center text-slate-500">
+
+                    No stock balance records found in the database matching these filters.
+
+                  </td>
+
+                </tr>
+
               ) : (
+
                 filtered.map((b) => {
-                  const total = Number(b.total_stock !== undefined ? b.total_stock : (b.on_hand_qty || 0));
-                  const reserved = Number(b.reserved_stock !== undefined ? b.reserved_stock : (b.reserved_qty || 0));
-                  const available = Number(b.available_stock !== undefined ? b.available_stock : (b.available_qty || 0));
-                  const damaged = Number(b.damaged_stock !== undefined ? b.damaged_stock : (b.blocked_qty || 0));
-                  const status = b.stock_status || (available <= 0 ? "Out of Stock" : available <= 20 ? "Low Stock" : "In Stock");
+
+                  const onHand = Number(b.current_stock ?? b.total_stock ?? b.on_hand_qty ?? 0);
+
+                  const avail = Number(b.available_stock ?? b.available_qty ?? 0);
+
+                  const reserved = Number(b.reserved_stock ?? b.reserved_qty ?? 0);
+
+                  const damaged = Number(b.damaged_stock ?? b.damaged_qty ?? 0);
+
+                  const blocked = Number(b.blocked_stock ?? b.blocked_qty ?? 0);
+
+                  const quarantined = Number(b.quarantined_stock ?? b.quarantined_qty ?? 0);
+
+                  const safety = Number(b.safety_stock ?? 0);
+
+                  const status = b.stock_status || (avail <= 0 ? "Out of Stock" : "In Stock");
+
+
 
                   return (
-                    <tr key={b.id || b.sku} className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors">
-                      <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-white">
-                        {b.product_name || b.item_name}
-                      </td>
-                      <td className="py-3.5 px-3">
-                        <span className="font-mono text-[11px] font-bold text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md bg-blue-50/80 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/40">
+
+                    <tr
+
+                      key={b.id}
+
+                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition"
+
+                    >
+
+                      <td className="px-4 py-3">
+
+                        <div className="font-semibold text-slate-900 dark:text-slate-100">
+
+                          {b.product_name || b.item_name || "Catalog Product"}
+
+                        </div>
+
+                        <div className="text-xs font-mono text-slate-500 dark:text-slate-400">
+
                           {b.sku || b.item_code}
-                        </span>
+
+                        </div>
+
                       </td>
-                      <td className="py-3.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">
-                        {b.warehouse_name || b.warehouse || "Main Central Hub"}
+
+                      <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300">
+
+                        <div className="flex items-center space-x-1">
+
+                          <WarehouseIcon className="w-3.5 h-3.5 text-slate-400" />
+
+                          <span>{b.warehouse_name || "Main Hub"}</span>
+
+                        </div>
+
+                        <div className="text-slate-400 font-mono text-[11px] mt-0.5">
+
+                          {b.location_name || b.bin_name || "Standard Bin"}
+
+                        </div>
+
                       </td>
-                      <td className="py-3.5 px-3 font-mono text-[11px] text-slate-500 dark:text-zinc-400">
-                        {b.location_name || b.location_code || b.location || "Aisle 1"}
+
+                      <td className="px-4 py-3 text-right font-medium font-mono">
+
+                        {onHand.toLocaleString()} <span className="text-xs text-slate-400">{b.unit || "EA"}</span>
+
                       </td>
-                      <td className="py-3.5 px-3 font-mono text-[11px] text-slate-500 dark:text-zinc-400">
-                        {b.bin_name || b.bin_code || b.bin || "—"}
-                      </td>
-                      <td className="py-3.5 px-3 text-right font-mono tabular-nums whitespace-nowrap font-semibold text-slate-900 dark:text-white">
-                        {total} {b.unit || "EA"}
-                      </td>
-                      <td className="py-3.5 px-3 text-right font-mono tabular-nums whitespace-nowrap font-medium text-purple-600 dark:text-purple-400">
-                        {reserved} {b.unit || "EA"}
-                      </td>
-                      <td className="py-3.5 px-3 text-right font-mono tabular-nums whitespace-nowrap font-bold text-emerald-600 dark:text-emerald-400">
-                        {available} {b.unit || "EA"}
-                      </td>
-                      <td className="py-3.5 px-3 text-right font-mono tabular-nums whitespace-nowrap font-medium text-amber-600 dark:text-amber-400">
-                        {damaged} {b.unit || "EA"}
-                      </td>
-                      <td className="py-3.5 px-3 text-center">
+
+                      <td className="px-4 py-3 text-right font-bold font-mono">
+
                         <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                            status === "Out of Stock"
-                              ? "bg-rose-50 text-rose-700 dark:bg-rose-950/70 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50"
-                              : status === "Low Stock"
-                              ? "bg-amber-50 text-amber-700 dark:bg-amber-950/70 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50"
-                              : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50"
-                          }`}
+
+                          className={
+
+                            avail <= 0
+
+                              ? "text-red-600 dark:text-red-400"
+
+                              : avail <= safety
+
+                              ? "text-amber-500"
+
+                              : "text-emerald-600 dark:text-emerald-400"
+
+                          }
+
                         >
-                          <span className={`h-1.5 w-1.5 rounded-full ${
-                            status === "Out of Stock" ? "bg-rose-500" : status === "Low Stock" ? "bg-amber-500" : "bg-emerald-500"
-                          }`} />
-                          {status.toUpperCase()}
+
+                          {avail.toLocaleString()} {b.unit || "EA"}
+
                         </span>
+
                       </td>
-                      <td className="py-3.5 px-3 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleExecuteScan(b.sku || b.item_code)}
-                          className="p-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 text-slate-500 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 transition-colors cursor-pointer"
-                          title="Inspect Product & Barcode Details"
+
+                      <td className="px-4 py-3 text-right font-mono text-xs text-slate-500">
+
+                        {reserved > 0 ? (
+
+                          <span className="text-amber-600 dark:text-amber-400 font-medium">
+
+                            {reserved.toLocaleString()}
+
+                          </span>
+
+                        ) : (
+
+                          "—"
+
+                        )}
+
+                      </td>
+
+                      <td className="px-4 py-3 text-right font-mono text-xs text-slate-500">
+
+                        {damaged > 0 ? (
+
+                          <span className="text-rose-600 dark:text-rose-400 font-medium">
+
+                            {damaged.toLocaleString()}
+
+                          </span>
+
+                        ) : (
+
+                          "—"
+
+                        )}
+
+                      </td>
+
+                      <td className="px-4 py-3 text-right font-mono text-xs text-slate-500">
+
+                        {blocked > 0 ? (
+
+                          <span className="text-red-600 dark:text-red-400 font-medium">
+
+                            {blocked.toLocaleString()}
+
+                          </span>
+
+                        ) : (
+
+                          "—"
+
+                        )}
+
+                      </td>
+
+                      <td className="px-4 py-3 text-right font-mono text-xs text-slate-500">
+
+                        {quarantined > 0 ? (
+
+                          <span className="text-purple-600 dark:text-purple-400 font-medium">
+
+                            {quarantined.toLocaleString()}
+
+                          </span>
+
+                        ) : (
+
+                          "—"
+
+                        )}
+
+                      </td>
+
+                      <td className="px-4 py-3 text-right font-mono text-xs text-slate-500">
+
+                        {safety > 0 ? `${safety.toLocaleString()}` : "—"}
+
+                      </td>
+
+                      <td className="px-4 py-3 text-center">
+
+                        <span
+
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+
+                            status === "In Stock"
+
+                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
+
+                              : status === "Low Stock" || status === "Critical"
+
+                              ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+
+                              : "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
+
+                          }`}
+
                         >
-                          <Eye className="h-3.5 w-3.5" />
-                        </button>
+
+                          {status}
+
+                        </span>
+
                       </td>
+
+                      <td className="px-4 py-3 text-right">
+
+                        <button
+
+                          onClick={() => setSelectedDetail(b)}
+
+                          className="px-2.5 py-1 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition inline-flex items-center space-x-1"
+
+                        >
+
+                          <Eye className="w-3.5 h-3.5" />
+
+                          <span>Detail</span>
+
+                        </button>
+
+                      </td>
+
                     </tr>
+
                   );
+
                 })
+
               )}
+
             </tbody>
+
           </table>
+
         </div>
+
       </div>
 
-      {/* Barcode Scanner Station Modal */}
-      {isScannerOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            {/* Header */}
-            <div className="p-5 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/50">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
-                  <Scan className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    Stock Balance Barcode Scanner
-                    <span className="flex h-2 w-2 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20 animate-pulse" />
-                  </h2>
-                  <p className="text-[11px] text-slate-500 dark:text-zinc-400">
-                    Scan any product barcode or SKU to inspect facility balances and specifications.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsScannerOpen(false)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
 
-            {/* Viewfinder Graphic */}
-            <div className="p-6 space-y-4">
-              <div className="relative h-44 rounded-2xl bg-slate-950 flex flex-col items-center justify-center overflow-hidden border border-slate-800 shadow-inner">
-                {/* Viewfinder Corners */}
-                <div className="absolute top-4 left-4 h-6 w-6 border-t-2 border-l-2 border-blue-500 rounded-tl-md" />
-                <div className="absolute top-4 right-4 h-6 w-6 border-t-2 border-r-2 border-blue-500 rounded-tr-md" />
-                <div className="absolute bottom-4 left-4 h-6 w-6 border-b-2 border-l-2 border-blue-500 rounded-bl-md" />
-                <div className="absolute bottom-4 right-4 h-6 w-6 border-b-2 border-r-2 border-blue-500 rounded-br-md" />
 
-                {/* Red Laser Scanning Beam */}
-                <div className="absolute inset-x-8 top-1/2 -translate-y-1/2 h-0.5 bg-rose-500 shadow-lg shadow-rose-500/80 animate-pulse" />
+      {/* Product Detail Modal */}
 
-                <div className="text-center space-y-1 text-slate-300 z-10 pointer-events-none">
-                  <Camera className="h-7 w-7 mx-auto text-blue-400 opacity-80" />
-                  <div className="text-xs font-semibold tracking-wide">
-                    Align Barcode within Scanning Viewfinder
-                  </div>
-                  <div className="text-[10px] text-slate-500 font-mono">
-                    Ready for Handheld Scanner or Rapid Keyboard Input
-                  </div>
-                </div>
-              </div>
-
-              {/* Fast Barcode Input Form */}
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleExecuteScan(scannerInput);
-                }}
-                className="space-y-2"
-              >
-                <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                  Scan Barcode or Enter Barcode / SKU:
-                </label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Barcode className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                    <input
-                      autoFocus
-                      type="text"
-                      value={scannerInput}
-                      onChange={(e) => setScannerInput(e.target.value)}
-                      placeholder="e.g. 890123620501 or BRG-6205-2RS"
-                      className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs"
-                  >
-                    Inspect
-                  </button>
-                </div>
-              </form>
-
-              {/* Quick Barcode Test Deck */}
-              <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-zinc-800">
-                <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400 flex items-center gap-1">
-                  <Sparkles className="h-3 w-3 text-blue-500" /> Quick-Test Catalog Barcodes:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { code: "890123620501", label: "Ball Bearing (890123620501)" },
-                    { code: "890123240012", label: "Hydraulic Valve (890123240012)" },
-                    { code: "890123120034", label: "Timing Belt (890123120034)" },
-                    { code: "890123102498", label: "Encoder (890123102498)" },
-                    { code: "890123460077", label: "Lubricant (890123460077)" },
-                  ].map((pill) => (
-                    <button
-                      key={pill.code}
-                      type="button"
-                      onClick={() => handleExecuteScan(pill.code)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-zinc-800 dark:hover:bg-blue-950/60 text-slate-700 hover:text-blue-600 dark:text-zinc-300 dark:hover:text-blue-300 font-mono text-[10px] font-semibold border border-slate-200/80 dark:border-zinc-700 transition-colors cursor-pointer"
-                    >
-                      {pill.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 px-6 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 flex items-center justify-between text-xs">
-              <span className="text-[11px] text-slate-500 dark:text-zinc-400 flex items-center gap-1">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Audio scan chime enabled
-              </span>
-              <button
-                type="button"
-                onClick={() => setIsScannerOpen(false)}
-                className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 font-semibold cursor-pointer"
-              >
-                Close Station
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Scanned Product Details Modal */}
       {selectedDetail && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-xl bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            {/* Header */}
-            <div className="p-6 border-b border-slate-100 dark:border-zinc-800 flex items-start justify-between bg-slate-50/50 dark:bg-zinc-900/50">
-              <div className="flex items-start gap-3.5">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20 shrink-0">
-                  <Package className="h-6 w-6" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
-                      {selectedDetail.sku}
-                    </span>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                        selectedDetail.available > 0
-                          ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300"
-                          : "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300"
-                      }`}
-                    >
-                      {selectedDetail.available > 0 ? "IN STOCK" : "OUT OF STOCK"}
-                    </span>
-                  </div>
-                  <h2 className="text-base font-bold text-slate-900 dark:text-white mt-1">
-                    {selectedDetail.name}
-                  </h2>
-                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                    {selectedDetail.category} • {selectedDetail.brand}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedDetail(null)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
+
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4">
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-3xl max-h-[calc(100vh-1.5rem)] overflow-y-auto shadow-2xl p-4 sm:p-6 relative">
+
+            <button
+
+              onClick={() => setSelectedDetail(null)}
+
+              aria-label="Close stock details"
+
+              className="absolute top-4 right-4 p-2 text-slate-500 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+
+            >
+
+              <X className="w-5 h-5" />
+
+            </button>
+
+            <div className="flex items-center space-x-2 text-emerald-600 mb-2">
+
+              <Boxes className="w-5 h-5" />
+
+              <h2 className="pr-10 text-lg sm:text-xl leading-tight font-bold text-slate-900 dark:text-slate-100">
+
+                Item Stock Details & Classification
+
+              </h2>
+
             </div>
 
-            {/* Body */}
-            <div className="p-6 space-y-5 text-xs">
-              {/* Barcode Banner */}
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700/60 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-xs">
-                    <Barcode className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <p className="text-sm leading-5 text-slate-600 dark:text-slate-300 mb-4">
+
+              Comprehensive breakdown of all physical and logical inventory quantities.
+
+            </p>
+
+
+
+            <div className="space-y-4 text-sm">
+
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/70 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+
+                <div className="break-words text-base sm:text-lg leading-6 font-bold text-slate-900 dark:text-slate-100">
+
+                  {selectedDetail.product_name || selectedDetail.item_name}
+
+                </div>
+
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-300">
+
+                  <span>SKU: <span className="font-mono text-emerald-700 dark:text-emerald-300 font-semibold">{selectedDetail.sku || selectedDetail.item_code}</span></span>
+
+                  <span>Facility: {selectedDetail.warehouse_name || "Main Hub"}</span>
+
+                </div>
+
+                <div className="text-xs text-slate-600 dark:text-slate-300">
+
+                  Location: {selectedDetail.location_name || "Standard Bin"}
+
+                </div>
+
+              </div>
+
+
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-xs">
+
+                <div className="min-h-28 flex flex-col justify-between gap-2 p-3 rounded-lg border border-blue-200 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/30">
+
+                  <div className="min-h-8 text-slate-600 dark:text-slate-300 font-medium leading-4">1. Current Stock (On Hand)</div>
+
+                  <div className="text-lg leading-6 font-bold text-blue-700 dark:text-blue-300 font-mono tabular-nums">
+
+                    {Number(selectedDetail.current_stock ?? selectedDetail.total_stock ?? selectedDetail.on_hand_qty ?? 0)} {selectedDetail.unit}
+
                   </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                      Primary Barcode (EAN-13 / GS1)
-                    </span>
-                    <div className="font-mono font-bold text-slate-900 dark:text-white text-sm">
-                      {selectedDetail.barcode || selectedDetail.sku}
-                    </div>
+
+                </div>
+
+                <div className="min-h-28 flex flex-col justify-between gap-2 p-3 rounded-lg border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/30">
+
+                  <div className="min-h-8 text-slate-600 dark:text-slate-300 font-medium leading-4">2. Free Available Stock</div>
+
+                  <div className="text-lg leading-6 font-bold text-emerald-700 dark:text-emerald-300 font-mono tabular-nums">
+
+                    {Number(selectedDetail.available_stock ?? selectedDetail.available_qty ?? 0)} {selectedDetail.unit}
+
                   </div>
+
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                  Grade A Verified
-                </span>
+
+                <div className="min-h-28 flex flex-col justify-between gap-2 p-3 rounded-lg border border-amber-200 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/30">
+
+                  <div className="min-h-8 text-slate-600 dark:text-slate-300 font-medium leading-4">3. Reserved Stock</div>
+
+                  <div className="text-lg leading-6 font-bold text-amber-700 dark:text-amber-300 font-mono tabular-nums">
+
+                    {Number(selectedDetail.reserved_stock ?? selectedDetail.reserved_qty ?? 0)} {selectedDetail.unit}
+
+                  </div>
+
+                </div>
+
+                <div className="min-h-28 flex flex-col justify-between gap-2 p-3 rounded-lg border border-rose-200 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/30">
+
+                  <div className="min-h-8 text-slate-600 dark:text-slate-300 font-medium leading-4">4. Damaged Stock</div>
+
+                  <div className="text-lg leading-6 font-bold text-rose-700 dark:text-rose-300 font-mono tabular-nums">
+
+                    {Number(selectedDetail.damaged_stock ?? selectedDetail.damaged_qty ?? 0)} {selectedDetail.unit}
+
+                  </div>
+
+                </div>
+
+                <div className="min-h-28 flex flex-col justify-between gap-2 p-3 rounded-lg border border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/30">
+
+                  <div className="min-h-8 text-slate-600 dark:text-slate-300 font-medium leading-4">5. Blocked Stock</div>
+
+                  <div className="text-lg leading-6 font-bold text-red-700 dark:text-red-300 font-mono tabular-nums">
+
+                    {Number(selectedDetail.blocked_stock ?? selectedDetail.blocked_qty ?? 0)} {selectedDetail.unit}
+
+                  </div>
+
+                </div>
+
+                <div className="min-h-28 flex flex-col justify-between gap-2 p-3 rounded-lg border border-purple-200 dark:border-purple-900/40 bg-purple-50/50 dark:bg-purple-950/30">
+
+                  <div className="min-h-8 text-slate-600 dark:text-slate-300 font-medium leading-4">6. Quarantined Stock</div>
+
+                  <div className="text-lg leading-6 font-bold text-purple-700 dark:text-purple-300 font-mono tabular-nums">
+
+                    {Number(selectedDetail.quarantined_stock ?? selectedDetail.quarantined_qty ?? 0)} {selectedDetail.unit}
+
+                  </div>
+
+                </div>
+
+                <div className="min-h-28 flex flex-col justify-between gap-2 p-3 rounded-lg border border-indigo-200 dark:border-indigo-900/40 bg-indigo-50/50 dark:bg-indigo-950/30">
+
+                  <div className="min-h-8 text-slate-600 dark:text-slate-300 font-medium leading-4">7. Safety Buffer</div>
+
+                  <div className="text-lg leading-6 font-bold text-indigo-700 dark:text-indigo-300 font-mono tabular-nums">
+
+                    {Number(selectedDetail.safety_stock ?? 0)} {selectedDetail.unit}
+
+                  </div>
+
+                </div>
+
+                <div className="min-h-28 flex flex-col justify-between gap-2 p-3 rounded-lg border border-cyan-200 dark:border-cyan-900/40 bg-cyan-50/50 dark:bg-cyan-950/30">
+
+                  <div className="min-h-8 text-slate-600 dark:text-slate-300 font-medium leading-4">8. Minimum Stock</div>
+
+                  <div className="text-lg leading-6 font-bold text-cyan-700 dark:text-cyan-300 font-mono tabular-nums">
+
+                    {Number(selectedDetail.min_stock ?? 0)} {selectedDetail.unit}
+
+                  </div>
+
+                </div>
+
+                <div className="min-h-28 flex flex-col justify-between gap-2 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/60">
+
+                  <div className="min-h-8 text-slate-600 dark:text-slate-300 font-medium leading-4">9. Maximum Stock</div>
+
+                  <div className="text-lg leading-6 font-bold text-slate-800 dark:text-slate-100 font-mono tabular-nums">
+
+                    {Number(selectedDetail.max_stock ?? 0)} {selectedDetail.unit}
+
+                  </div>
+
+                </div>
+
               </div>
 
-              {/* Balances Telemetry Strip */}
-              <div className="grid grid-cols-4 gap-2.5 text-center">
-                <div className="p-3 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40">
-                  <span className="text-[10px] text-slate-400 block font-medium">On-Hand</span>
-                  <span className="text-base font-bold font-mono text-slate-900 dark:text-white mt-0.5 block tabular-nums">
-                    {selectedDetail.on_hand}
-                  </span>
-                  <span className="text-[9px] text-slate-400">{selectedDetail.unit}</span>
-                </div>
-                <div className="p-3 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40">
-                  <span className="text-[10px] text-slate-400 block font-medium">Available</span>
-                  <span className="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 block tabular-nums">
-                    {selectedDetail.available}
-                  </span>
-                  <span className="text-[9px] text-slate-400">{selectedDetail.unit}</span>
-                </div>
-                <div className="p-3 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40">
-                  <span className="text-[10px] text-slate-400 block font-medium">Reserved</span>
-                  <span className="text-base font-bold font-mono text-purple-600 dark:text-purple-400 mt-0.5 block tabular-nums">
-                    {selectedDetail.reserved}
-                  </span>
-                  <span className="text-[9px] text-slate-400">{selectedDetail.unit}</span>
-                </div>
-                <div className="p-3 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40">
-                  <span className="text-[10px] text-slate-400 block font-medium">Blocked QC</span>
-                  <span className="text-base font-bold font-mono text-amber-600 dark:text-amber-400 mt-0.5 block tabular-nums">
-                    {selectedDetail.blocked}
-                  </span>
-                  <span className="text-[9px] text-slate-400">{selectedDetail.unit}</span>
-                </div>
-              </div>
 
-              {/* Warehouse & Location Specs */}
-              <div className="grid grid-cols-2 gap-3 p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-                <div>
-                  <span className="text-slate-400 block text-[10px]">Assigned Facility:</span>
-                  <span className="font-semibold text-slate-800 dark:text-zinc-200 block mt-0.5">
-                    {selectedDetail.warehouse}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px]">Storage Bin / Rack:</span>
-                  <span className="font-mono font-bold text-slate-800 dark:text-zinc-200 block mt-0.5">
-                    {selectedDetail.location}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px]">WAV Unit Valuation:</span>
-                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 block mt-0.5">
-                    ${Number(selectedDetail.unit_cost).toFixed(2)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px]">Total Holding Capital:</span>
-                  <span className="font-mono font-bold text-blue-600 dark:text-blue-400 block mt-0.5">
-                    ${(Number(selectedDetail.on_hand) * Number(selectedDetail.unit_cost)).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              </div>
-            </div>
 
-            {/* Footer */}
-            <div className="p-4 px-6 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 flex items-center justify-between text-xs">
-              <span className="text-[11px] text-slate-500 dark:text-zinc-400 font-mono">
-                System Status: Active Registered Catalog
-              </span>
-              <div className="flex items-center gap-2">
+              <div className="flex justify-end pt-2">
+
                 <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedDetail(null);
-                    navigate(`/inventory/products?sku=${encodeURIComponent(selectedDetail.sku)}`);
-                  }}
-                  className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-semibold cursor-pointer transition-colors"
-                >
-                  View Catalog
-                </button>
-                <button
-                  type="button"
+
                   onClick={() => setSelectedDetail(null)}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer shadow-xs transition-colors"
+
+                  className="min-w-32 justify-center px-4 py-2.5 text-sm font-semibold rounded-lg bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-700 dark:hover:bg-slate-600 transition"
+
                 >
-                  Done
+
+                  Close Detail
+
                 </button>
+
               </div>
+
             </div>
+
           </div>
+
         </div>
+
       )}
+
     </div>
+
   );
+
 }
 
-export const StockOverviewPage = StockBalancesPage;
+export default StockBalancesPage;

@@ -509,7 +509,6 @@ export function StockMovementsPage({ initialType = "ALL" }) {
           { key: "ISSUE", label: "Stock Issues (Out)" },
           { key: "TRANSFER", label: "Warehouse Transfers" },
           { key: "ADJUSTMENT", label: "Stock Adjustments" },
-          { key: "RETURN", label: "Stock Returns" },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -519,7 +518,6 @@ export function StockMovementsPage({ initialType = "ALL" }) {
               else if (tab.key === "ISSUE") navigate("/inventory/operations/stock-out");
               else if (tab.key === "TRANSFER") navigate("/inventory/operations/transfers");
               else if (tab.key === "ADJUSTMENT") navigate("/inventory/operations/adjustments");
-              else if (tab.key === "RETURN") navigate("/inventory/operations/returns");
             }}
             className={`px-3.5 py-2.5 font-medium whitespace-nowrap border-b-2 transition-all cursor-pointer ${
               activeTab === tab.key

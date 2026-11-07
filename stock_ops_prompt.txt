@@ -1,0 +1,561 @@
+<USER_REQUEST>
+# CLAUDE CODE MASTER PROMPT 02
+# STOCK OPERATIONS MODULE – COMPLETE IMPLEMENTATION
+
+Act as a Senior Inventory Architect and Full-Stack Developer.
+
+Audit, correct, implement and test the complete Stock Operations module in my existing reusable Inventory Management project.
+
+## 1. Existing project constraints
+
+Preserve:
+- React + Vite + JavaScript (NOT TypeScript)
+- Existing Tailwind design system
+- Django + Django REST Framework
+- PostgreSQL
+- Existing project architecture and API conventions
+
+This module must remain reusable and must not depend on ONE-ERP, Purchase or Sales internal models.
+
+First inspect the existing codebase. Reuse existing models, services, APIs, components and routes. Do not create duplicate functionality.
+
+## 2. Sidebar structure
+
+Stock Operations:
+
+1. Stock In
+2. Stock Issue
+3. Stock Transfer
+4. Inter-Warehouse Transfer
+5. Inter-Location Transfer
+6. Stock Adjustment
+7. Stock Return
+8. Opening Stock
+9. Stock Reservation
+10. Stock Release
+11. Stock Reclassification
+12. Stock Out
+
+All 12 entries must have correct routes, pages, API integration, permissions and working actions.
+
+## 3. Central stock transaction architecture
+
+All stock-changing operations must use the existing central stock transaction/posting service.
+
+Do not implement independent stock deduction or addition logic in every submodule.
+
+Every posted transaction must maintain:
+- Transaction ID
+- Transaction Type
+- Source Document Type
+- Source Document ID
+- Item and Variant
+- Warehouse and Location
+- Batch and Serial references
+- Quantity and UOM
+- Inward/Outward direction
+- Transaction Date
+- Posting Timestamp
+- Posted By
+- External Reference where applicable
+- Reversal Reference where applicable
+
+Mandatory safeguards:
+- Atomic database transactions
+- Idempotency protection
+- Duplicate posting prevention
+- Database row locking where necessary
+- Immutable posted ledger
+- Reversal/compensating transactions
+- Audit history
+- Configurable negative stock policy
+- Backend-authoritative stock validation
+
+Draft documents must never update posted balances.
+
+## 4. Stock In
+
+Stock In represents eligible inward transactions originating from:
+- Goods Receipt
+- Opening Stock
+- Transfer In
+- Eligible Stock Return
+- Positive Stock Adjustment
+
+Requirements:
+- Display actual inward transactions.
+- Filter by date, item, warehouse, source document and status.
+- Show source document number and transaction reference.
+- Show inward quantity, UOM, batch and serial information.
+- Support drill-down to the source document.
+- Prevent duplicate inward posting.
+
+IMPORTANT:
+Goods Receipt posting must automatically create Stock In through the central posting service. Users must not create a second Stock In for the same receipt.
+
+If manual Stock In is supported, make it a separately configured transaction type with appropriate permissions and audit controls.
+
+## 5. Stock Issue
+
+### Header fields
+
+- Issue Number (backend-generated)
+- Issue Date
+- Issue Type
+- Source Warehouse
+- Source Location
+- Reference Type (optional)
+- Reference Number (optional)
+- Requested By
+- Issued By
+- Approved By
+- Issue Reason
+- Remarks
+- Attachments
+
+### Line item fields
+
+- Item
+- Variant
+- SKU
+- Batch Number
+- Serial Numbers
+- UOM
+- On-Hand Quantity (read-only)
+- Reserved Quantity (read-only)
+- Available Quantity (read-only)
+- Issue Quantity
+- Line Remarks
+
+### Workflow
+
+Draft → Submit → Approval (if configured) → Post Issue → Ledger Update → Balance Update.
+
+### Validations
+
+- Item and warehouse must be active.
+- Location must belong to selected warehouse.
+- Variant must belong to selected item.
+- Issue quantity must be greater than zero.
+- Available stock must be validated by backend at submission/posting.
+- Reserved stock must not be issued without permitted reservation allocation.
+- Validate batch and serial tracking.
+- Prevent duplicate serial issue.
+- Apply negative stock policy.
+- Validate UOM compatibility.
+- Prevent duplicate posting.
+
+## 6. Stock Transfer
+
+Support two transfer types:
+- Inter-Warehouse Transfer
+- Inter-Location Transfer
+
+### Header fields
+
+- Transfer Number
+- Transfer Date
+- Transfer Type
+- Source Warehouse
+- Source Location
+- Destination Warehouse
+- Destination Location
+- Expected Arrival Date
+- Transfer Reason
+- Requested By
+- Approved By
+- Dispatched By
+- Received By
+- Remarks
+- Attachments
+
+### Line item fields
+
+- Item
+- Variant
+- Batch
+- Serial Numbers
+- UOM
+- Available Quantity
+- Transfer Quantity
+- Dispatched Quantity
+- Received Quantity
+- Pending Quantity
+- Shortage Quantity
+- Damaged Quantity
+- Line Remarks
+
+### Workflow
+
+Draft → Submit → Approval (if configured) → Dispatch → In Transit → Receive → Complete.
+
+### Business rules
+
+- Source and destination must be valid.
+- Inter-Warehouse requires different warehouses.
+- Inter-Location requires different permitted locations.
+- Dispatch cannot exceed eligible available quantity.
+- Partial dispatch must be supported.
+- Partial receipt must be supported.
+- Destination stock must increase only when the configured receipt event occurs.
+- In-transit quantity must be tracked separately.
+- Shortage and damage must be recorded as discrepancies.
+- Prevent duplicate dispatch and receipt posting.
+- Reconcile dispatched quantity against received, pending, shortage and damaged quantities.
+
+Use one shared transfer engine for both transfer types. Do not create duplicate transfer business logic.
+
+## 7. Stock Adjustment
+
+### Fields
+
+Header:
+- Adjustment Number
+- Adjustment Date
+- Adjustment Type
+- Warehouse
+- Location
+- Reason
+- Supporting Document
+- Requested By
+- Approved By
+- Remarks
+
+Lines:
+- Item
+- Variant
+- Batch
+- Serial Number
+- System Quantity (read-only, backend-derived)
+- Physical Quantity
+- Adjustment Quantity (calculated)
+- UOM
+- Line Reason
+
+### Workflow
+
+Draft → Submit → Approval (if configured) → Post Adjustment.
+
+Rules:
+- Backend calculates system quantity and variance.
+- Validate item tracking.
+- Require a valid reason.
+- Apply configurable approval thresholds.
+- Prevent duplicate posting.
+- Never directly overwrite stock balances.
+- Create an auditable adjustment transaction.
+
+## 8. Stock Return
+
+Support:
+- Return In
+- Return Out
+
+### Fields
+
+Header:
+- Return Number
+- Return Date
+- Return Type
+- Original Reference Type
+- Original Reference Number
+- Source Warehouse
+- Destination Warehouse
+- Return Reason
+- Requested By
+- Approved By
+- Remarks
+- Attachments
+
+Lines:
+- Item
+- Variant
+- Batch
+- Serial Number
+- Return Quantity
+- UOM
+- Item Condition
+- Inspection Required
+- Accepted Quantity
+- Rejected Quantity
+- Return Location
+- Line Remarks
+
+Rules:
+- Original transaction reference should be validated when supplied.
+- Enforce return quantity limits where applicable.
+- Damaged/rejected goods must not become available stock.
+- Support inspection where configured.
+- Return In and Return Out must have correct stock directions.
+- Do not require Purchase/Sales apps to be installed.
+- External reference integration must remain optional.
+
+## 9. Opening Stock
+
+Fields:
+- Opening Stock Number
+- Opening Date
+- Item
+- Variant
+- Warehouse
+- Location
+- Batch
+- Serial Numbers
+- Quantity
+- UOM
+- Unit Cost (optional, valuation dependent)
+- Total Cost (calculated)
+- Remarks
+- Entered By
+- Approved By
+
+Workflow:
+
+Draft → Validate → Approval (if configured) → Post.
+
+Rules:
+- Validate quantity, UOM and tracking.
+- Prevent duplicate serials.
+- Prevent duplicate opening balance posting for the same configured scope.
+- Use the central posting service.
+- Support existing import mechanisms if available.
+
+## 10. Stock Reservation
+
+Fields:
+- Reservation Number
+- Reservation Date
+- Item
+- Variant
+- Warehouse
+- Location
+- Available Quantity (read-only)
+- Reservation Quantity
+- UOM
+- Reference Type
+- Reference Number
+- Priority
+- Expiry Date
+- Reserved By
+- Remarks
+
+Rules:
+- Validate available quantity on backend.
+- Reservation reduces available stock, not physical on-hand.
+- Prevent over-reservation.
+- Support partial reservations.
+- Track active, partially released, released and expired states.
+- Support configured expiry and release policy.
+
+## 11. Stock Release
+
+Fields:
+- Reservation Number
+- Item
+- Variant
+- Warehouse
+- Location
+- Original Reserved Quantity
+- Previously Released Quantity
+- Remaining Reserved Quantity
+- Release Quantity
+- Release Date
+- Release Reason
+- Released By
+- Remarks
+
+Rules:
+- Only active reservations can be released.
+- Release quantity must be positive.
+- Never release more than remaining reserved quantity.
+- Prevent duplicate releases.
+- Maintain release history.
+- Recalculate availability correctly.
+
+## 12. Stock Reclassification
+
+Fields:
+- Reclassification Number
+- Date
+- Item
+- Variant
+- Warehouse
+- Location
+- Batch/Serial
+- Current Classification
+- New Classification
+- Current Status
+- New Status
+- Quantity
+- Reason
+- Requested By
+- Approved By
+- Remarks
+
+Rules:
+- Validate permitted transitions.
+- Preserve old and new values.
+- Maintain full audit history.
+- Do not bypass quarantine, blocked or inspection rules.
+- Do not silently make ineligible stock available.
+
+## 13. Stock Out
+
+Stock Out must display eligible outward transactions from:
+- Stock Issue
+- Transfer Dispatch
+- Return Out
+- Negative Adjustment where permitted
+
+Requirements:
+- Show source document and transaction reference.
+- Display actual outward quantity.
+- Provide filters and drill-down.
+- Do not deduct stock again when displaying an already-posted outward transaction.
+- Do not create a duplicate stock deduction engine.
+
+## 14. Field mapping and form UX
+
+For every form field, verify:
+- Display label
+- Database field or related-object mapping
+- Data type
+- Input type
+- Required/optional
+- Default value
+- Validation
+- Conditional visibility
+- Editable/read-only status
+- API mapping
+- Serializer mapping
+- Permission
+
+Use searchable API-driven dropdowns and dependent fields.
+
+Document number generation must be backend-controlled.
+
+System quantity, available quantity and reserved quantity must be backend-derived.
+
+Keep workflow actions separate:
+- Save Draft
+- Submit
+- Approve
+- Reject
+- Dispatch
+- Receive
+- Post
+- Reverse
+
+Do not make these buttons perform identical operations.
+
+## 15. Individual configurations
+
+Create independently manageable configurations for:
+- Stock In
+- Stock Issue
+- Stock Transfer
+- Inter-Warehouse Transfer
+- Inter-Location Transfer
+- Stock Adjustment
+- Stock Return
+- Opening Stock
+- Stock Reservation
+- Stock Release
+- Stock Reclassification
+- Stock Out
+
+Applicable settings:
+- Enable/Disable
+- Document numbering
+- Required/optional fields
+- Default values
+- Negative stock policy
+- Approval rules
+- Adjustment approval limits
+- Transfer dispatch/receipt policy
+- Partial transfer policy
+- Reservation expiry
+- Batch/serial rules
+- Return inspection
+- Permissions
+- Notifications
+- Effective dates
+- Configuration history
+
+Use the existing shared configuration service if available. Settings must be independently scoped and enforced in the backend.
+
+## 16. Frontend, backend and database mapping
+
+Audit each submodule end-to-end:
+
+React page/form → API service → Django URL → View/ViewSet → Serializer → Business Service → Model → PostgreSQL.
+
+Verify:
+- Correct field types
+- Foreign keys
+- Unique constraints
+- Check constraints
+- Decimal precision
+- Indexes
+- Permissions
+- Migrations
+- Audit fields
+- Error responses
+
+Do not trust frontend quantities.
+
+Do not hardcode demo items, warehouses or stock balances.
+
+## 17. Testing
+
+Execute actual PostgreSQL-backed tests:
+
+1. Stock In from Goods Receipt.
+2. Stock In from Opening Stock.
+3. Stock Issue with sufficient quantity.
+4. Stock Issue with insufficient quantity.
+5. Stock Issue with reserved stock.
+6. Inter-Warehouse Transfer.
+7. Inter-Location Transfer.
+8. Partial dispatch.
+9. Partial receipt.
+10. Transfer shortage.
+11. Damaged transfer receipt.
+12. Adjustment increase.
+13. Adjustment decrease.
+14. Return In.
+15. Return Out.
+16. Opening Stock duplicate prevention.
+17. Reservation creation.
+18. Partial reservation release.
+19. Reservation over-release prevention.
+20. Reclassification.
+21. Stock Out traceability.
+22. Duplicate submission.
+23. Concurrent posting.
+24. Permission enforcement.
+25. Configuration enforcement.
+26. Ledger and balance consistency.
+
+For each test verify frontend, API, backend, PostgreSQL records, ledger and resulting stock balance.
+
+## 18. Final report
+
+Provide:
+- Existing and verified features
+- Missing features
+- Incorrect features
+- Field mapping report
+- Workflow implementation report
+- Models/APIs changed
+- Migrations
+- Actual test results
+- Remaining issues
+
+Do not claim tests passed without execution.
+
+PRIMARY GOAL: Complete Stock Operations using one reliable transaction engine, correct form fields, valid workflows and accurate PostgreSQL stock posting. Preserve existing working functionality.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-11-04T17:23:54+05:30.
+</ADDITIONAL_METADATA>

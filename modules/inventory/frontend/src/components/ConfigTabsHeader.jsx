@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Settings,
@@ -10,10 +10,46 @@ import {
   History,
   CheckCircle2,
   ClipboardCheck,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 export function ConfigTabsHeader({ title, subtitle, icon: Icon = Settings }) {
   const location = useLocation();
+  const tabsRef = useRef(null);
+  const activeTabRef = useRef(null);
+  const [scrollState, setScrollState] = useState({ left: false, right: false });
+
+  const updateScrollState = useCallback(() => {
+    const tabs = tabsRef.current;
+    if (!tabs) return;
+    setScrollState({
+      left: tabs.scrollLeft > 0,
+      right: tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 1,
+    });
+  }, []);
+
+  useEffect(() => {
+    const tabs = tabsRef.current;
+    if (!tabs) return undefined;
+    updateScrollState();
+    const observer = new ResizeObserver(updateScrollState);
+    observer.observe(tabs);
+    window.addEventListener("resize", updateScrollState);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateScrollState);
+    };
+  }, [updateScrollState]);
+
+  useEffect(() => {
+    activeTabRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+    updateScrollState();
+  }, [location.pathname, updateScrollState]);
+
+  const scrollTabs = (direction) => {
+    tabsRef.current?.scrollBy({ left: direction * Math.max(180, tabsRef.current.clientWidth * 0.7), behavior: "smooth" });
+  };
 
   const tabs = [
     { label: "General Settings", path: "/inventory/configuration/general", icon: Settings },
@@ -55,27 +91,51 @@ export function ConfigTabsHeader({ title, subtitle, icon: Icon = Settings }) {
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-200 dark:border-zinc-800 text-xs">
-        {tabs.map((tab) => {
-          const isActive = location.pathname === tab.path;
-          const TabIcon = tab.icon;
-          return (
-            <Link
-              key={tab.path}
-              to={tab.path}
-              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-lg font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                isActive
-                  ? "bg-blue-600 text-white shadow-xs font-semibold"
-                  : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 hover:bg-slate-100 dark:hover:bg-zinc-800"
-              }`}
-            >
-              <TabIcon className={`h-3.5 w-3.5 shrink-0 ${isActive ? "text-white" : "text-slate-400 dark:text-zinc-500"}`} />
-              {tab.label}
-            </Link>
-          );
-        })}
+      <div className="flex min-w-0 items-center gap-1 border-b border-slate-200 pb-1 text-xs dark:border-zinc-800">
+        <button
+          type="button"
+          aria-label="Scroll configuration tabs left"
+          disabled={!scrollState.left}
+          onClick={() => scrollTabs(-1)}
+          className="shrink-0 rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 disabled:cursor-default disabled:opacity-30 dark:text-zinc-400 dark:hover:bg-zinc-800"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <div
+          ref={tabsRef}
+          onScroll={updateScrollState}
+          className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-hidden"
+        >
+          {tabs.map((tab) => {
+            const isActive = location.pathname === tab.path;
+            const TabIcon = tab.icon;
+            return (
+              <Link
+                key={tab.path}
+                ref={isActive ? activeTabRef : undefined}
+                to={tab.path}
+                className={`inline-flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 font-medium transition-colors ${
+                  isActive
+                    ? "bg-blue-600 font-semibold text-white shadow-xs"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                }`}
+              >
+                <TabIcon className={`h-3.5 w-3.5 shrink-0 ${isActive ? "text-white" : "text-slate-400 dark:text-zinc-500"}`} />
+                {tab.label}
+              </Link>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          aria-label="Scroll configuration tabs right"
+          disabled={!scrollState.right}
+          onClick={() => scrollTabs(1)}
+          className="shrink-0 rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 disabled:cursor-default disabled:opacity-30 dark:text-zinc-400 dark:hover:bg-zinc-800"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );
 }
-

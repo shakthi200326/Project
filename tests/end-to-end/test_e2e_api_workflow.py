@@ -131,7 +131,9 @@ class EndToEndRestApiWorkflowTests(TestCase):
             batch_number="BATCH-HD-2026-A1",
         )
 
-        # 8. Post Transaction via REST API endpoint /api/v1/inventory/movements/{id}/post/
+        # 8. Submit, then post via /api/v1/inventory/movements/{id}/post/ (draft receipts never post)
+        submit_resp = self.client.post(f"/api/v1/inventory/movements/{tx.id}/submit/")
+        self.assertEqual(submit_resp.status_code, status.HTTP_200_OK)
         post_resp = self.client.post(f"/api/v1/inventory/movements/{tx.id}/post/")
         self.assertEqual(post_resp.status_code, status.HTTP_200_OK)
         self.assertEqual(post_resp.data["status"], "POSTED")

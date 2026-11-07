@@ -72,6 +72,80 @@ const ACTIONS = {
   reverse: { label: "Reverse", icon: RotateCcw, danger: true, reason: true, message: "Reverse this posted receipt? A compensating reversal document will remove the received stock." },
 };
 
+function ReceiptWorkflowStepper({ status, inspectionRequired, putawayProgress }) {
+  const steps = [
+    { key: "DRAFT", label: "Draft" },
+    { key: "SUBMITTED", label: "Submitted" },
+    ...(inspectionRequired ? [{ key: "INSPECTION", label: "Inspection" }] : []),
+    { key: "PUTAWAY", label: "Putaway" },
+    { key: "POSTED", label: "Posted to Stock" },
+  ];
+
+  const getStepState = (stepKey) => {
+    if (status === "CANCELLED" || status === "REVERSED") return "default";
+    if (status === "POSTED") return "completed";
+
+    if (stepKey === "DRAFT") return status === "DRAFT" ? "active" : "completed";
+    if (stepKey === "SUBMITTED") {
+      if (status === "DRAFT") return "pending";
+      if (status === "SUBMITTED" || status === "APPROVED") return "active";
+      return "completed";
+    }
+    if (stepKey === "INSPECTION") {
+      if (["DRAFT", "SUBMITTED", "APPROVED"].includes(status)) return "pending";
+      if (status === "UNDER_INSPECTION") return "active";
+      return "completed";
+    }
+    if (stepKey === "PUTAWAY") {
+      if (["DRAFT", "SUBMITTED", "APPROVED", "UNDER_INSPECTION"].includes(status)) return "pending";
+      if (putawayProgress === "COMPLETED") return "completed";
+      if (["ACCEPTED", "PARTIALLY_ACCEPTED", "PUTAWAY_PENDING", "READY_TO_POST"].includes(status)) return "active";
+      return "pending";
+    }
+    if (stepKey === "POSTED") {
+      return status === "READY_TO_POST" ? "ready" : "pending";
+    }
+    return "pending";
+  };
+
+  return (
+    <div className="p-3 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/80 dark:border-zinc-800 shadow-sm mb-4">
+      <div className="flex items-center justify-between gap-2 overflow-x-auto">
+        {steps.map((st, i) => {
+          const state = getStepState(st.key);
+          return (
+            <React.Fragment key={st.key}>
+              <div className="flex items-center gap-2 shrink-0">
+                <div
+                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                    state === "completed"
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : state === "active"
+                      ? "bg-indigo-600 text-white ring-4 ring-indigo-100 dark:ring-indigo-950/50"
+                      : state === "ready"
+                      ? "bg-blue-600 text-white ring-4 ring-blue-100 dark:ring-blue-950/50 animate-pulse"
+                      : "bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500"
+                  }`}
+                >
+                  {state === "completed" ? "✓" : i + 1}
+                </div>
+                <div className="text-xs font-medium text-slate-700 dark:text-zinc-300">{st.label}</div>
+              </div>
+              {i < steps.length - 1 && (
+                <div
+                  className={`flex-1 h-0.5 min-w-8 transition-colors ${
+                    state === "completed" ? "bg-emerald-500" : "bg-slate-200 dark:bg-zinc-800"
+                  }`}
+                />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ReceiptDetail({ grn, view }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -101,7 +175,8 @@ function ReceiptDetail({ grn, view }) {
   if (error && !rec) return <ErrorBanner error={error} onRetry={load} />;
   if (!rec) return <LoadingBlock label="Loading receipt…" />;
 
-  const can = (a) => rec.available_actions.includes(a);
+  const availableActions = Array.isArray(rec.available_actions) ? rec.available_actions : [];
+  const can = (a) => availableActions.includes(a);
   const runAction = async (action, reason) => {
     try {
       const updated = await receiptAction(rec.id, action, reason ? { reason } : {});
@@ -121,7 +196,8 @@ function ReceiptDetail({ grn, view }) {
 
   const awaitingApproval = rec.status === "SUBMITTED" && can("approve");
   const goto = (path) => navigate(`${path}?receipt=${rec.id}`);
-  const t = rec.totals;
+  const t = rec.totals || {};
+  const receiptLines = Array.isArray(rec.lines) ? rec.lines : [];
 
   return (
     <div className="space-y-4">
@@ -182,6 +258,14 @@ function ReceiptDetail({ grn, view }) {
           </ul>
         </Notice>
       )}
+
+      {/* Visual Workflow Stepper */}
+      <ReceiptWorkflowStepper
+        status={rec.status}
+        inspectionRequired={rec.inspection_required}
+        putawayProgress={rec.putaway_progress}
+      />
+
       {awaitingApproval && <Notice tone="blue">This receipt is awaiting approval before it can be inspected, put away or posted.</Notice>}
       {rec.status === "POSTED" && (
         <Notice tone="blue" icon={CheckCircle2}>
@@ -220,7 +304,7 @@ function ReceiptDetail({ grn, view }) {
         </div>
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mt-4 pt-4 border-t border-slate-100 dark:border-zinc-800">
           {[
-            ["Lines", t.lines],
+            ["Lines", t.lines ?? receiptLines.length],
             ["Received", fmtQty(t.received)],
             ["Accepted", fmtQty(t.accepted)],
             ["Rejected", fmtQty(t.rejected)],
@@ -257,7 +341,7 @@ function ReceiptDetail({ grn, view }) {
         ))}
       </div>
 
-      {tab === "lines" && <LinesTable lines={rec.lines} />}
+      {tab === "lines" && <LinesTable lines={receiptLines} />}
       {tab === "inspections" && <RecordTab fetcher={() => fetchInspections({ receipt: rec.id })} columns={INSPECTION_COLUMNS} empty="No receipt inspections recorded." />}
       {tab === "quality" && <RecordTab fetcher={() => fetchQualityInspections({ receipt: rec.id })} columns={QUALITY_COLUMNS} empty="No quality inspections recorded." />}
       {tab === "putaways" && <RecordTab fetcher={() => fetchPutaways({ receipt: rec.id })} columns={PUTAWAY_COLUMNS} empty="No putaway recorded." />}

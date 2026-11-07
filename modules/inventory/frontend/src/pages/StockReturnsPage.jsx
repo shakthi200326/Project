@@ -262,9 +262,6 @@ export function StockReturnsPage() {
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
               Stock Returns & RMA Disposition
             </h1>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50">
-              Phase 3 Return Movement
-            </span>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50">
               Live Audited Ledger
             </span>
@@ -670,7 +667,7 @@ export function StockReturnsPage() {
         </div>
       </div>
 
-      {/* Phase 3 Stock Return Modal */}
+      
       <StockTransactionModal
         isOpen={isModalOpen}
         initialType="RETURN"

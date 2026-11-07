@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ClipboardList, History, Plus } from "lucide-react";
-import { fetchActiveWarehouses, fetchReceipts } from "../../services/goodsReceiptApi";
+import { useLocation, useNavigate } from "react-router-dom";
+import { ClipboardList, History, Plus, CheckCircle2, Clock, AlertTriangle, Layers, ArrowDownToLine, Package } from "lucide-react";
+import { fetchActiveWarehouses, fetchReceiptMetrics, fetchReceipts } from "../../services/goodsReceiptApi";
 import {
   DataTable,
   DateRange,
@@ -20,10 +20,33 @@ import {
   statusLabel,
   useGrnContext,
   usePagedQuery,
+  useToast,
 } from "./grnComponents";
 
 const FILTERS = ["search", "status", "receipt_type", "warehouse", "date_from", "date_to", "posted", "putaway"];
 const HISTORY_STATUSES = ["POSTED", "REVERSED", "REJECTED", "CANCELLED"];
+
+/** Metric KPI Card component for enterprise header overview */
+function GrnMetricCard({ label, value, subtext, icon: Icon, color = "indigo" }) {
+  const colorMap = {
+    indigo: "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-900",
+    amber: "bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-900",
+    blue: "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900",
+    emerald: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900",
+  };
+  return (
+    <div className="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
+      <div className={`p-2.5 rounded-lg border ${colorMap[color] || colorMap.indigo}`}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <div>
+        <div className="text-xs font-medium text-slate-500 dark:text-zinc-400">{label}</div>
+        <div className="text-lg font-bold text-slate-900 dark:text-white leading-tight">{value}</div>
+        {subtext && <div className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">{subtext}</div>}
+      </div>
+    </div>
+  );
+}
 
 /** Receipt Register (all receipts) and Receipt History (closed receipts) share this page. */
 export function ReceiptRegisterPage({ view = "register" }) {
@@ -63,14 +86,30 @@ function NewReceiptButton() {
 
 function RegisterTable({ view, grn }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [toastNode, toast] = useToast();
   const [warehouses, setWarehouses] = useState([]);
+  const [metrics, setMetrics] = useState(null);
   const { data, loading, error, filters, setFilter, reload } = usePagedQuery(
     (params) => fetchReceipts({ ...params, view }),
     FILTERS
   );
+
+  const loadMetrics = () => {
+    fetchReceiptMetrics({ warehouse: filters.warehouse }).then(setMetrics).catch(() => {});
+  };
+
   useEffect(() => {
     fetchActiveWarehouses().then(setWarehouses).catch(() => setWarehouses([]));
-  }, []);
+    loadMetrics();
+  }, [filters.warehouse]);
+
+  useEffect(() => {
+    if (location.state?.toast) {
+      toast(location.state.toast);
+      navigate(location.pathname + location.search, { replace: true, state: null });
+    }
+  }, [location.pathname, location.search, location.state, navigate, toast]);
 
   const receiptTypes = grn.settings("create").receipt_types || [];
   const statuses = view === "history" ? HISTORY_STATUSES : RECEIPT_STATUSES;
@@ -89,11 +128,11 @@ function RegisterTable({ view, grn }) {
       ),
     },
     { key: "warehouse", label: "Warehouse", render: (r) => `${r.warehouse_code}${r.receiving_location_code ? ` / ${r.receiving_location_code}` : ""}` },
-    { key: "lines", label: "Lines", align: "right", render: (r) => r.totals.lines },
-    { key: "received", label: "Received", align: "right", render: (r) => fmtQty(r.totals.received) },
-    { key: "accepted", label: "Accepted", align: "right", render: (r) => fmtQty(r.totals.accepted) },
-    { key: "rejected", label: "Rejected", align: "right", render: (r) => fmtQty(r.totals.rejected) },
-    { key: "pending", label: "Pending Insp.", align: "right", render: (r) => fmtQty(r.totals.pending) },
+    { key: "lines", label: "Lines", align: "right", render: (r) => r.totals?.lines ?? r.lines?.length ?? 0 },
+    { key: "received", label: "Received", align: "right", render: (r) => fmtQty(r.totals?.received) },
+    { key: "accepted", label: "Accepted", align: "right", render: (r) => fmtQty(r.totals?.accepted) },
+    { key: "rejected", label: "Rejected", align: "right", render: (r) => fmtQty(r.totals?.rejected) },
+    { key: "pending", label: "Pending Insp.", align: "right", render: (r) => fmtQty(r.totals?.pending) },
     { key: "putaway_progress", label: "Putaway", render: (r) => <StatusBadge status={r.putaway_progress} /> },
     { key: "status", label: "Receipt Status", render: (r) => <StatusBadge status={r.status} label={r.status_label} /> },
     { key: "posted", label: "Posted", render: (r) => (r.posted ? "Yes" : "No") },
@@ -103,7 +142,43 @@ function RegisterTable({ view, grn }) {
   ];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      {toastNode}
+
+      {/* Enterprise KPI Metrics Bar */}
+      {view === "register" && metrics && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <GrnMetricCard
+            label="Total Receipts"
+            value={metrics.total_receipts}
+            subtext={`${metrics.draft_count} Drafts`}
+            icon={ClipboardList}
+            color="indigo"
+          />
+          <GrnMetricCard
+            label="Under Inspection"
+            value={metrics.under_inspection_count}
+            subtext={`${fmtQty(metrics.pending_inspection_units)} units pending`}
+            icon={AlertTriangle}
+            color="amber"
+          />
+          <GrnMetricCard
+            label="Putaway Pending"
+            value={metrics.putaway_pending_count}
+            subtext="Ready for storage placement"
+            icon={Layers}
+            color="blue"
+          />
+          <GrnMetricCard
+            label="Posted to Stock"
+            value={metrics.posted_count}
+            subtext={`${fmtQty(metrics.total_accepted_qty)} accepted units`}
+            icon={CheckCircle2}
+            color="emerald"
+          />
+        </div>
+      )}
+
       <FilterBar count={data?.count}>
         <SearchInput
           value={filters.search}

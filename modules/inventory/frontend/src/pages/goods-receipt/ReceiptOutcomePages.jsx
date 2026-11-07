@@ -1,6 +1,7 @@
 // Accepted / Rejected / Partial Acceptance views are derived from receipt lines
 // and inspection records; nothing is stored separately for them.
 import React, { useState } from "react";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { PackageCheck, PackageX, Split } from "lucide-react";
 import { fetchInspections, fetchReceiptLines, setRejectionDisposition } from "../../services/goodsReceiptApi";
 import {
@@ -86,7 +87,11 @@ export function AcceptedGoodsPage() {
     { key: "receipt_status", label: "Receipt Status", render: (r) => <StatusBadge status={r.receipt_status} /> },
   ];
   return (
-    <GrnPage title="Accepted Goods" subtitle="Receipt lines with accepted quantity: eligible for putaway and stock recognition." icon={PackageCheck}>
+    <GrnPage
+      title="Accepted Goods"
+      subtitle="Review accepted product quantities ready for putaway and inventory posting."
+      icon={PackageCheck}
+    >
       <SubmoduleGate grn={grn} submodule="accepted">
         <LineOutcomeTable outcome="accepted" columns={columns} empty="No accepted goods match these filters." pageSize={grn.settings("accepted").page_size} />
       </SubmoduleGate>
@@ -101,30 +106,23 @@ export function PartialAcceptancePage() {
     { key: "received_quantity", label: "Received", align: "right", render: (r) => fmtQty(r.received_quantity) },
     { key: "accepted_quantity", label: "Accepted", align: "right", render: (r) => fmtQty(r.accepted_quantity) },
     { key: "rejected_quantity", label: "Rejected", align: "right", render: (r) => fmtQty(r.rejected_quantity) },
-    { key: "pending_inspection_quantity", label: "Pending Insp.", align: "right", render: (r) => fmtQty(r.pending_inspection_quantity) },
-    {
-      key: "acceptance_rate",
-      label: "Acceptance",
-      align: "right",
-      render: (r) => `${((Number(r.accepted_quantity) / Number(r.received_quantity)) * 100).toFixed(1)}%`,
-    },
-    { key: "rejection_reason", label: "Last Rejection Reason", render: (r) => r.rejection_reason || "—" },
+    { key: "pending_inspection_quantity", label: "Pending Inspection", align: "right", render: (r) => fmtQty(r.pending_inspection_quantity) },
+    { key: "inspection_status", label: "Inspection", render: (r) => <StatusBadge status={r.inspection_status} /> },
     { key: "receipt_status", label: "Receipt Status", render: (r) => <StatusBadge status={r.receipt_status} /> },
   ];
-  const cfg = grn.settings("partial");
   return (
     <GrnPage
       title="Partial Acceptance"
-      subtitle="Lines where only part of the received quantity was accepted, or inspection is still in progress."
+      subtitle="Review receipt lines with accepted quantities and rejected or still-pending quantities."
       icon={Split}
     >
       <SubmoduleGate grn={grn} submodule="partial">
-        {!cfg.allow_partial_acceptance && (
-          <div className="mb-3 text-xs text-amber-700 dark:text-amber-400">
-            Partial acceptance is currently disabled: new inspections must fully accept or fully reject a line.
-          </div>
-        )}
-        <LineOutcomeTable outcome="partial" columns={columns} empty="No partially accepted lines." pageSize={cfg.page_size} />
+        <LineOutcomeTable
+          outcome="partial"
+          columns={columns}
+          empty="No partially accepted goods match these filters."
+          pageSize={grn.settings("partial").page_size}
+        />
       </SubmoduleGate>
     </GrnPage>
   );
@@ -135,7 +133,7 @@ export function RejectedGoodsPage() {
   return (
     <GrnPage
       title="Rejected Goods"
-      subtitle="Rejected quantities by inspection, with reason and disposition. Rejected goods never enter available stock."
+      subtitle="Track inspection rejections, reasons, and disposition workflows (Return, Scrap, Hold, Quarantine)."
       icon={PackageX}
     >
       <SubmoduleGate grn={grn} submodule="rejected">
@@ -224,7 +222,15 @@ function RejectedTable({ grn }) {
         />
         <DateRange from={filters.date_from} to={filters.date_to} onFrom={(v) => setFilter("date_from", v)} onTo={(v) => setFilter("date_to", v)} />
       </FilterBar>
-      <DataTable columns={columns} rows={data?.results} loading={loading} error={loadError} onRetry={reload} empty="No rejected goods." />
+      <DataTable
+        columns={columns}
+        rows={data?.results}
+        loading={loading}
+        error={loadError}
+        onRetry={reload}
+        empty="No rejected goods."
+        minWidth={1180}
+      />
       <Pagination data={data} page={filters.page} pageSize={cfg.page_size} onPage={(p) => setFilter("page", p)} />
     </div>
   );

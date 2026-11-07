@@ -39,6 +39,7 @@ import {
   Clock,
   Calendar,
   ShieldCheck,
+  Bell,
 } from "lucide-react";
 import { useTheme } from "@shared/shell-app/ThemeProvider.jsx";
 import { useWorkspace } from "@shared/shell-app/ContextSelector.jsx";
@@ -117,6 +118,7 @@ export function CommandPaletteModal({ isOpen, onClose }) {
     { label: "Valuation Settings", path: "/inventory/configuration/valuation", icon: DollarSign, category: "Inventory Configuration" },
     { label: "Document Numbering", path: "/inventory/configuration/numbering", icon: Hash, category: "Inventory Configuration" },
     { label: "Approval Settings", path: "/inventory/configuration/approvals", icon: ShieldCheck, category: "Inventory Configuration" },
+    { label: "Notifications & Alerts", path: "/inventory/notifications", icon: Bell, category: "Inventory Configuration" },
   ];
 
   const q = query.trim().toLowerCase();

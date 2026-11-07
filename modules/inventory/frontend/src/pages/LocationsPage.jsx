@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   X,
   Edit2,
-  Trash2,
   RefreshCw,
   Sparkles,
   Layers,
@@ -40,7 +39,6 @@ import {
   fetchWarehouses,
   createLocation,
   updateLocation,
-  deleteLocation,
   fetchWarehouseConfig,
 } from "../services/api";
 
@@ -246,18 +244,6 @@ export function LocationsPage() {
     }
   };
 
-  const handleDelete = async (id, code) => {
-    if (window.confirm(`Are you sure you want to delete storage location "${code}"?`)) {
-      try {
-        await deleteLocation(id);
-        setLocations((prev) => prev.filter((item) => item.id !== id));
-        showToast(`Storage Location "${code}" deleted.`);
-      } catch (err) {
-        console.error(err);
-        showToast("Cannot delete location with active inventory balances.");
-      }
-    }
-  };
 
   const filteredLocations = locations.filter((loc) => {
     const q = search.toLowerCase();
@@ -627,13 +613,6 @@ export function LocationsPage() {
                           title="Edit location"
                         >
                           <Edit2 className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(loc.id, loc.code)}
-                          className="p-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 text-slate-400 hover:text-rose-600 hover:border-rose-200 dark:hover:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-                          title="Delete location"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     </td>

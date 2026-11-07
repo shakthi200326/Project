@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { PieChart, Download, FileSpreadsheet, Activity, DollarSign, Calendar, Filter, ArrowUpRight, CheckCircle2, BarChart3, Sparkles } from "lucide-react";
+import { PieChart, Download, FileSpreadsheet, Activity, DollarSign, Calendar, Filter, ArrowUpRight, CheckCircle2, AlertCircle, BarChart3, Sparkles } from "lucide-react";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -14,6 +14,7 @@ import {
   Cell,
 } from "recharts";
 import { DEMO_KPIS } from "../services/api";
+import { downloadReportPdf, openReportPdf } from "../utils/pdfExport";
 
 const ABC_PARETO_DATA = [
   { rank: "A1", category: "High Velocity Motors & Pumps", value: 168.4, cumulative: 39.3, class: "A", skus: 120 },
@@ -29,8 +30,8 @@ export function ReportsPage() {
   const [dateRange, setDateRange] = useState("30d");
   const [toastMessage, setToastMessage] = useState(null);
 
-  const showToast = (msg) => {
-    setToastMessage(msg);
+  const showToast = (message, type = "success") => {
+    setToastMessage({ message, type });
     setTimeout(() => setToastMessage(null), 3500);
   };
 
@@ -66,7 +67,50 @@ export function ReportsPage() {
   ];
 
   const handleExportPdf = () => {
-    showToast("Generating executive inventory analytics PDF summary...");
+    try {
+      downloadReportPdf({
+        title: "Executive Inventory Analytics",
+        subtitle: "Inventory valuation, velocity, cycle-count accuracy, and ABC Pareto analysis.",
+        fileName: "executive_inventory_analytics",
+        sections: [
+          {
+            title: "Reporting Period",
+            rows: [["Selected period", dateRange === "30d" ? "Last 30 Days" : dateRange === "90d" ? "This Quarter (Q4)" : "Year-to-Date 2026"]],
+          },
+          {
+            title: "Summary Metrics",
+            headers: ["Metric", "Value"],
+            rows: [
+              ["Total Asset Value", `$${DEMO_KPIS.total_stock_value.toLocaleString("en-US", { minimumFractionDigits: 2 })}`],
+              ["Inventory Turnover Ratio", "6.4x / Year"],
+              ["Days on Hand", "57 days"],
+              ["Cycle Count Accuracy", "99.82%"],
+              ["Dead Stock Risk", "$3,420.00"],
+            ],
+          },
+          {
+            title: "ABC Velocity & Pareto Analysis",
+            headers: ["Rank", "Category", "Capital Held ($K)", "Cumulative (%)", "Class", "SKUs"],
+            rows: ABC_PARETO_DATA.map((entry) => [
+              entry.rank,
+              entry.category,
+              entry.value,
+              entry.cumulative,
+              entry.class,
+              entry.skus,
+            ]),
+          },
+          {
+            title: "Available Reports",
+            headers: ["Report", "Category", "Period", "Description"],
+            rows: reports.map((report) => [report.name, report.category, report.period, report.description]),
+          },
+        ],
+      });
+      showToast("Executive inventory PDF downloaded.");
+    } catch (exportError) {
+      showToast(exportError?.message || "Unable to generate the executive PDF.", "error");
+    }
   };
 
   const handleExportReportCsv = (reportName) => {
@@ -83,7 +127,43 @@ export function ReportsPage() {
   };
 
   const handleViewReportPdf = (reportName) => {
-    showToast(`Opening PDF preview for "${reportName}"...`);
+    const report = reports.find((item) => item.name === reportName);
+    if (!report) {
+      showToast("This report is not available.", "error");
+      return;
+    }
+    try {
+      openReportPdf({
+        title: report.name,
+        subtitle: report.description,
+        fileName: report.name,
+        sections: [
+          {
+            title: "Report Details",
+            rows: [
+              ["Category", report.category],
+              ["Reporting frequency", report.period],
+              ["Selected date range", dateRange === "30d" ? "Last 30 Days" : dateRange === "90d" ? "This Quarter (Q4)" : "Year-to-Date 2026"],
+            ],
+          },
+          {
+            title: "ABC Velocity & Pareto Analysis",
+            headers: ["Rank", "Category", "Capital Held ($K)", "Cumulative (%)", "Class", "SKUs"],
+            rows: ABC_PARETO_DATA.map((entry) => [
+              entry.rank,
+              entry.category,
+              entry.value,
+              entry.cumulative,
+              entry.class,
+              entry.skus,
+            ]),
+          },
+        ],
+      });
+      showToast(`PDF preview opened for "${report.name}".`);
+    } catch (exportError) {
+      showToast(exportError?.message || "Unable to open the report PDF.", "error");
+    }
   };
 
   return (
@@ -91,8 +171,12 @@ export function ReportsPage() {
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-4 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-slate-900/95 dark:bg-zinc-800/95 backdrop-blur-md text-white text-xs font-semibold shadow-2xl border border-slate-700/60 animate-in slide-in-from-top-2">
-          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-          <span>{toastMessage}</span>
+          {toastMessage.type === "error" ? (
+            <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
+          ) : (
+            <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+          )}
+          <span>{toastMessage.message}</span>
         </div>
       )}
 

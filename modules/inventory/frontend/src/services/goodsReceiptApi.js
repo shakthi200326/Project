@@ -11,13 +11,9 @@ import {
   fetchReceipts as apiFetchReceipts,
   fetchReceipt as apiFetchReceipt,
   fetchReceiptTimeline as apiFetchReceiptTimeline,
-  createReceipt as apiCreateReceipt,
-  updateReceipt as apiUpdateReceipt,
   deleteReceipt as apiDeleteReceipt,
-  receiptAction as apiReceiptAction,
   fetchReceiptLines as apiFetchReceiptLines,
   fetchInspections as apiFetchInspections,
-  recordInspection as apiRecordInspection,
   setRejectionDisposition as apiSetRejectionDisposition,
   fetchQualityInspections as apiFetchQualityInspections,
   recordQualityInspection as apiRecordQualityInspection,
@@ -32,6 +28,7 @@ import {
   saveGrnSettings as apiSaveGrnSettings,
   resetGrnSettings as apiResetGrnSettings,
   fetchGrnSettingsHistory as apiFetchGrnSettingsHistory,
+  fetchProducts as apiFetchProducts,
 } from "./api.js";
 
 const GRN = `${API_BASE}/inventory/goods-receipt`;
@@ -83,6 +80,28 @@ export const searchReceiptItems = async (search) => {
     const data = await request("/lookups/items/", { params: { search } });
     if (Array.isArray(data) && data.length > 0) return data;
   } catch (e) {}
+  try {
+    const data = await apiFetchProducts({ search: search || "" });
+    const items = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
+    if (items.length > 0) {
+      return items.map((p) => ({
+        id: p.id,
+        code: p.code || p.sku || "",
+        name: p.name || p.display_name || "",
+        description: p.description || p.short_description || "",
+        barcode: p.barcode || "",
+        base_uom: p.base_uom || p.unit || p.base_unit || "Nos",
+        uom_options: p.uom_options || [],
+        standard_cost: p.standard_cost ?? p.unit_cost ?? 0,
+        category: p.category_name || p.category?.name || "",
+        brand: p.brand_name || p.brand || "",
+        manufacturer: p.manufacturer || "",
+        model_number: p.model_number || "",
+        tracking: p.tracking || "NONE",
+        variants: Array.isArray(p.variants) ? p.variants : [],
+      }));
+    }
+  } catch (e) {}
   const q = (search || "").toLowerCase().trim();
   return DEMO_PRODUCTS.filter((p) => !q || p.name.toLowerCase().includes(q) || (p.code && p.code.toLowerCase().includes(q)) || (p.sku && p.sku.toLowerCase().includes(q)));
 };
@@ -131,13 +150,34 @@ export const fetchGrnSettingsHistory = async (submodule) => {
 };
 
 // Receipts
+export const fetchReceiptMetrics = async (params) => {
+  try {
+    const data = await request("/receipts/metrics/", { params });
+    if (data) return data;
+  } catch (e) {}
+  return {
+    total_receipts: 0,
+    draft_count: 0,
+    under_inspection_count: 0,
+    pending_inspection_units: "0.0000",
+    putaway_pending_count: 0,
+    ready_to_post_count: 0,
+    posted_count: 0,
+    total_lines: 0,
+    total_received_qty: "0.0000",
+    total_accepted_qty: "0.0000",
+    total_rejected_qty: "0.0000",
+  };
+};
+
 export const fetchReceipts = async (params) => {
   try {
     const data = await request("/receipts/", { params });
-    if (data && (data.count > 0 || (Array.isArray(data.results) && data.results.length > 0))) {
-      return data;
-    }
-  } catch (e) {}
+    if (data && Number.isInteger(data.count) && Array.isArray(data.results)) return data;
+    throw new ApiError("The inventory server returned an invalid Goods Receipt list.", 502, data);
+  } catch (e) {
+    if (e.status && e.status !== 0) throw e;
+  }
   return apiFetchReceipts(params);
 };
 
@@ -158,23 +198,15 @@ export const fetchReceiptTimeline = async (id) => {
 };
 
 export const createReceipt = async (payload, idempotencyKey) => {
-  try {
-    return await request("/receipts/", {
-      method: "POST",
-      body: payload,
-      headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {},
-    });
-  } catch (e) {
-    return apiCreateReceipt(payload, idempotencyKey);
-  }
+  return await request("/receipts/", {
+    method: "POST",
+    body: payload,
+    headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {},
+  });
 };
 
 export const updateReceipt = async (id, payload) => {
-  try {
-    return await request(`/receipts/${id}/`, { method: "PATCH", body: payload });
-  } catch (e) {
-    return apiUpdateReceipt(id, payload);
-  }
+  return await request(`/receipts/${id}/`, { method: "PATCH", body: payload });
 };
 
 export const deleteReceipt = async (id) => {
@@ -186,20 +218,14 @@ export const deleteReceipt = async (id) => {
 };
 
 export const receiptAction = async (id, action, body = {}) => {
-  try {
-    return await request(`/receipts/${id}/${action.replace(/_/g, "-")}/`, { method: "POST", body });
-  } catch (e) {
-    return apiReceiptAction(id, action, body);
-  }
+  return await request(`/receipts/${id}/${action.replace(/_/g, "-")}/`, { method: "POST", body });
 };
 
 // Derived line views: accepted | rejected | partial | pending_inspection | pending_putaway | putaway
 export const fetchReceiptLines = async (outcome, params) => {
   try {
     const data = await request("/lines/", { params: { outcome, ...params } });
-    if (data && (data.count > 0 || (Array.isArray(data.results) && data.results.length > 0))) {
-      return data;
-    }
+    if (data && Array.isArray(data.results)) return data;
   } catch (e) {}
   return apiFetchReceiptLines(outcome, params);
 };
@@ -208,19 +234,16 @@ export const fetchReceiptLines = async (outcome, params) => {
 export const fetchInspections = async (params) => {
   try {
     const data = await request("/inspections/", { params });
-    if (data && (data.count > 0 || (Array.isArray(data.results) && data.results.length > 0))) {
-      return data;
-    }
-  } catch (e) {}
+    if (data && Array.isArray(data.results)) return data;
+    throw new ApiError("The inventory server returned an invalid inspection list.", 502, data);
+  } catch (e) {
+    if (e.status && e.status !== 0) throw e;
+  }
   return apiFetchInspections(params);
 };
 
 export const recordInspection = async (payload) => {
-  try {
-    return await request("/inspections/", { method: "POST", body: payload });
-  } catch (e) {
-    return apiRecordInspection(payload);
-  }
+  return await request("/inspections/", { method: "POST", body: payload });
 };
 
 export const setRejectionDisposition = async (id, disposition) => {

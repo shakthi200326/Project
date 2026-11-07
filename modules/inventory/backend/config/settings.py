@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import config._bootstrap
+from corsheaders.defaults import default_headers
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = BASE_DIR.parent.parent.parent
@@ -35,7 +36,9 @@ INSTALLED_APPS = [
     "apps.valuation",
     "apps.planning",
     "apps.configuration",
+    "apps.goods_receipt",
     "apps.integration",
+    "apps.security_audit",
 ]
 
 MIDDLEWARE = [
@@ -96,11 +99,22 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
+EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "25"))
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "false").lower() == "true"
+EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "false").lower() == "true"
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "10"))
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "inventory@localhost")
+
 STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # CORS
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_HEADERS = (*default_headers, "idempotency-key")
 
 # DRF
 REST_FRAMEWORK = {
@@ -133,5 +147,8 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.integration.tasks.check_low_stock_thresholds_task",
         "schedule": 300.0,
     },
+    "scan-inventory-notifications-every-5-minutes": {
+        "task": "apps.integration.tasks.scan_inventory_notifications_task",
+        "schedule": 300.0,
+    },
 }
-

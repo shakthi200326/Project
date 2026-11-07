@@ -68,7 +68,7 @@ export function ProductImportHistoryPage() {
             Refresh
           </button>
           <Link
-            to="/inventory/products/import"
+            to="/inventory/products/data-management?tab=import"
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-colors"
           >
             <Upload className="w-4 h-4" />
@@ -246,4 +246,3 @@ export function ProductImportHistoryPage() {
   );
 }
 export default ProductImportHistoryPage;
-

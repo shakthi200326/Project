@@ -19,7 +19,6 @@ import {
   TrendingUp,
   Clock,
   Sparkles,
-  Barcode,
   Eye,
   Truck,
 } from "lucide-react";
@@ -610,11 +609,9 @@ export function GoodsReceiptPage() {
       <StockTransactionModal
         isOpen={isModalOpen}
         initialType="RECEIPT"
-        lockType={true}
         onClose={() => setIsModalOpen(false)}
         onPosted={handleReceiptPosted}
       />
     </div>
   );
 }
-

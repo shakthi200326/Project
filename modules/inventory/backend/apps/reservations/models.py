@@ -32,6 +32,9 @@ class StockReservation(models.Model):
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name="reservations")
     location = models.ForeignKey(StorageLocation, on_delete=models.CASCADE, null=True, blank=True)
     quantity = models.DecimalField(max_digits=20, decimal_places=4)
+    released_quantity = models.DecimalField(max_digits=20, decimal_places=4, default=Decimal("0.0000"))
+    priority = models.CharField(max_length=20, default="NORMAL", blank=True)
+    reserved_by = models.CharField(max_length=120, blank=True, default="")
     required_date = models.DateField(null=True, blank=True)
     batch_number = models.CharField(max_length=80, blank=True, default="")
     remarks = models.TextField(blank=True, default="")
@@ -40,6 +43,10 @@ class StockReservation(models.Model):
     expires_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def remaining_quantity(self) -> Decimal:
+        return max(Decimal("0.0000"), self.quantity - self.released_quantity)
 
     class Meta:
         db_table = "inv_reservations"

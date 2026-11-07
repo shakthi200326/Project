@@ -1,6 +1,7 @@
 from decimal import Decimal
 from django.test import TestCase
 from django.core.exceptions import ValidationError
+from rest_framework.test import APIClient
 
 from apps.categories.models import InventoryCategory
 from apps.brands.models import Brand
@@ -113,3 +114,56 @@ class CatalogAndMasterDataTests(TestCase):
         )
         self.assertEqual(box.conversion_factor, Decimal("12.0000"))
         self.assertEqual(box.base_unit.code, "EA")
+
+
+class ProductUomUpdateApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.category = InventoryCategory.objects.create(code="UOM-CAT", name="UOM Test Category")
+        self.units = {
+            code: UnitOfMeasure.objects.create(code=code, name=code)
+            for code in ("EA", "BOX", "CTN", "KG", "MTR")
+        }
+        self.item = InventoryItem.objects.create(
+            code="UOM-ITEM-01",
+            name="UOM Test Item",
+            category=self.category,
+            base_unit="EA",
+            base_uom=self.units["EA"],
+        )
+
+    def test_patch_resolves_registered_uom_codes(self):
+        response = self.client.patch(
+            f"/api/v1/inventory/items/{self.item.id}/",
+            {
+                "base_unit": "BOX",
+                "base_uom": "BOX",
+                "purchase_uom": "CTN",
+                "sales_uom": "EA",
+                "weight_uom": "KG",
+                "dimension_uom": "MTR",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200, response.data)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.base_unit, "BOX")
+        self.assertEqual(self.item.base_uom, self.units["BOX"])
+        self.assertEqual(self.item.purchase_uom, self.units["CTN"])
+        self.assertEqual(self.item.sales_uom, self.units["EA"])
+        self.assertEqual(self.item.weight_uom, self.units["KG"])
+        self.assertEqual(self.item.dimension_uom, self.units["MTR"])
+        self.assertEqual(response.data["weight_uom_code"], "KG")
+        self.assertEqual(response.data["dimension_uom_code"], "MTR")
+
+    def test_patch_accepts_work_in_progress_item_type(self):
+        response = self.client.patch(
+            f"/api/v1/inventory/items/{self.item.id}/",
+            {"item_type": "WIP"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200, response.data)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.item_type, InventoryItem.ItemType.WIP)

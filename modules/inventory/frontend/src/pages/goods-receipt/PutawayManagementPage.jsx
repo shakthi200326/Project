@@ -77,9 +77,9 @@ function PutawayWorkspace({ grn }) {
         </div>
       ),
     },
-    { key: "warehouse_code", label: "Warehouse" },
-    { key: "accepted_quantity", label: "Accepted", align: "right", render: (r) => `${fmtQty(r.accepted_quantity)} ${r.uom}` },
-    { key: "putaway_quantity", label: "Put Away", align: "right", render: (r) => fmtQty(r.putaway_quantity) },
+    { key: "warehouse_code", label: "Warehouse", render: (r) => <span className="whitespace-nowrap font-mono text-[11px]">{r.warehouse_code || "—"}</span> },
+    { key: "accepted_quantity", label: "Accepted", align: "right", render: (r) => <span className="whitespace-nowrap font-medium">{fmtQty(r.accepted_quantity)} {r.uom}</span> },
+    { key: "putaway_quantity", label: "Put Away", align: "right", render: (r) => <span className="whitespace-nowrap">{fmtQty(r.putaway_quantity)}</span> },
     { key: "pending_putaway_quantity", label: "Pending", align: "right", render: (r) => fmtQty(r.pending_putaway_quantity) },
     { key: "putaway_status", label: "Status", render: (r) => <StatusBadge status={r.putaway_status} /> },
   ];
@@ -94,8 +94,8 @@ function PutawayWorkspace({ grn }) {
           : "any accepted quantity not put away is posted to the receiving location."}{" "}
         {cfg.allow_multiple_locations ? "A line may be split across several locations." : "Each line must go to a single location."}
       </Notice>
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
-        <div className="xl:col-span-3 space-y-3">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+        <div className="xl:col-span-7 2xl:col-span-8 space-y-3 min-w-0">
           <FilterBar count={data?.count}>
             <SearchInput value={filters.search} onChange={(v) => setFilter("search", v)} placeholder="Receipt no., item, batch…" />
             <SelectFilter
@@ -122,7 +122,7 @@ function PutawayWorkspace({ grn }) {
           />
           <Pagination data={data} page={filters.page} onPage={(p) => setFilter("page", p)} />
         </div>
-        <div className="xl:col-span-2">
+        <div className="xl:col-span-5 2xl:col-span-4 min-w-0">
           {selected ? (
             <PutawayForm
               key={`${selected.id}-${selected.putaway_quantity}`}
@@ -263,7 +263,7 @@ function PutawayLog({ reloadKey, onChanged }) {
     { key: "putaway_number", label: "Putaway No.", render: (r) => <span className="font-mono">{r.putaway_number}</span> },
     { key: "receipt_number", label: "Receipt", render: (r) => <ReceiptLink id={r.receipt} number={r.receipt_number} /> },
     { key: "line", label: "Line", render: (r) => `#${r.line} ${r.item_code}${r.variant_sku ? ` / ${r.variant_sku}` : ""}` },
-    { key: "warehouse_code", label: "Warehouse" },
+    { key: "warehouse_code", label: "Warehouse", render: (r) => <span className="whitespace-nowrap font-mono text-[11px]">{r.warehouse_code || "—"}</span> },
     { key: "location_code", label: "Location", render: (r) => `${r.location_code} – ${r.location_name}` },
     { key: "quantity", label: "Qty", align: "right", render: (r) => `${fmtQty(r.quantity)} ${r.uom}` },
     { key: "status", label: "Status", render: (r) => <StatusBadge status={r.status} /> },

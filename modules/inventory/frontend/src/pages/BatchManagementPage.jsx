@@ -1,825 +1,1199 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
-  Hash,
-  Search,
-  Plus,
-  Filter,
-  Download,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  ShieldAlert,
-  ShieldCheck,
-  X,
-  Warehouse as WarehouseIcon,
-  MapPin,
-  Calendar,
-  Layers,
-  ArrowRight,
-  RefreshCw,
-  ExternalLink,
-} from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
-import {
-  fetchBatches,
-  createBatch,
-  fetchProducts,
-  fetchWarehouses,
-  fetchLocations,
+  fetchBatchesFiltered,
+  createBatchRecord,
+  updateBatchRecord,
+  fetchBatchDetail,
   quarantineBatch,
   releaseBatch,
-} from "@/services/api";
+  fetchBatchMovements,
+  fetchWarehouses,
+  fetchItems,
+  fetchVariants,
+} from "../services/api";
 
-export function BatchManagementPage() {
-  const navigate = useNavigate();
-  const [batches, setBatches] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [warehouses, setWarehouses] = useState([]);
-  const [locations, setLocations] = useState([]);
-  const [loading, setLoading] = useState(true);
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-  // Filters
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedProduct, setSelectedProduct] = useState("");
-  const [selectedWarehouse, setSelectedWarehouse] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("");
+const generateBatchNumber = () => {
+  const yr = new Date().getFullYear();
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  return `BCH-${yr}-${rand}`;
+};
 
-  // Create Modal
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+const today = () => new Date().toISOString().split("T")[0];
 
-  // Create Form State - Exactly the 11 Phase 5 fields
-  const [formData, setFormData] = useState({
-    batch_number: "",
-    product: "",
-    sku: "",
-    supplier: "",
-    manufacturing_date: "",
-    expiry_date: "",
-    received_date: new Date().toISOString().split("T")[0],
-    initial_quantity: 100,
-    warehouse: "",
-    storage_location: "",
-    batch_status: "Pending Inspection",
+// ─── Toast ────────────────────────────────────────────────────────────────────
+
+function Toast({ toasts, removeToast }) {
+  return (
+    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2">
+      {toasts.map((t) => (
+        <div
+          key={t.id}
+          className={`flex items-start gap-3 px-4 py-3 rounded-lg shadow-lg text-sm font-medium min-w-[260px] max-w-sm
+            ${t.type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}
+        >
+          <span className="flex-1">{t.message}</span>
+          <button onClick={() => removeToast(t.id)} className="ml-2 opacity-70 hover:opacity-100">✕</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function useToast() {
+  const [toasts, setToasts] = useState([]);
+  const addToast = useCallback((message, type = "success") => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
+  }, []);
+  const removeToast = useCallback((id) => setToasts((prev) => prev.filter((t) => t.id !== id)), []);
+  return { toasts, addToast, removeToast };
+}
+
+// ─── Status Badges ─────────────────────────────────────────────────────────────
+
+const BATCH_STATUS_COLORS = {
+  Released: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  Quarantined: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+  Rejected: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+  Pending: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200",
+  "Pending Inspection": "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200",
+};
+
+const EXPIRY_STATUS_COLORS = {
+  Healthy: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  "Expiring Soon": "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+  Expired: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+};
+
+function StatusBadge({ value, colorMap }) {
+  const cls = colorMap?.[value] || "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-200";
+  return (
+    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${cls}`}>
+      {value || "—"}
+    </span>
+  );
+}
+
+// ─── Shared Table ─────────────────────────────────────────────────────────────
+
+function Table({ columns, rows, emptyText = "No records found." }) {
+  return (
+    <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs">
+          <thead>
+            <tr className="border-b border-slate-200/80 dark:border-zinc-800/80 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400 font-semibold select-none">
+              {columns.map((col) => (
+                <th key={col.key} className="py-3 px-4 whitespace-nowrap">
+                  {col.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="px-4 py-8 text-center text-slate-400 dark:text-zinc-500">
+                  {emptyText}
+                </td>
+              </tr>
+            ) : (
+              rows.map((row, i) => (
+                <tr key={row.id ?? i} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/40 transition-colors">
+                  {columns.map((col) => (
+                    <td key={col.key} className="py-3 px-4 whitespace-nowrap text-slate-700 dark:text-zinc-300">
+                      {col.render ? col.render(row) : row[col.key] ?? "—"}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── Pagination ───────────────────────────────────────────────────────────────
+
+function Pagination({ page, totalPages, onPage }) {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="flex items-center justify-center gap-2 mt-4">
+      <button
+        onClick={() => onPage(page - 1)}
+        disabled={page <= 1}
+        className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700"
+      >
+        ← Prev
+      </button>
+      <span className="text-sm text-gray-600 dark:text-gray-300">
+        Page {page} of {totalPages}
+      </span>
+      <button
+        onClick={() => onPage(page + 1)}
+        disabled={page >= totalPages}
+        className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700"
+      >
+        Next →
+      </button>
+    </div>
+  );
+}
+
+// ─── Modal Shell ──────────────────────────────────────────────────────────────
+
+function Modal({ title, onClose, children }) {
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg mx-4">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none">✕</button>
+        </div>
+        <div className="px-6 py-4">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Form Helpers ─────────────────────────────────────────────────────────────
+
+function Field({ label, required, children, hint }) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      {children}
+      {hint && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{hint}</p>}
+    </div>
+  );
+}
+
+const inputCls =
+  "w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
+
+const selectCls =
+  "w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
+
+// ─── Quarantine Modal ─────────────────────────────────────────────────────────
+
+const QUARANTINE_REASONS = [
+  "Quality Issue",
+  "Contamination",
+  "Damaged",
+  "Near Expiry",
+  "Regulatory Hold",
+  "Inspection Required",
+  "Other",
+];
+
+function QuarantineModal({ batch, onClose, onDone, addToast }) {
+  const [form, setForm] = useState({
+    quarantine_quantity: "",
+    quarantine_reason: "",
+    quarantine_date: today(),
+    remarks: "",
   });
+  const [loading, setLoading] = useState(false);
 
-  const loadData = async () => {
+  const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.quarantine_quantity || !form.quarantine_reason) {
+      addToast("Quantity and reason are required.", "error");
+      return;
+    }
     setLoading(true);
     try {
-      const [batchRes, prodRes, whRes, locRes] = await Promise.all([
-        fetchBatches(),
-        fetchProducts(),
-        fetchWarehouses(),
-        fetchLocations(),
-      ]);
-      setBatches(batchRes.results || batchRes || []);
-      setProducts(prodRes.results || prodRes || []);
-      setWarehouses(whRes.results || whRes || []);
-      setLocations(locRes.results || locRes || []);
+      await quarantineBatch(batch.id, {
+        quarantine_quantity: Number(form.quarantine_quantity),
+        quarantine_reason: form.quarantine_reason,
+        quarantine_date: form.quarantine_date,
+        remarks: form.remarks,
+      });
+      addToast(`Batch ${batch.batch_number} quarantined successfully.`, "success");
+      onDone();
     } catch (err) {
-      console.error("Failed to load batch management data", err);
+      addToast(err?.message || "Failed to quarantine batch.", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  return (
+    <Modal title={`Quarantine Batch — ${batch.batch_number}`} onClose={onClose}>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Field label="Quarantine Quantity" required>
+          <input
+            type="number"
+            min="1"
+            max={batch.available_quantity ?? undefined}
+            value={form.quarantine_quantity}
+            onChange={(e) => set("quarantine_quantity", e.target.value)}
+            className={inputCls}
+            placeholder="Enter quantity"
+          />
+        </Field>
+        <Field label="Quarantine Reason" required>
+          <select value={form.quarantine_reason} onChange={(e) => set("quarantine_reason", e.target.value)} className={selectCls}>
+            <option value="">Select reason…</option>
+            {QUARANTINE_REASONS.map((r) => <option key={r}>{r}</option>)}
+          </select>
+        </Field>
+        <Field label="Quarantine Date">
+          <input type="date" value={form.quarantine_date} onChange={(e) => set("quarantine_date", e.target.value)} className={inputCls} />
+        </Field>
+        <Field label="Remarks">
+          <textarea value={form.remarks} onChange={(e) => set("remarks", e.target.value)} rows={3} className={inputCls} placeholder="Optional remarks…" />
+        </Field>
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-4 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-semibold disabled:opacity-60"
+          >
+            {loading ? "Processing…" : "Quarantine"}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
 
-  // Filtered locations based on selected warehouse in create modal
-  const modalFilteredLocations = useMemo(() => {
-    if (!formData.warehouse) return locations;
-    return locations.filter(
-      (loc) =>
-        String(loc.warehouse) === String(formData.warehouse) ||
-        String(loc.warehouse_id) === String(formData.warehouse) ||
-        loc.warehouse_name === formData.warehouse
-    );
-  }, [locations, formData.warehouse]);
+// ─── Release Modal ────────────────────────────────────────────────────────────
 
-  const handleProductChange = (e) => {
-    const prodId = e.target.value;
-    const prod = products.find((p) => String(p.id) === String(prodId));
-    setFormData((prev) => ({
-      ...prev,
-      product: prodId,
-      sku: prod ? prod.sku || prod.code || "" : "",
-    }));
-  };
+const INSPECTION_RESULTS = ["Passed", "Failed", "Partially Passed"];
 
-  const handleGenerateBatchNumber = () => {
-    const yr = new Date().getFullYear();
-    const rand = Math.floor(1000 + Math.random() * 9000);
-    setFormData((prev) => ({ ...prev, batch_number: `BAT-${yr}-${rand}` }));
-  };
+function ReleaseModal({ batch, onClose, onDone, addToast }) {
+  const [form, setForm] = useState({
+    release_quantity: "",
+    inspection_result: "",
+    release_reason: "",
+    released_by: "",
+    release_date: today(),
+  });
+  const [loading, setLoading] = useState(false);
 
-  const handleCreateBatch = async (e) => {
+  const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.batch_number.trim()) {
-      setErrorMsg("Batch Number is required.");
+    if (!form.release_quantity || !form.inspection_result || !form.release_reason) {
+      addToast("Quantity, inspection result, and release reason are required.", "error");
       return;
     }
-    if (!formData.product) {
-      setErrorMsg("Product is required.");
-      return;
-    }
-    if (!formData.warehouse) {
-      setErrorMsg("Warehouse is required.");
-      return;
-    }
-    if (!formData.storage_location) {
-      setErrorMsg("Storage Location is required.");
-      return;
-    }
-    if (!formData.initial_quantity || Number(formData.initial_quantity) <= 0) {
-      setErrorMsg("Initial Quantity must be greater than 0.");
-      return;
-    }
-
-    setSubmitting(true);
-    setErrorMsg("");
+    setLoading(true);
     try {
-      const payload = {
-        batch_number: formData.batch_number,
-        product: formData.product,
-        sku: formData.sku,
-        supplier: formData.supplier || "",
-        manufacturing_date: formData.manufacturing_date || null,
-        expiry_date: formData.expiry_date || null,
-        received_date: formData.received_date,
-        initial_quantity: Number(formData.initial_quantity),
-        remaining_quantity: Number(formData.initial_quantity),
-        warehouse: formData.warehouse,
-        location: formData.storage_location,
-        batch_status: formData.batch_status,
-      };
-      await createBatch(payload);
-      setShowCreateModal(false);
-      // Reset form
-      setFormData({
-        batch_number: "",
-        product: "",
-        sku: "",
-        supplier: "",
-        manufacturing_date: "",
-        expiry_date: "",
-        received_date: new Date().toISOString().split("T")[0],
-        initial_quantity: 100,
-        warehouse: "",
-        storage_location: "",
-        batch_status: "Pending Inspection",
+      await releaseBatch(batch.id, {
+        release_quantity: Number(form.release_quantity),
+        inspection_result: form.inspection_result,
+        release_reason: form.release_reason,
+        released_by: form.released_by,
+        release_date: form.release_date,
       });
-      loadData();
+      addToast(`Batch ${batch.batch_number} released successfully.`, "success");
+      onDone();
     } catch (err) {
-      setErrorMsg(err.message || "Failed to create batch.");
+      addToast(err?.message || "Failed to release batch.", "error");
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
-  };
-
-  // Filtered Batches
-  const filteredBatches = useMemo(() => {
-    return batches.filter((b) => {
-      const q = searchTerm.toLowerCase();
-      const matchSearch =
-        !searchTerm ||
-        (b.batch_number && b.batch_number.toLowerCase().includes(q)) ||
-        (b.product_name && b.product_name.toLowerCase().includes(q)) ||
-        (b.sku && b.sku.toLowerCase().includes(q));
-
-      const matchProduct = !selectedProduct || String(b.product) === String(selectedProduct) || b.product_name === selectedProduct;
-      const matchWarehouse = !selectedWarehouse || String(b.warehouse) === String(selectedWarehouse) || b.warehouse_name === selectedWarehouse;
-      const matchStatus = !selectedStatus || b.batch_status === selectedStatus || b.status === selectedStatus;
-
-      return matchSearch && matchProduct && matchWarehouse && matchStatus;
-    });
-  }, [batches, searchTerm, selectedProduct, selectedWarehouse, selectedStatus]);
-
-  // KPI Calculations
-  const totalBatches = batches.length;
-  const releasedBatches = batches.filter(
-    (b) => b.batch_status === "Released" || b.status === "RELEASED" || b.status === "Released"
-  ).length;
-  const quarantinedBatches = batches.filter(
-    (b) => b.batch_status === "Quarantined" || b.status === "QUARANTINED" || b.status === "Quarantined" || Number(b.quarantined_quantity || 0) > 0
-  ).length;
-  const pendingBatches = batches.filter(
-    (b) => b.batch_status === "Pending Inspection" || b.status === "PENDING_INSPECTION" || b.status === "Pending Inspection"
-  ).length;
-
-  const exportCSV = () => {
-    const headers = [
-      "Batch Number",
-      "Product Name",
-      "SKU",
-      "Warehouse",
-      "Storage Location",
-      "Initial Qty",
-      "Remaining Qty",
-      "Quarantined Qty",
-      "Received Date",
-      "Expiry Date",
-      "Days to Expiry",
-      "Expiry Status",
-      "Batch Status",
-    ];
-    const rows = filteredBatches.map((b) => [
-      b.batch_number,
-      b.product_name || "",
-      b.sku || "",
-      b.warehouse_name || b.warehouse || "",
-      b.location_name || b.location || "",
-      b.initial_quantity || 0,
-      b.remaining_quantity || 0,
-      b.quarantined_quantity || 0,
-      b.received_date || "",
-      b.expiry_date || "",
-      b.days_to_expiry !== undefined ? b.days_to_expiry : "",
-      b.expiry_status || "Healthy",
-      b.batch_status || b.status || "Pending Inspection",
-    ]);
-
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      [headers.join(","), ...rows.map((e) => e.map(x => `"${x}"`).join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `batches_export_${new Date().toISOString().split("T")[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const getStatusBadge = (status) => {
-    const s = String(status || "Pending Inspection").toUpperCase();
-    if (s.includes("RELEASED")) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-          <CheckCircle className="h-3 w-3" /> Released
-        </span>
-      );
-    }
-    if (s.includes("QUARANTINE")) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-          <ShieldAlert className="h-3 w-3" /> Quarantined
-        </span>
-      );
-    }
-    if (s.includes("REJECTED")) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
-          <AlertTriangle className="h-3 w-3" /> Rejected
-        </span>
-      );
-    }
-    if (s.includes("CLOSED")) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700">
-          Closed
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-        <Clock className="h-3 w-3" /> Pending Inspection
-      </span>
-    );
-  };
-
-  const getExpiryBadge = (expiryStatus, days) => {
-    if (!expiryStatus || expiryStatus === "N/A") {
-      return <span className="text-slate-400 dark:text-zinc-500 text-[11px]">—</span>;
-    }
-    if (expiryStatus === "Expired" || (days !== null && days !== undefined && days <= 0)) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">
-          Expired ({days}d)
-        </span>
-      );
-    }
-    if (expiryStatus === "Expiring Soon" || (days !== null && days !== undefined && days <= 30)) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-          Expiring Soon ({days}d)
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
-        Healthy ({days}d)
-      </span>
-    );
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Batch Management
-            </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-              Traceability
-            </span>
-          </div>
-          <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
-            Create, monitor, and inspect product batches and manufacturing lots across facilities.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={exportCSV}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors shadow-xs"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Export CSV
+    <Modal title={`Release Batch — ${batch.batch_number}`} onClose={onClose}>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Field label="Release Quantity" required>
+          <input
+            type="number"
+            min="1"
+            value={form.release_quantity}
+            onChange={(e) => set("release_quantity", e.target.value)}
+            className={inputCls}
+            placeholder="Enter quantity"
+          />
+        </Field>
+        <Field label="Inspection Result" required>
+          <select value={form.inspection_result} onChange={(e) => set("inspection_result", e.target.value)} className={selectCls}>
+            <option value="">Select result…</option>
+            {INSPECTION_RESULTS.map((r) => <option key={r}>{r}</option>)}
+          </select>
+        </Field>
+        <Field label="Release Reason" required>
+          <input
+            type="text"
+            value={form.release_reason}
+            onChange={(e) => set("release_reason", e.target.value)}
+            className={inputCls}
+            placeholder="Reason for release"
+          />
+        </Field>
+        <Field label="Released By">
+          <input
+            type="text"
+            value={form.released_by}
+            onChange={(e) => set("released_by", e.target.value)}
+            className={inputCls}
+            placeholder="Name or ID"
+          />
+        </Field>
+        <Field label="Release Date">
+          <input type="date" value={form.release_date} onChange={(e) => set("release_date", e.target.value)} className={inputCls} />
+        </Field>
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+            Cancel
           </button>
           <button
-            onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-colors"
+            type="submit"
+            disabled={loading}
+            className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold disabled:opacity-60"
           >
-            <Plus className="h-4 w-4" />
-            Create Batch
+            {loading ? "Processing…" : "Release"}
           </button>
         </div>
-      </div>
+      </form>
+    </Modal>
+  );
+}
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Total Batches</span>
-            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400">
-              <Hash className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">{totalBatches}</span>
-            <span className="text-xs text-slate-400">Active Registry</span>
-          </div>
+// ─── Batch List (shared for Tab 1 & Tab 3) ───────────────────────────────────
+
+function BatchListTab({ trackingType, addToast, onViewDetails }) {
+  const [batches, setBatches] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState({
+    status: "",
+    warehouse: "",
+    item: "",
+    expiry_status: "",
+    tracking_type: trackingType || "",
+  });
+  const [warehouses, setWarehouses] = useState([]);
+  const [items, setItems] = useState([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [quarantineTarget, setQuarantineTarget] = useState(null);
+  const [releaseTarget, setReleaseTarget] = useState(null);
+
+  const PAGE_SIZE = 10;
+
+  const loadWarehouses = useCallback(async () => {
+    try {
+      const res = await fetchWarehouses();
+      setWarehouses(Array.isArray(res) ? res : res?.results ?? []);
+    } catch (_) {}
+  }, []);
+
+  const loadItems = useCallback(async () => {
+    try {
+      const res = await fetchItems();
+      setItems(Array.isArray(res) ? res : res?.results ?? []);
+    } catch (_) {}
+  }, []);
+
+  const loadBatches = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = {
+        page,
+        page_size: PAGE_SIZE,
+        ...(filters.status && { status: filters.status }),
+        ...(filters.warehouse && { warehouse: filters.warehouse }),
+        ...(filters.item && { item: filters.item }),
+        ...(filters.expiry_status && { expiry_status: filters.expiry_status }),
+        ...(filters.tracking_type && { tracking_type: filters.tracking_type }),
+        ...(search && { search }),
+      };
+      const res = await fetchBatchesFiltered(params);
+      const results = Array.isArray(res) ? res : res?.results ?? [];
+      setBatches(results);
+      const count = res?.count ?? results.length;
+      setTotalPages(Math.max(1, Math.ceil(count / PAGE_SIZE)));
+    } catch (err) {
+      addToast("Failed to load batches.", "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [page, filters, search, addToast]);
+
+  useEffect(() => { loadWarehouses(); }, [loadWarehouses]);
+  useEffect(() => { loadItems(); }, [loadItems]);
+  useEffect(() => { loadBatches(); }, [loadBatches]);
+
+  const setFilter = (k, v) => {
+    setFilters((p) => ({ ...p, [k]: v }));
+    setPage(1);
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setPage(1);
+  };
+
+  const handleSearchChange = (e) => {
+    setSearch(e.target.value);
+    setPage(1);
+  };
+
+  const columns = [
+    { key: "batch_number", label: "Batch #" },
+    { key: "item_name", label: "Item", render: (r) => r.item_name ?? r.item ?? "—" },
+    { key: "sku", label: "SKU", render: (r) => r.sku ?? r.item_sku ?? "—" },
+    { key: "variant_name", label: "Variant", render: (r) => r.variant_name ?? r.variant_sku ?? r.variant ?? "—" },
+    { key: "warehouse_name", label: "Warehouse", render: (r) => r.warehouse_name ?? r.warehouse ?? "—" },
+    { key: "tracking_type", label: "Tracking Type" },
+    { key: "initial_quantity", label: "Initial Qty" },
+    { key: "remaining_quantity", label: "Remaining Qty" },
+    { key: "available_quantity", label: "Available Qty" },
+    { key: "quarantined_quantity", label: "Quarantined Qty" },
+    { key: "manufacturing_date", label: "Mfg Date" },
+    { key: "received_date", label: "Received Date" },
+    { key: "expiry_date", label: "Expiry Date" },
+    {
+      key: "expiry_status",
+      label: "Expiry Status",
+      render: (r) => <StatusBadge value={r.expiry_status} colorMap={EXPIRY_STATUS_COLORS} />,
+    },
+    {
+      key: "status",
+      label: "Batch Status",
+      render: (r) => <StatusBadge value={r.status} colorMap={BATCH_STATUS_COLORS} />,
+    },
+    {
+      key: "_actions",
+      label: "Actions",
+      render: (r) => (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => onViewDetails(r)}
+            className="px-2 py-1 rounded text-xs bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900 font-medium"
+          >
+            View
+          </button>
+          <button
+            onClick={() => setQuarantineTarget(r)}
+            className="px-2 py-1 rounded text-xs bg-yellow-50 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900 font-medium"
+          >
+            Quarantine
+          </button>
+          <button
+            onClick={() => setReleaseTarget(r)}
+            className="px-2 py-1 rounded text-xs bg-green-50 dark:bg-green-900/40 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900 font-medium"
+          >
+            Release
+          </button>
         </div>
+      ),
+    },
+  ];
 
-        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Released (Usable)</span>
-            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400">
-              <ShieldCheck className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{releasedBatches}</span>
-            <span className="text-xs text-slate-400">Available for picking</span>
-          </div>
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Filters */}
+      <form onSubmit={handleSearch} className="flex flex-wrap gap-3 items-end">
+        <div className="flex-1 min-w-[180px]">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Search</label>
+          <input
+            type="text"
+            placeholder="Batch number, item, or SKU…"
+            value={search}
+            onChange={handleSearchChange}
+            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
         </div>
-
-        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">Quarantined</span>
-            <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/70 text-amber-600 dark:text-amber-400">
-              <ShieldAlert className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-amber-600 dark:text-amber-400 tabular-nums">{quarantinedBatches}</span>
-            <span className="text-xs text-slate-400">Blocked from issue</span>
-          </div>
+        <div className="min-w-[140px]">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</label>
+          <select
+            value={filters.status}
+            onChange={(e) => setFilter("status", e.target.value)}
+            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">All Statuses</option>
+            <option>Released</option>
+            <option>Quarantined</option>
+            <option>Rejected</option>
+            <option value="Pending Inspection">Pending Inspection</option>
+          </select>
         </div>
-
-        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">Pending Inspection</span>
-            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400">
-              <Clock className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">{pendingBatches}</span>
-            <span className="text-xs text-slate-400">Awaiting QC pass</span>
-          </div>
+        <div className="min-w-[160px]">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Warehouse</label>
+          <select
+            value={filters.warehouse}
+            onChange={(e) => setFilter("warehouse", e.target.value)}
+            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">All Warehouses</option>
+            {warehouses.map((w) => (
+              <option key={w.id} value={w.id}>{w.name}</option>
+            ))}
+          </select>
         </div>
-      </div>
+        <div className="min-w-[160px]">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Item</label>
+          <select
+            value={filters.item}
+            onChange={(e) => setFilter("item", e.target.value)}
+            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">All Items</option>
+            {items.map((item) => (
+              <option key={item.id} value={item.id}>{item.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="min-w-[160px]">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Expiry Status</label>
+          <select
+            value={filters.expiry_status}
+            onChange={(e) => setFilter("expiry_status", e.target.value)}
+            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">All Expiry Statuses</option>
+            <option>Healthy</option>
+            <option>Expiring Soon</option>
+            <option>Expired</option>
+          </select>
+        </div>
+        {!trackingType && (
+          <div className="min-w-[140px]">
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tracking Type</label>
+            <select
+              value={filters.tracking_type}
+              onChange={(e) => setFilter("tracking_type", e.target.value)}
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">Batch &amp; Lot</option>
+              <option value="BATCH">Batch</option>
+              <option value="LOT">Lot</option>
+            </select>
+          </div>
+        )}
+        <button
+          type="submit"
+          className="rounded-md bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-sm font-medium"
+        >
+          Search
+        </button>
+      </form>
 
-      {/* Filter Toolbar */}
-      <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+      {loading ? (
+        <div className="text-center py-12 text-gray-400">Loading…</div>
+      ) : (
+        <>
+          <Table columns={columns} rows={batches} />
+          <Pagination page={page} totalPages={totalPages} onPage={setPage} />
+        </>
+      )}
+
+      {quarantineTarget && (
+        <QuarantineModal
+          batch={quarantineTarget}
+          onClose={() => setQuarantineTarget(null)}
+          onDone={() => { setQuarantineTarget(null); loadBatches(); }}
+          addToast={addToast}
+        />
+      )}
+      {releaseTarget && (
+        <ReleaseModal
+          batch={releaseTarget}
+          onClose={() => setReleaseTarget(null)}
+          onDone={() => { setReleaseTarget(null); loadBatches(); }}
+          addToast={addToast}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Create Batch / Lot Form (shared for Tab 2 & Tab 4) ──────────────────────
+
+function CreateBatchForm({ defaultTrackingType = "Batch", addToast }) {
+  const [items, setItems] = useState([]);
+  const [variants, setVariants] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const blankForm = useCallback(() => ({
+    batch_number: generateBatchNumber(),
+    item: "",
+    variant: "",
+    warehouse: "",
+    manufacturer: "",
+    supplier: "",
+    supplier_lot_number: "",
+    goods_receipt_ref: "",
+    manufacturing_date: "",
+    received_date: today(),
+    expiry_date: "",
+    initial_quantity: "",
+    status: "Pending Inspection",
+    notes: "",
+  }), [defaultTrackingType]);
+
+  const [form, setForm] = useState(blankForm);
+
+  const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [i, w] = await Promise.all([fetchItems(), fetchWarehouses()]);
+        setItems(Array.isArray(i) ? i : i?.results ?? []);
+        setWarehouses(Array.isArray(w) ? w : w?.results ?? []);
+      } catch (_) {}
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!form.item) {
+      setVariants([]);
+      set("variant", "");
+      return;
+    }
+    fetchVariants({ item: form.item })
+      .then((res) => {
+        const rows = Array.isArray(res) ? res : res?.results ?? [];
+        setVariants(rows);
+      })
+      .catch(() => setVariants([]));
+  }, [form.item]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.batch_number || !form.item || !form.warehouse || !form.initial_quantity) {
+      addToast("Batch number, item, warehouse, and initial quantity are required.", "error");
+      return;
+    }
+    if (!form.received_date) {
+      addToast("Received date is required.", "error");
+      return;
+    }
+    if (variants.length > 0 && !form.variant) {
+      addToast("Variant is required for this item.", "error");
+      return;
+    }
+    setLoading(true);
+    try {
+      await createBatchRecord({
+        ...form,
+        tracking_type: defaultTrackingType,
+        initial_quantity: Number(form.initial_quantity),
+      });
+      addToast(`${defaultTrackingType} created successfully: ${form.batch_number}`, "success");
+      setForm(blankForm());
+    } catch (err) {
+      addToast(err?.message || `Failed to create ${defaultTrackingType.toLowerCase()}.`, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isLot = defaultTrackingType === "Lot";
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-2xl flex flex-col gap-5">
+      <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200">
+        {isLot ? "Create New Lot" : "Create New Batch"}
+      </h2>
+
+      {/* Batch or Lot Number */}
+      <div className="grid grid-cols-1 gap-4">
+        <Field label={isLot ? "Lot Number" : "Batch Number"} required hint="Format: BCH-YYYY-NNNN">
+          <div className="flex gap-2">
             <input
               type="text"
-              placeholder="Search batch #, product, or SKU..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={form.batch_number}
+              onChange={(e) => set("batch_number", e.target.value)}
+              className={inputCls}
             />
-          </div>
-
-          <div>
-            <select
-              value={selectedProduct}
-              onChange={(e) => setSelectedProduct(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            <button
+              type="button"
+              onClick={() => set("batch_number", generateBatchNumber())}
+              className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 whitespace-nowrap"
             >
-              <option value="">All Products</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.name || p.id}>
-                  {p.name} ({p.sku || p.code})
-                </option>
-              ))}
-            </select>
+              Regenerate
+            </button>
           </div>
-
-          <div>
-            <select
-              value={selectedWarehouse}
-              onChange={(e) => setSelectedWarehouse(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Warehouses</option>
-              {warehouses.map((w) => (
-                <option key={w.id} value={w.name || w.id}>
-                  {w.name} ({w.code})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Statuses</option>
-              <option value="Pending Inspection">Pending Inspection</option>
-              <option value="Released">Released</option>
-              <option value="Quarantined">Quarantined</option>
-              <option value="Rejected">Rejected</option>
-              <option value="Closed">Closed</option>
-            </select>
-          </div>
-        </div>
+        </Field>
       </div>
 
-      {/* Batches Table */}
-      <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-zinc-800/50 text-slate-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-200 dark:border-zinc-800 whitespace-nowrap">
-              <tr>
-                <th className="py-3 px-4">Batch Number</th>
-                <th className="py-3 px-4">Product & SKU</th>
-                <th className="py-3 px-4">Warehouse & Location</th>
-                <th className="py-3 px-4 text-right">Remaining / Initial</th>
-                <th className="py-3 px-4 text-right">Quarantined</th>
-                <th className="py-3 px-4">Received Date</th>
-                <th className="py-3 px-4">Expiry Date</th>
-                <th className="py-3 px-4">Batch Status</th>
-                <th className="py-3 px-4 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/70">
-              {loading ? (
-                <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400 dark:text-zinc-500">
-                    <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-blue-500" />
-                    Loading batches...
-                  </td>
-                </tr>
-              ) : filteredBatches.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400 dark:text-zinc-500">
-                    No batches found matching filter criteria.
-                  </td>
-                </tr>
-              ) : (
-                filteredBatches.map((b) => (
-                  <tr key={b.id || b.batch_number} className="hover:bg-slate-50/60 dark:hover:bg-zinc-800/40 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-blue-600 dark:text-blue-400">
-                      {b.batch_number}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-slate-900 dark:text-white">
-                        {b.product_name || "Product"}
-                      </div>
-                      <div className="text-[10px] font-mono text-slate-400 dark:text-zinc-500">
-                        SKU: {b.sku || "N/A"}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="text-slate-800 dark:text-zinc-200 font-medium">
-                        {b.warehouse_name || b.warehouse || "Warehouse"}
-                      </div>
-                      <div className="text-[10px] text-slate-400 dark:text-zinc-500">
-                        {b.location_name || b.location || "Default Location"}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-right tabular-nums whitespace-nowrap">
-                      <span className="font-bold text-slate-900 dark:text-white">
-                        {Number(b.remaining_quantity || b.initial_quantity || 0)}
-                      </span>
-                      <span className="text-slate-400 dark:text-zinc-500 text-[10px] ml-1">
-                        / {Number(b.initial_quantity || 0)}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right tabular-nums font-semibold text-amber-600 dark:text-amber-400">
-                      {Number(b.quarantined_quantity || 0)}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600 dark:text-zinc-400">
-                      {b.received_date || "—"}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="text-slate-800 dark:text-zinc-200 font-mono text-[11px]">
-                        {b.expiry_date || "—"}
-                      </div>
-                      {b.expiry_date && (
-                        <div className="mt-0.5">
-                          {getExpiryBadge(b.expiry_status, b.days_to_expiry)}
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      {getStatusBadge(b.batch_status || b.status)}
-                    </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <Link
-                          to={`/inventory/tracking/batch-movements?batch=${encodeURIComponent(b.batch_number)}`}
-                          title="View Ledger Movements"
-                          className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                        >
-                          <ArrowRight className="h-4 w-4" />
-                        </Link>
-                        {b.batch_status !== "Quarantined" && Number(b.quarantined_quantity || 0) === 0 ? (
-                          <Link
-                            to={`/inventory/tracking/batch-quarantine?batch=${encodeURIComponent(b.batch_number)}`}
-                            title="Quarantine Lot"
-                            className="p-1 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/50 text-slate-400 hover:text-amber-600 transition-colors"
-                          >
-                            <ShieldAlert className="h-4 w-4" />
-                          </Link>
-                        ) : (
-                          <Link
-                            to={`/inventory/tracking/batch-release?batch=${encodeURIComponent(b.batch_number)}`}
-                            title="Release Quarantined Lot"
-                            className="p-1 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/50 text-slate-400 hover:text-emerald-600 transition-colors"
-                          >
-                            <ShieldCheck className="h-4 w-4" />
-                          </Link>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+      {/* Item + Warehouse */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Item" required>
+          <select value={form.item} onChange={(e) => set("item", e.target.value)} className={selectCls}>
+            <option value="">Select item…</option>
+            {items.map((it) => (
+              <option key={it.id} value={it.id}>{it.name ?? it.item_name ?? it.id}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Variant">
+          <select
+            value={form.variant}
+            onChange={(e) => set("variant", e.target.value)}
+            className={selectCls}
+            disabled={!form.item || variants.length === 0}
+          >
+            <option value="">Select variant…</option>
+            {variants.map((variant) => (
+              <option key={variant.id} value={variant.id}>
+                {variant.variant_name ?? variant.name ?? variant.sku ?? `Variant ${variant.id}`}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Warehouse" required>
+          <select value={form.warehouse} onChange={(e) => set("warehouse", e.target.value)} className={selectCls}>
+            <option value="">Select warehouse…</option>
+            {warehouses.map((w) => (
+              <option key={w.id} value={w.id}>{w.name}</option>
+            ))}
+          </select>
+        </Field>
       </div>
 
-      {/* Modal: Create Batch Form (Phase 5 - Exact 11 fields) */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="w-full max-w-2xl rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl overflow-hidden my-8">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/50">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Create Batch Form
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-zinc-400">
-                  Register a production lot or supplier batch for traceability.
-                </p>
+      {/* Supplier info */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Manufacturer">
+          <input type="text" value={form.manufacturer} onChange={(e) => set("manufacturer", e.target.value)} className={inputCls} placeholder="Manufacturer name" />
+        </Field>
+        <Field label="Supplier">
+          <input type="text" value={form.supplier} onChange={(e) => set("supplier", e.target.value)} className={inputCls} placeholder="Supplier name" />
+        </Field>
+        <Field label={isLot ? "Supplier Lot Reference" : "Supplier Lot #"} hint={isLot ? "Primary lot tracking reference" : undefined}>
+          <input type="text" value={form.supplier_lot_number} onChange={(e) => set("supplier_lot_number", e.target.value)} className={inputCls} placeholder="Supplier lot number" />
+        </Field>
+        <Field label="Goods Receipt Ref">
+          <input type="text" value={form.goods_receipt_ref} onChange={(e) => set("goods_receipt_ref", e.target.value)} className={inputCls} placeholder="GRN/PO reference" />
+        </Field>
+      </div>
+
+      {/* Dates */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Field label="Manufacturing Date">
+          <input type="date" value={form.manufacturing_date} onChange={(e) => set("manufacturing_date", e.target.value)} className={inputCls} />
+        </Field>
+        <Field label="Received Date" required>
+          <input type="date" value={form.received_date} onChange={(e) => set("received_date", e.target.value)} className={inputCls} />
+        </Field>
+        <Field label="Expiry Date">
+          <input type="date" value={form.expiry_date} onChange={(e) => set("expiry_date", e.target.value)} className={inputCls} />
+        </Field>
+      </div>
+
+      {/* Qty + Status */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Initial Quantity" required>
+          <input
+            type="number"
+            min="0"
+            step="any"
+            value={form.initial_quantity}
+            onChange={(e) => set("initial_quantity", e.target.value)}
+            className={inputCls}
+            placeholder="0"
+          />
+        </Field>
+        <Field label="Batch Status" required>
+          <select value={form.status} onChange={(e) => set("status", e.target.value)} className={selectCls}>
+            <option value="Pending Inspection">Pending Inspection</option>
+            <option value="Released">Released</option>
+            <option value="Quarantined">Quarantined</option>
+          </select>
+        </Field>
+      </div>
+
+      {/* Notes */}
+      <Field label="Notes">
+        <textarea
+          value={form.notes}
+          onChange={(e) => set("notes", e.target.value)}
+          rows={3}
+          className={inputCls}
+          placeholder="Optional notes…"
+        />
+      </Field>
+
+      {/* Submit */}
+      <div className="flex gap-3">
+        <button
+          type="submit"
+          disabled={loading}
+          className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-60"
+        >
+          {loading ? "Creating…" : `Create ${defaultTrackingType}`}
+        </button>
+        <button
+          type="button"
+          onClick={() => setForm(blankForm())}
+          className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm hover:bg-gray-50 dark:hover:bg-gray-700"
+        >
+          Reset
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// ─── Tab 5 — Batch-wise Stock ─────────────────────────────────────────────────
+
+function BatchwiseStockTab({ addToast }) {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetchBatchesFiltered({ page_size: 50 });
+      setRows(Array.isArray(res) ? res : res?.results ?? []);
+    } catch (err) {
+      addToast("Failed to load batch-wise stock.", "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [addToast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const columns = [
+    { key: "batch_number", label: "Batch #" },
+    { key: "item_name", label: "Item", render: (r) => r.item_name ?? r.item ?? "—" },
+    { key: "sku", label: "SKU", render: (r) => r.sku ?? r.item_sku ?? "—" },
+    { key: "variant_name", label: "Variant", render: (r) => r.variant_name ?? r.variant_sku ?? r.variant ?? "—" },
+    { key: "warehouse_name", label: "Warehouse", render: (r) => r.warehouse_name ?? r.warehouse ?? "—" },
+    { key: "location", label: "Location", render: (r) => r.location ?? r.bin_location ?? "—" },
+    { key: "initial_quantity", label: "Initial Qty" },
+    { key: "remaining_quantity", label: "Remaining Qty" },
+    { key: "available_quantity", label: "Available Qty" },
+    { key: "quarantined_quantity", label: "Quarantined Qty" },
+    { key: "received_date", label: "Received Date" },
+    { key: "expiry_date", label: "Expiry Date" },
+    {
+      key: "expiry_status",
+      label: "Expiry Status",
+      render: (r) => <StatusBadge value={r.expiry_status} colorMap={EXPIRY_STATUS_COLORS} />,
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (r) => <StatusBadge value={r.status} colorMap={BATCH_STATUS_COLORS} />,
+    },
+  ];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-between items-center">
+        <p className="text-sm text-gray-500 dark:text-gray-400">Read-only snapshot of batch-wise stock (up to 50 records).</p>
+        <button onClick={load} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold">
+          Refresh
+        </button>
+      </div>
+      {loading ? <div className="text-center py-12 text-gray-400">Loading…</div> : <Table columns={columns} rows={rows} />}
+    </div>
+  );
+}
+
+// ─── Tab 6 — Batch Details ────────────────────────────────────────────────────
+
+function DetailRow({ label, value }) {
+  return (
+    <div className="flex gap-2 py-1.5 border-b border-gray-100 dark:border-gray-700 last:border-0">
+      <span className="w-44 shrink-0 text-xs font-semibold text-gray-500 dark:text-gray-400">{label}</span>
+      <span className="text-sm text-gray-800 dark:text-gray-100 break-all">{value ?? "—"}</span>
+    </div>
+  );
+}
+
+function BatchDetailsTab({ initialBatch, addToast }) {
+  const [searchInput, setSearchInput] = useState(initialBatch?.batch_number ?? "");
+  const [batch, setBatch] = useState(initialBatch ?? null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (initialBatch) {
+      setBatch(initialBatch);
+      setSearchInput(initialBatch.batch_number ?? "");
+    }
+  }, [initialBatch]);
+
+  const handleSearch = async () => {
+    if (!searchInput.trim()) return;
+    setLoading(true);
+    try {
+      const res = await fetchBatchDetail(searchInput.trim());
+      setBatch(res);
+    } catch (err) {
+      addToast("Batch not found or error loading details.", "error");
+      setBatch(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Search */}
+      <div className="flex gap-2 max-w-md">
+        <input
+          type="text"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          placeholder="Enter Batch Number…"
+          className={inputCls}
+        />
+        <button
+          onClick={handleSearch}
+          disabled={loading}
+          className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-60 whitespace-nowrap"
+        >
+          {loading ? "Loading…" : "Search"}
+        </button>
+      </div>
+
+      {batch && (
+        <>
+          {/* Detail Card */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">
+                {batch.batch_number}
+              </h3>
+              <div className="flex gap-2">
+                <StatusBadge value={batch.status} colorMap={BATCH_STATUS_COLORS} />
+                <StatusBadge value={batch.expiry_status} colorMap={EXPIRY_STATUS_COLORS} />
               </div>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
             </div>
-
-            <form onSubmit={handleCreateBatch} className="p-6 space-y-4 text-xs">
-              {errorMsg && (
-                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300 font-medium">
-                  {errorMsg}
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* 1. Batch Number (Auto-generated / Text, Required) */}
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Batch Number <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="e.g. BAT-2026-9041"
-                      value={formData.batch_number}
-                      onChange={(e) => setFormData({ ...formData, batch_number: e.target.value })}
-                      required
-                      className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleGenerateBatchNumber}
-                      className="px-2.5 py-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700 font-medium text-[11px]"
-                    >
-                      Generate
-                    </button>
-                  </div>
-                </div>
-
-                {/* 2. Product (Dropdown, Required) */}
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Product <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={formData.product}
-                    onChange={handleProductChange}
-                    required
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select product...</option>
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({p.sku || p.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* 3. SKU (Auto-filled, Required) */}
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    SKU <span className="text-rose-500">*</span> (Auto-filled)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.sku}
-                    readOnly
-                    placeholder="Selected product SKU"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-100/70 dark:bg-zinc-800/30 text-slate-600 dark:text-zinc-400 font-mono cursor-not-allowed"
-                  />
-                </div>
-
-                {/* 4. Supplier (Dropdown, Optional) */}
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Supplier
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Supplier Name / Identifier"
-                    value={formData.supplier}
-                    onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* 5. Manufacturing Date (Date, Optional) */}
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Manufacturing Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.manufacturing_date}
-                    onChange={(e) => setFormData({ ...formData, manufacturing_date: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* 6. Expiry Date (Date, Conditional) */}
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Expiry Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.expiry_date}
-                    onChange={(e) => setFormData({ ...formData, expiry_date: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* 7. Received Date (Date, Required) */}
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Received Date <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.received_date}
-                    onChange={(e) => setFormData({ ...formData, received_date: e.target.value })}
-                    required
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* 8. Initial Quantity (Number, Required) */}
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Initial Quantity <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={formData.initial_quantity}
-                    onChange={(e) => setFormData({ ...formData, initial_quantity: e.target.value })}
-                    required
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* 9. Warehouse (Dropdown, Required) */}
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Warehouse <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={formData.warehouse}
-                    onChange={(e) => setFormData({ ...formData, warehouse: e.target.value, storage_location: "" })}
-                    required
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select warehouse...</option>
-                    {warehouses.map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {w.name} ({w.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* 10. Storage Location (Dropdown, Required) */}
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Storage Location <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={formData.storage_location}
-                    onChange={(e) => setFormData({ ...formData, storage_location: e.target.value })}
-                    required
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select storage location...</option>
-                    {modalFilteredLocations.map((loc) => (
-                      <option key={loc.id} value={loc.id}>
-                        {loc.name || loc.code} ({loc.location_type || "Storage"})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* 11. Batch Status (Dropdown, Required) */}
-                <div className="sm:col-span-2">
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Batch Status <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={formData.batch_status}
-                    onChange={(e) => setFormData({ ...formData, batch_status: e.target.value })}
-                    required
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="Pending Inspection">Pending Inspection</option>
-                    <option value="Released">Released</option>
-                    <option value="Quarantined">Quarantined</option>
-                    <option value="Rejected">Rejected</option>
-                    <option value="Closed">Closed</option>
-                  </select>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+              <div>
+                <DetailRow label="Batch Number" value={batch.batch_number} />
+                <DetailRow label="Tracking Type" value={batch.tracking_type} />
+                <DetailRow label="Item" value={batch.item_name ?? batch.item} />
+                <DetailRow label="SKU" value={batch.sku ?? batch.item_sku} />
+                <DetailRow label="Variant" value={batch.variant_name ?? batch.variant_sku ?? batch.variant} />
+                <DetailRow label="Warehouse" value={batch.warehouse_name ?? batch.warehouse} />
+                <DetailRow label="Location" value={batch.location ?? batch.bin_location} />
+                <DetailRow label="Manufacturer" value={batch.manufacturer} />
+                <DetailRow label="Supplier" value={batch.supplier} />
+                <DetailRow label="Supplier Lot #" value={batch.supplier_lot_number} />
+                <DetailRow label="Goods Receipt Ref" value={batch.goods_receipt_ref} />
               </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 font-medium transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors disabled:opacity-50"
-                >
-                  {submitting ? "Saving..." : "Create Batch"}
-                </button>
+              <div>
+                <DetailRow label="Manufacturing Date" value={batch.manufacturing_date} />
+                <DetailRow label="Received Date" value={batch.received_date} />
+                <DetailRow label="Expiry Date" value={batch.expiry_date} />
+                <DetailRow label="Initial Qty" value={batch.initial_quantity} />
+                <DetailRow label="Remaining Qty" value={batch.remaining_quantity} />
+                <DetailRow label="Available Qty" value={batch.available_quantity} />
+                <DetailRow label="Quarantined Qty" value={batch.quarantined_quantity} />
+                <DetailRow label="Batch Status" value={batch.status} />
+                <DetailRow label="Expiry Status" value={batch.expiry_status} />
+                <DetailRow label="Notes" value={batch.notes} />
+                <DetailRow label="Created At" value={batch.created_at} />
               </div>
-            </form>
+            </div>
           </div>
+
+          {/* Quarantine Records */}
+          {Array.isArray(batch.quarantine_records) && batch.quarantine_records.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Quarantine History</h4>
+              <Table
+                columns={[
+                  { key: "quarantine_date", label: "Date" },
+                  { key: "quarantine_quantity", label: "Qty" },
+                  { key: "quarantine_reason", label: "Reason" },
+                  { key: "remarks", label: "Remarks" },
+                  { key: "quarantined_by", label: "By" },
+                ]}
+                rows={batch.quarantine_records}
+              />
+            </div>
+          )}
+
+          {/* Serial Numbers */}
+          {Array.isArray(batch.serial_numbers) && batch.serial_numbers.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Associated Serial Numbers</h4>
+              <div className="flex flex-wrap gap-2">
+                {batch.serial_numbers.map((sn, i) => (
+                  <span key={i} className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-xs font-mono text-gray-700 dark:text-gray-200">
+                    {typeof sn === "object" ? sn.serial_number ?? JSON.stringify(sn) : sn}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {!batch && !loading && (
+        <div className="text-center py-16 text-gray-400 dark:text-gray-500 text-sm">
+          Enter a batch number above and click Search to view details.
         </div>
       )}
     </div>
   );
 }
-export default BatchManagementPage;
 
+// ─── Tab 7 — Batch Movement History ──────────────────────────────────────────
+
+function BatchMovementTab({ addToast }) {
+  const [batchSearch, setBatchSearch] = useState("");
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+
+  const handleSearch = async () => {
+    setLoading(true);
+    setSearched(true);
+    try {
+      const params = batchSearch.trim() ? { batch_number: batchSearch.trim() } : {};
+      const res = await fetchBatchMovements(params);
+      setRows(Array.isArray(res) ? res : res?.results ?? []);
+    } catch (err) {
+      addToast("Failed to load batch movements.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const columns = [
+    { key: "date", label: "Date", render: (r) => r.date ?? r.created_at ?? "—" },
+    { key: "transaction_type", label: "Transaction Type" },
+    { key: "direction", label: "Direction" },
+    { key: "reference", label: "Reference" },
+    { key: "item_name", label: "Item", render: (r) => r.item_name ?? r.item ?? "—" },
+    { key: "warehouse_name", label: "Warehouse", render: (r) => r.warehouse_name ?? r.warehouse ?? "—" },
+    { key: "quantity", label: "Quantity" },
+    { key: "batch_number", label: "Batch" },
+    { key: "serial_number", label: "Serial" },
+  ];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-2 max-w-md">
+        <input
+          type="text"
+          value={batchSearch}
+          onChange={(e) => setBatchSearch(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          placeholder="Filter by batch number…"
+          className={inputCls}
+        />
+        <button
+          onClick={handleSearch}
+          disabled={loading}
+          className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-60"
+        >
+          {loading ? "Loading…" : "Search"}
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-12 text-gray-400">Loading…</div>
+      ) : searched ? (
+        <Table columns={columns} rows={rows} emptyText="No movements found." />
+      ) : (
+        <div className="text-center py-16 text-gray-400 dark:text-gray-500 text-sm">
+          Enter a batch number and click Search to view movement history.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+const TABS = [
+  { id: "batch-list", label: "Batch List" },
+  { id: "create-batch", label: "Create Batch" },
+  { id: "lot-list", label: "Lot List" },
+  { id: "create-lot", label: "Create Lot" },
+  { id: "batch-stock", label: "Batch-wise Stock" },
+  { id: "batch-details", label: "Batch Details" },
+  { id: "batch-movements", label: "Batch Movement History" },
+];
+
+export function BatchManagementPage() {
+  const [activeTab, setActiveTab] = useState("batch-list");
+  const [detailsBatch, setDetailsBatch] = useState(null);
+  const { toasts, addToast, removeToast } = useToast();
+
+  const handleViewDetails = useCallback((batch) => {
+    setDetailsBatch(batch);
+    setActiveTab("batch-details");
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
+      <Toast toasts={toasts} removeToast={removeToast} />
+
+      {/* Page Header */}
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+        <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Batch &amp; Lot Management</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+          Manage batches, lots, stock levels, quarantine, and movement history.
+        </p>
+      </div>
+
+      {/* Tab Bar */}
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 overflow-x-auto">
+        <div className="flex gap-2 min-w-max">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap
+                ${activeTab === tab.id
+                  ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400"
+                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300"
+                }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      <div className="p-6">
+        {activeTab === "batch-list" && (
+          <BatchListTab addToast={addToast} onViewDetails={handleViewDetails} />
+        )}
+        {activeTab === "create-batch" && (
+          <CreateBatchForm defaultTrackingType="Batch" addToast={addToast} />
+        )}
+        {activeTab === "lot-list" && (
+          <BatchListTab trackingType="LOT" addToast={addToast} onViewDetails={handleViewDetails} />
+        )}
+        {activeTab === "create-lot" && (
+          <CreateBatchForm defaultTrackingType="Lot" addToast={addToast} />
+        )}
+        {activeTab === "batch-stock" && (
+          <BatchwiseStockTab addToast={addToast} />
+        )}
+        {activeTab === "batch-details" && (
+          <BatchDetailsTab initialBatch={detailsBatch} addToast={addToast} />
+        )}
+        {activeTab === "batch-movements" && (
+          <BatchMovementTab addToast={addToast} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default BatchManagementPage;

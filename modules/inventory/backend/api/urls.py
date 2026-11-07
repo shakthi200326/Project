@@ -9,13 +9,21 @@ from .report_views import (
     WarehouseReportView,
 )
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import DefaultRouter, SimpleRouter
 from .views import (
     CategoryViewSet,
     BrandViewSet,
     UnitOfMeasureViewSet,
     ItemViewSet,
+    ItemVariantViewSet,
+    ProductImportHistoryViewSet,
+    ProductAttributeViewSet,
+    ProductBarcodeViewSet,
+    ProductUnitConversionViewSet,
     WarehouseViewSet,
+    WarehouseZoneViewSet,
+    WarehouseMappingViewSet,
+    WarehouseOperationalConfigurationViewSet,
     StorageLocationViewSet,
     RackViewSet,
     BinViewSet,
@@ -42,19 +50,59 @@ from .views import (
     CycleCountViewSet,
     FullStockCountViewSet,
     AuditHistoryViewSet,
+    StockOperationsSettingsViewSet,
+    StockReclassificationViewSet,
+    ShelfLifePolicyViewSet,
+    ProductRecallViewSet,
+    AllocationViewSet,
+    TraceabilityViewSet,
 )
+from .goods_receipt_views import (
+    GoodsReceiptViewSet,
+    ReceiptLineViewSet,
+    ReceiptInspectionViewSet,
+    QualityInspectionViewSet,
+    ReceiptPutawayViewSet,
+    ReceiptDiscrepancyViewSet,
+    GoodsReceiptSettingsViewSet,
+    GoodsReceiptLookupViewSet,
+)
+from .transfer_views import StockTransferViewSet
 from .configuration_views import (
     InventoryConfigurationView,
     DocumentNumberingViewSet,
     ConfigurationAuditLogListView,
 )
+from apps.integration.views import (
+    InventoryAlertListView,
+    InventoryAlertReadView,
+    NotificationSettingsView,
+)
+
+grn_router = SimpleRouter()
+grn_router.register(r"goods-receipt/receipts", GoodsReceiptViewSet, basename="grn-receipts")
+grn_router.register(r"goods-receipt/lines", ReceiptLineViewSet, basename="grn-lines")
+grn_router.register(r"goods-receipt/inspections", ReceiptInspectionViewSet, basename="grn-inspections")
+grn_router.register(r"goods-receipt/quality-inspections", QualityInspectionViewSet, basename="grn-quality-inspections")
+grn_router.register(r"goods-receipt/putaways", ReceiptPutawayViewSet, basename="grn-putaways")
+grn_router.register(r"goods-receipt/discrepancies", ReceiptDiscrepancyViewSet, basename="grn-discrepancies")
+grn_router.register(r"goods-receipt/settings", GoodsReceiptSettingsViewSet, basename="grn-settings")
+grn_router.register(r"goods-receipt/lookups", GoodsReceiptLookupViewSet, basename="grn-lookups")
 
 router = DefaultRouter()
 router.register(r"categories", CategoryViewSet)
 router.register(r"brands", BrandViewSet)
 router.register(r"units", UnitOfMeasureViewSet)
 router.register(r"items", ItemViewSet)
+router.register(r"variants", ItemVariantViewSet, basename="variants")
+router.register(r"import-history", ProductImportHistoryViewSet, basename="import-history")
+router.register(r"attributes", ProductAttributeViewSet, basename="attributes")
+router.register(r"product-barcodes", ProductBarcodeViewSet, basename="product-barcodes")
+router.register(r"product-uom-conversions", ProductUnitConversionViewSet, basename="product-uom-conversions")
 router.register(r"warehouses", WarehouseViewSet)
+router.register(r"zones", WarehouseZoneViewSet, basename="zones")
+router.register(r"warehouse-mappings", WarehouseMappingViewSet, basename="warehouse-mappings")
+router.register(r"warehouse-operational-config", WarehouseOperationalConfigurationViewSet, basename="warehouse-operational-config")
 router.register(r"locations", StorageLocationViewSet)
 router.register(r"storage-locations", StorageLocationViewSet, basename="storage-locations")
 router.register(r"racks", RackViewSet)
@@ -66,18 +114,29 @@ router.register(r"ledger", StockLedgerViewSet)
 router.register(r"stock-ledger", StockLedgerViewSet, basename="stock-ledger")
 router.register(r"movements", StockTransactionViewSet)
 router.register(r"transactions", StockTransactionViewSet, basename="transactions")
+router.register(r"transfers", StockTransferViewSet, basename="transfers")
 router.register(r"reservations", StockReservationViewSet)
 router.register(r"reconciliation", StockCountViewSet)
 router.register(r"damaged-stock", DamagedStockViewSet)
 router.register(r"transit", StockInTransitViewSet, basename="transit")
+router.register(r"in-transit", StockInTransitViewSet, basename="in-transit")
 router.register(r"batches", BatchViewSet)
 router.register(r"batch-quarantines", BatchQuarantineViewSet, basename="batch-quarantine")
 router.register(r"batch-movements", BatchMovementViewSet, basename="batch-movement")
 router.register(r"serials", SerialNumberViewSet)
 router.register(r"serial-movements", SerialMovementViewSet, basename="serial-movement")
+router.register(r"tracking/shelf-life-policies", ShelfLifePolicyViewSet, basename="tracking-shelf-life-policies")
+router.register(r"shelf-life-policies", ShelfLifePolicyViewSet, basename="shelf-life-policies")
+router.register(r"tracking/recalls", ProductRecallViewSet, basename="tracking-product-recalls")
+router.register(r"product-recalls", ProductRecallViewSet, basename="product-recalls")
+router.register(r"tracking/allocations", AllocationViewSet, basename="tracking-allocations")
+router.register(r"allocations", AllocationViewSet, basename="allocations")
+router.register(r"tracking/traceability", TraceabilityViewSet, basename="tracking-traceability")
+router.register(r"traceability", TraceabilityViewSet, basename="traceability")
 router.register(r"valuation", ValuationViewSet)
 router.register(r"planning/reorder-rules", ReorderRuleViewSet, basename="reorder-rules")
 router.register(r"planning/stock-levels", StockLevelViewSet, basename="stock-levels")
+router.register(r"stock-levels", StockLevelViewSet, basename="stock-levels-root")
 router.register(r"planning/replenishment-plans", ReplenishmentPlanViewSet, basename="replenishment-plans")
 router.register(r"planning/purchase-suggestions", PurchaseSuggestionViewSet, basename="purchase-suggestions")
 router.register(r"planning/stock-forecast", StockForecastViewSet, basename="stock-forecast")
@@ -87,6 +146,8 @@ router.register(r"audit/full-counts", FullStockCountViewSet, basename="audit-ful
 router.register(r"audit/variances", StockCountViewSet, basename="audit-variances")
 router.register(r"audit/history", AuditHistoryViewSet, basename="audit-history")
 router.register(r"configuration/document-numbering", DocumentNumberingViewSet, basename="config-doc-numbering")
+router.register(r"operations/settings", StockOperationsSettingsViewSet, basename="operations-settings")
+router.register(r"operations/reclassification", StockReclassificationViewSet, basename="operations-reclassification")
 
 urlpatterns = [
     path("dashboard/kpis/", DashboardKPIView.as_view(), name="inventory-dashboard-kpis"),
@@ -100,6 +161,11 @@ urlpatterns = [
     path("reports/warehouse/", WarehouseReportView.as_view(), name="report-warehouse"),
     path("configuration/global/", InventoryConfigurationView.as_view(), name="configuration-global"),
     path("configuration/audit-log/", ConfigurationAuditLogListView.as_view(), name="configuration-audit-log"),
+    path("notifications/settings/", NotificationSettingsView.as_view(), name="notification-settings"),
+    path("notifications/alerts/", InventoryAlertListView.as_view(), name="inventory-alerts"),
+    path("notifications/alerts/read-all/", InventoryAlertReadView.as_view(), name="inventory-alerts-read-all"),
+    path("notifications/alerts/<int:alert_id>/read/", InventoryAlertReadView.as_view(), name="inventory-alert-read"),
     path("integrations/", include("apps.integration.urls")),
+    path("", include(grn_router.urls)),
     path("", include(router.urls)),
 ]
