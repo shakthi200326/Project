@@ -272,6 +272,32 @@ class PurchaseIntelligenceOrchestrator:
         }
 
     @classmethod
+    def _get_committed_item_keys(cls, warehouse: Warehouse, tenant_id: str) -> set:
+        """
+        (product_id, variant_id) pairs already covered by an APPROVED recommendation, or by a
+        CONVERTED one whose supplier lead time has not yet elapsed. Conversion does not create
+        incoming stock, so without this a re-run would duplicate the same lines in a new batch.
+        """
+        now = timezone.now()
+        keys = set()
+        committed_items = PurchaseRecommendationItem.objects.filter(
+            recommendation__warehouse=warehouse,
+            recommendation__tenant_id=tenant_id,
+            recommendation__status__in=[
+                PurchaseRecommendation.Status.APPROVED,
+                PurchaseRecommendation.Status.CONVERTED,
+            ],
+        ).select_related("recommendation")
+        for item in committed_items:
+            header = item.recommendation
+            if header.status == PurchaseRecommendation.Status.CONVERTED:
+                expected_arrival = header.updated_at + timedelta(days=item.lead_time_days or 7)
+                if expected_arrival <= now:
+                    continue
+            keys.add((item.product_id, item.variant_id))
+        return keys
+
+    @classmethod
     def generate_recommendations_for_warehouse(
         cls,
         warehouse: Warehouse,
@@ -283,22 +309,55 @@ class PurchaseIntelligenceOrchestrator:
         under a single PurchaseRecommendation header. Prevents duplicate active recommendations.
         """
         active_products = InventoryItem.objects.filter(is_active=True, is_purchasable=True)
+        committed_keys = cls._get_committed_item_keys(warehouse, tenant_id)
         items_to_create = []
 
         for prod in active_products:
             res = cls.evaluate_item_recommendation(prod, warehouse, tenant_id=tenant_id)
-            if res and res["suggested_quantity"] > Decimal("0.0000"):
-                items_to_create.append(res)
-
-        if not items_to_create:
-            return None
+            if not res or res["suggested_quantity"] <= Decimal("0.0000"):
+                continue
+            variant_id = res["variant"].id if res.get("variant") else None
+            if (prod.id, variant_id) in committed_keys:
+                # Already approved / ordered and still awaiting arrival -- don't suggest it again.
+                continue
+            items_to_create.append(res)
 
         # Check for existing DRAFT or UNDER_REVIEW recommendation for this warehouse to prevent duplication
-        existing_rec = PurchaseRecommendation.objects.filter(
+        open_recommendations = PurchaseRecommendation.objects.filter(
             warehouse=warehouse,
             status__in=[PurchaseRecommendation.Status.DRAFT, PurchaseRecommendation.Status.UNDER_REVIEW],
             tenant_id=tenant_id,
-        ).first()
+        ).order_by("-created_at", "-pk")
+        existing_rec = open_recommendations.first()
+        if existing_rec:
+            for duplicate in open_recommendations.exclude(pk=existing_rec.pk):
+                previous_status = duplicate.status
+                duplicate.status = PurchaseRecommendation.Status.EXPIRED
+                duplicate.save(update_fields=["status", "updated_at"])
+                RecommendationHistory.objects.create(
+                    recommendation=duplicate,
+                    action_type="EXPIRED",
+                    from_status=previous_status,
+                    to_status=duplicate.status,
+                    actor=user_actor,
+                    details=f"Superseded by newer open recommendation {existing_rec.recommendation_number}.",
+                )
+
+        if not items_to_create:
+            if existing_rec:
+                # Nothing left to suggest -- retire the stale open batch instead of leaving a duplicate.
+                old_status = existing_rec.status
+                existing_rec.status = PurchaseRecommendation.Status.EXPIRED
+                existing_rec.save(update_fields=["status", "updated_at"])
+                RecommendationHistory.objects.create(
+                    recommendation=existing_rec,
+                    action_type="EXPIRED",
+                    from_status=old_status,
+                    to_status=existing_rec.status,
+                    actor=user_actor,
+                    details="Superseded: all lines are already approved or on order.",
+                )
+            return None
 
         now = timezone.now()
         rec = existing_rec or PurchaseRecommendation(

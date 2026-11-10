@@ -10064,7 +10064,19 @@ export const DEMO_GRN_CONTEXT = {
       allow_manual_number: false,
     },
     inspection: { enabled: true, required_permission: "inventory.grn.inspect", inspection_mode: "OPTIONAL", quality_lead_role: "qa.inspector" },
-    quality: { enabled: true, required_permission: "inventory.grn.inspect_quality", auto_assign: true },
+    quality: {
+      enabled: false,
+      quality_inspection_required: false,
+      required_permission: "inventory.grn.inspect_quality",
+      auto_assign: true,
+      inspection_types: ["Visual", "Dimensional", "Functional", "Laboratory"],
+      criteria: [
+        { code: "PACK_INTEG", name: "Packaging & Tamper-Proof Seal", type: "BOOLEAN", mandatory: true },
+        { code: "DIM_CHECK", name: "Dimensional & Physical Tolerance", type: "BOOLEAN", mandatory: true },
+        { code: "SPEC_BARCODE", name: "Specification, Rating & Barcode Scan", type: "BOOLEAN", mandatory: true },
+        { code: "SURFACE_FINISH", name: "Surface Finish & Corrosion Inspection", type: "BOOLEAN", mandatory: false },
+      ],
+    },
     accepted: { enabled: true, required_permission: "inventory.grn.view", default_sort: "-transaction_date" },
     rejected: { enabled: true, required_permission: "inventory.grn.view", require_rejection_reason: true },
     partial: { enabled: true, required_permission: "inventory.grn.view" },
@@ -10640,6 +10652,111 @@ export const DEMO_INSPECTIONS = [
   },
 ];
 
+export const DEMO_QUALITY_INSPECTIONS = [
+  {
+    id: 1,
+    inspection_number: "QIN-00101",
+    receipt: 1,
+    receipt_number: "GRN-2026-0001",
+    receipt_status: "UNDER_INSPECTION",
+    line: 101,
+    item: 3,
+    item_code: "BELT-T10-1200",
+    item_name: "Polyurethane Timing Belt T10-1200",
+    variant_sku: "",
+    inspection_type: "Dimensional",
+    sample_quantity: "5.0000",
+    passed_quantity: "5.0000",
+    failed_quantity: "0.0000",
+    quality_result: "PASS",
+    status: "PASS",
+    inspector: "David Kim (QA Engineer)",
+    inspection_date: "2026-11-04",
+    remarks: "Sample batch of 5 belts measured. Pitch tolerance within +/- 0.02mm. Tensile test passed.",
+    criteria_results: [
+      { code: "PACK_INTEG", name: "Packaging & Tamper-Proof Seal", type: "BOOLEAN", value: true, mandatory: true, passed: true },
+      { code: "DIM_CHECK", name: "Dimensional & Physical Tolerance", type: "BOOLEAN", value: true, mandatory: true, passed: true },
+      { code: "SPEC_BARCODE", name: "Specification, Rating & Barcode Scan", type: "BOOLEAN", value: true, mandatory: true, passed: true },
+    ],
+  },
+  {
+    id: 2,
+    inspection_number: "QIN-00102",
+    receipt: 2,
+    receipt_number: "GRN-2026-0002",
+    receipt_status: "SUBMITTED",
+    line: 102,
+    item: 2,
+    item_code: "HYD-SV-24V",
+    item_name: "Hydraulic Solenoid Valve 24V DC",
+    variant_sku: "",
+    inspection_type: "Functional",
+    sample_quantity: "2.0000",
+    passed_quantity: "2.0000",
+    failed_quantity: "0.0000",
+    quality_result: "PASS",
+    status: "PASS",
+    inspector: "Marcus Vance",
+    inspection_date: "2026-11-03",
+    remarks: "Electrical coil resistance tested at 24V DC. Flow rate and actuation response within 15ms spec.",
+    criteria_results: [
+      { code: "PACK_INTEG", name: "Packaging & Tamper-Proof Seal", type: "BOOLEAN", value: true, mandatory: true, passed: true },
+      { code: "DIM_CHECK", name: "Dimensional & Port Mounting Check", type: "BOOLEAN", value: true, mandatory: true, passed: true },
+      { code: "SPEC_BARCODE", name: "Serial Number & Rating Verification", type: "BOOLEAN", value: true, mandatory: true, passed: true },
+    ],
+  },
+  {
+    id: 3,
+    inspection_number: "QIN-00103",
+    receipt: 3,
+    receipt_number: "GRN-2026-0003",
+    receipt_status: "PARTIALLY_ACCEPTED",
+    line: 103,
+    item: 1,
+    item_code: "BRG-6205-2RS",
+    item_name: "Industrial Ball Bearing 6205-2RS",
+    variant_sku: "",
+    inspection_type: "Visual",
+    sample_quantity: "15.0000",
+    passed_quantity: "10.0000",
+    failed_quantity: "5.0000",
+    quality_result: "CONDITIONAL",
+    status: "CONDITIONAL",
+    inspector: "Elena Rostova",
+    inspection_date: "2026-11-02",
+    remarks: "Outer raceway surface scratch on 5 bearings. Conditionally approved for low-speed secondary conveyor assemblies.",
+    criteria_results: [
+      { code: "PACK_INTEG", name: "Packaging & Tamper-Proof Seal", type: "BOOLEAN", value: true, mandatory: true, passed: true },
+      { code: "SURFACE_FINISH", name: "Surface Finish & Corrosion Inspection", type: "BOOLEAN", value: false, mandatory: false, passed: false },
+    ],
+  },
+  {
+    id: 4,
+    inspection_number: "QIN-00104",
+    receipt: 5,
+    receipt_number: "GRN-2026-0005",
+    receipt_status: "READY_TO_POST",
+    line: 105,
+    item: 3,
+    item_code: "BELT-T10-1200",
+    item_name: "Polyurethane Timing Belt T10-1200",
+    variant_sku: "",
+    inspection_type: "Laboratory",
+    sample_quantity: "4.0000",
+    passed_quantity: "4.0000",
+    failed_quantity: "0.0000",
+    quality_result: "PASS",
+    status: "PASS",
+    inspector: "Sarah Jenkins (Senior QC)",
+    inspection_date: "2026-11-02",
+    remarks: "Durometer hardness measured at 92 Shore A (spec: 90-95 Shore A). Tensile cord elongation within 0.8% limit.",
+    criteria_results: [
+      { code: "DIM_CHECK", name: "Dimensional & Tooth Thickness", type: "BOOLEAN", value: true, mandatory: true, passed: true },
+      { code: "SPEC_BARCODE", name: "Specification, Rating & Barcode Scan", type: "BOOLEAN", value: true, mandatory: true, passed: true },
+    ],
+  },
+];
+
 export const DEMO_PUTAWAYS = [
   {
     id: 1,
@@ -10964,8 +11081,45 @@ export async function recordInspection(payload) {
       body: JSON.stringify(payload),
     });
     if (res.ok) return await res.json();
-  } catch (e) {}
-  const created = { id: Date.now(), ...payload, status: "COMPLETED", inspected_at: new Date().toISOString() };
+    const errData = await res.json().catch(() => null);
+    if (errData && res.status >= 400 && res.status < 500 && res.status !== 404) {
+      const err = new Error(errData.error || errData.detail || "Inspection failed");
+      err.errors = errData.errors || errData;
+      err.status = res.status;
+      throw err;
+    }
+  } catch (e) {
+    if (e.errors || (e.status && e.status >= 400 && e.status < 500 && e.status !== 404)) throw e;
+  }
+  const acc = Number(payload.accepted_quantity || 0);
+  const rej = Number(payload.rejected_quantity || 0);
+  const status = rej === 0 ? "PASSED" : acc === 0 ? "FAILED" : "PARTIAL";
+  const num = `RIN-${Date.now().toString().slice(-5)}`;
+  const created = {
+    id: Date.now(),
+    inspection_number: num,
+    ...payload,
+    status,
+    inspected_at: payload.inspection_date || new Date().toISOString(),
+  };
+  const lineId = Number(payload.line);
+  for (const r of DEMO_RECEIPTS) {
+    if (r.lines) {
+      const targetLine = r.lines.find((l) => l.id === lineId);
+      if (targetLine) {
+        targetLine.accepted_quantity = String(Number(targetLine.accepted_quantity || 0) + acc);
+        targetLine.rejected_quantity = String(Number(targetLine.rejected_quantity || 0) + rej);
+        targetLine.pending_inspection_quantity = String(Math.max(0, Number(targetLine.pending_inspection_quantity || 0) - (acc + rej)));
+        targetLine.inspection_status = status;
+        created.receipt_number = r.document_number;
+        created.item = targetLine.item;
+        created.item_code = targetLine.item_code;
+        created.item_name = targetLine.item_name;
+        break;
+      }
+    }
+  }
+  DEMO_INSPECTIONS.unshift(created);
   return created;
 }
 
@@ -10985,9 +11139,24 @@ export async function fetchQualityInspections(params = {}) {
   try {
     const query = new URLSearchParams(params).toString();
     const res = await fetch(`${API_BASE}/inventory/goods-receipt/quality-inspections/?${query}`);
-    if (res.ok) return await res.json();
+    if (res.ok) {
+      const data = await res.json();
+      if (data && (data.count > 0 || (Array.isArray(data.results) && data.results.length > 0))) return data;
+    }
   } catch (e) {}
-  return { count: DEMO_INSPECTIONS.length, results: DEMO_INSPECTIONS };
+  let list = [...DEMO_QUALITY_INSPECTIONS];
+  if (params.result) {
+    list = list.filter((r) => r.quality_result === params.result || r.status === params.result);
+  }
+  const page = Number(params.page || 1);
+  const pageSize = Number(params.page_size || 25);
+  const offset = (page - 1) * pageSize;
+  return {
+    count: list.length,
+    next: offset + pageSize < list.length ? `?page=${page + 1}` : null,
+    previous: page > 1 ? `?page=${page - 1}` : null,
+    results: list.slice(offset, offset + pageSize),
+  };
 }
 
 export async function recordQualityInspection(payload) {
@@ -11010,13 +11179,30 @@ export async function recordQualityInspection(payload) {
   const failedQty = Number(payload.failed_quantity || 0);
   const sampleQty = Number(payload.sample_quantity || 0);
   const derivedResult = failedQty > 0 ? (failedQty === sampleQty ? "FAIL" : "CONDITIONAL") : "PASS";
-  return {
+  const num = `QIN-${Date.now().toString().slice(-5)}`;
+  const created = {
     id: Date.now(),
-    inspection_number: `QIN-${Date.now().toString().slice(-5)}`,
+    inspection_number: num,
     ...payload,
     quality_result: derivedResult,
     status: derivedResult,
+    inspection_date: payload.inspection_date || new Date().toISOString().slice(0, 10),
   };
+  const lineId = Number(payload.line);
+  for (const r of DEMO_RECEIPTS) {
+    if (r.lines) {
+      const targetLine = r.lines.find((l) => l.id === lineId);
+      if (targetLine) {
+        created.receipt_number = r.document_number;
+        created.item = targetLine.item;
+        created.item_code = targetLine.item_code;
+        created.item_name = targetLine.item_name;
+        break;
+      }
+    }
+  }
+  DEMO_QUALITY_INSPECTIONS.unshift(created);
+  return created;
 }
 
 export async function fetchPutaways(params = {}) {

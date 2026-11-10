@@ -220,9 +220,9 @@ export function AppShell({ children }) {
       "/inventory/goods-receipt/inspection": [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/register" }, { label: "Receipt Inspection" }],
       "/inventory/goods-receipt/discrepancies": [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/register" }, { label: "Receipt Discrepancy" }],
       "/inventory/goods-receipt/partial": [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/register" }, { label: "Partial Acceptance" }],
-      "/inventory/goods-receipt/quality": [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/quality" }, { label: "Quality Inspection" }],
-      "/inventory/goods-receipt/accepted": [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/quality" }, { label: "Accepted Goods" }],
-      "/inventory/goods-receipt/rejected": [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/quality" }, { label: "Rejected Goods" }],
+      "/inventory/goods-receipt/outcomes": [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/outcomes" }, { label: "Accepted & Rejected Goods" }],
+      "/inventory/goods-receipt/accepted": [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/outcomes" }, { label: "Accepted Goods" }],
+      "/inventory/goods-receipt/rejected": [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/outcomes" }, { label: "Rejected Goods" }],
       "/inventory/goods-receipt/putaway": [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/register" }, { label: "Putaway Management" }],
       "/inventory/goods-receipt/history": [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/register" }, { label: "Receipt History" }],
       "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock In" }],
@@ -338,7 +338,7 @@ export function AppShell({ children }) {
       title: "Goods Receipt & Inspection",
       items: [
         { label: "Receipt Register", path: "/inventory/goods-receipt/register", icon: ClipboardList },
-        { label: "Quality Inspection", path: "/inventory/goods-receipt/quality", icon: FlaskConical },
+        { label: "Accepted & Rejected Goods", path: "/inventory/goods-receipt/outcomes", icon: PackageCheck },
         { label: "Putaway Management", path: "/inventory/goods-receipt/putaway", icon: Layers3 },
         { label: "Receipt History", path: "/inventory/goods-receipt/history", icon: History },
       ],
@@ -645,10 +645,10 @@ export function AppShell({ children }) {
                           location.pathname.startsWith("/inventory/goods-receipt/discrepancies") ||
                           location.pathname.startsWith("/inventory/goods-receipt/partial"));
 
-                      const isQualityManagement = item.path === "/inventory/goods-receipt/quality";
-                      const isQualityManagementActive =
-                        isQualityManagement &&
-                        (location.pathname === "/inventory/goods-receipt/quality" ||
+                      const isOutcomesOperations = item.path === "/inventory/goods-receipt/outcomes";
+                      const isOutcomesOperationsActive =
+                        isOutcomesOperations &&
+                        (location.pathname === "/inventory/goods-receipt/outcomes" ||
                           location.pathname.startsWith("/inventory/goods-receipt/accepted") ||
                           location.pathname.startsWith("/inventory/goods-receipt/rejected"));
 
@@ -740,7 +740,7 @@ export function AppShell({ children }) {
                         isItemMasterActive ||
                         isClassificationActive ||
                         isGrnOperationsActive ||
-                        isQualityManagementActive ||
+                        isOutcomesOperationsActive ||
                         isStockOperationsActive ||
                         isTransferOperationsActive ||
                         isAdjustmentOperationsActive ||
@@ -912,10 +912,10 @@ export function AppShell({ children }) {
                               location.pathname.startsWith("/inventory/goods-receipt/discrepancies") ||
                               location.pathname.startsWith("/inventory/goods-receipt/partial"));
 
-                          const isQualityManagement = item.path === "/inventory/goods-receipt/quality";
-                          const isQualityManagementActive =
-                            isQualityManagement &&
-                            (location.pathname === "/inventory/goods-receipt/quality" ||
+                          const isOutcomesOperations = item.path === "/inventory/goods-receipt/outcomes";
+                          const isOutcomesOperationsActive =
+                            isOutcomesOperations &&
+                            (location.pathname === "/inventory/goods-receipt/outcomes" ||
                               location.pathname.startsWith("/inventory/goods-receipt/accepted") ||
                               location.pathname.startsWith("/inventory/goods-receipt/rejected"));
 
@@ -1007,7 +1007,7 @@ export function AppShell({ children }) {
                             isItemMasterActive ||
                             isClassificationActive ||
                             isGrnOperationsActive ||
-                            isQualityManagementActive ||
+                            isOutcomesOperationsActive ||
                             isStockOperationsActive ||
                             isTransferOperationsActive ||
                             isAdjustmentOperationsActive ||

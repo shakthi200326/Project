@@ -14,6 +14,7 @@ import {
   deleteReceipt as apiDeleteReceipt,
   fetchReceiptLines as apiFetchReceiptLines,
   fetchInspections as apiFetchInspections,
+  recordInspection as apiRecordInspection,
   setRejectionDisposition as apiSetRejectionDisposition,
   fetchQualityInspections as apiFetchQualityInspections,
   recordQualityInspection as apiRecordQualityInspection,
@@ -43,7 +44,15 @@ export class ApiError extends Error {
 }
 
 async function request(path, { method = "GET", body, params, headers } = {}) {
-  const url = new URL(path.startsWith("http") ? path : `${GRN}${path}`);
+  const requestPath = String(path || "");
+  const apiBasePath = new URL(API_BASE, window.location.origin).pathname.replace(/\/+$/, "");
+  const isApiPath = apiBasePath && (requestPath === apiBasePath || requestPath.startsWith(`${apiBasePath}/`));
+  const target = /^https?:\/\//i.test(requestPath)
+    ? requestPath
+    : isApiPath
+      ? requestPath
+      : `${GRN}${requestPath.startsWith("/") ? requestPath : `/${requestPath}`}`;
+  const url = new URL(target, window.location.origin);
   Object.entries(params || {}).forEach(([k, v]) => {
     if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, v);
   });
@@ -61,6 +70,11 @@ async function request(path, { method = "GET", body, params, headers } = {}) {
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     const message = data?.error || data?.detail || `Request failed (HTTP ${res.status}).`;
+    console.error("Goods receipt API request failed", {
+      method,
+      path: `${url.pathname}${url.search}`,
+      status: res.status,
+    });
     throw new ApiError(message, res.status, data);
   }
   return data;
@@ -225,7 +239,7 @@ export const receiptAction = async (id, action, body = {}) => {
 export const fetchReceiptLines = async (outcome, params) => {
   try {
     const data = await request("/lines/", { params: { outcome, ...params } });
-    if (data && Array.isArray(data.results)) return data;
+    if (data && (data.count > 0 || (Array.isArray(data.results) && data.results.length > 0))) return data;
   } catch (e) {}
   return apiFetchReceiptLines(outcome, params);
 };
@@ -234,16 +248,23 @@ export const fetchReceiptLines = async (outcome, params) => {
 export const fetchInspections = async (params) => {
   try {
     const data = await request("/inspections/", { params });
-    if (data && Array.isArray(data.results)) return data;
+    if (data && (data.count > 0 || (Array.isArray(data.results) && data.results.length > 0))) return data;
     throw new ApiError("The inventory server returned an invalid inspection list.", 502, data);
   } catch (e) {
-    if (e.status && e.status !== 0) throw e;
+    if (e.status >= 400 && e.status < 500 && e.status !== 404) throw e;
   }
   return apiFetchInspections(params);
 };
 
 export const recordInspection = async (payload) => {
-  return await request("/inspections/", { method: "POST", body: payload });
+  try {
+    return await request("/inspections/", { method: "POST", body: payload });
+  } catch (e) {
+    if (e.status && e.status >= 400 && e.status < 500 && e.status !== 404) {
+      throw e;
+    }
+    return apiRecordInspection(payload);
+  }
 };
 
 export const setRejectionDisposition = async (id, disposition) => {

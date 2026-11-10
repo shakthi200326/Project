@@ -48,6 +48,7 @@ import {
   generateProductVariants,
   updateProduct,
 } from "@/services/api";
+import { ScrollableTabs } from "./ScrollableTabs.jsx";
 
 // Parse a numeric form field, keeping 0 as a real value; blank or invalid falls back.
 const numberOr = (value, fallback) => {
@@ -523,7 +524,7 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-1 px-5 overflow-x-auto border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs">
+        <ScrollableTabs stripClassName="flex items-center gap-1 px-5 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs" role="group">
           {[
             { key: "overview", label: "Overview & Specs" },
             { key: "stock", label: "Stock Availability" },
@@ -548,7 +549,7 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
               {tab.label}
             </button>
           ))}
-        </div>
+        </ScrollableTabs>
 
         {/* Body Content */}
         <div className="flex-1 overflow-y-auto p-5 space-y-6">

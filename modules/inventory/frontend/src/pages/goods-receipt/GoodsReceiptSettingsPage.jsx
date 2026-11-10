@@ -29,12 +29,12 @@ import {
   useGrnContext,
   useToast,
 } from "./grnComponents";
+import { ScrollableTabs } from "../../components/ScrollableTabs.jsx";
 
 const SUBMODULES = [
   ["register", "Receipt Register"],
   ["create", "Create Goods Receipt"],
   ["inspection", "Receipt Inspection"],
-  ["quality", "Quality Inspection"],
   ["accepted", "Accepted Goods"],
   ["rejected", "Rejected Goods"],
   ["partial", "Partial Acceptance"],
@@ -145,7 +145,7 @@ export function GoodsReceiptSettingsPage() {
   
       icon={Settings2}
     >
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-200 dark:border-zinc-800 text-xs">
+      <ScrollableTabs stripClassName="flex items-center gap-1.5 pb-1 border-b border-slate-200 dark:border-zinc-800 text-xs" role="group">
         {SUBMODULES.map(([key, label]) => (
           <button
             key={key}
@@ -158,7 +158,7 @@ export function GoodsReceiptSettingsPage() {
             {all && !all[key]?.settings?.enabled && <span className="ml-1 text-[10px] opacity-70">(off)</span>}
           </button>
         ))}
-      </div>
+      </ScrollableTabs>
       {error && <ErrorBanner error={error} onRetry={load} />}
       {!all && !error && <LoadingBlock />}
       {all && !canWrite && !grn.loading && (

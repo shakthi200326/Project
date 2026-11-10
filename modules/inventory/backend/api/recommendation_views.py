@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import Dict, Any, List, Optional
 from datetime import timedelta
 from django.utils import timezone
-from django.db.models import Sum, Q, Count, Avg, Max, Min
+from django.db.models import Sum, Q, Count, Avg, Max, Min, OuterRef, Subquery
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -42,6 +42,9 @@ from apps.planning.services.demand_forecasting_engine import (
 )
 from apps.planning.services.supplier_intelligence import SupplierIntelligenceService
 from apps.planning.purchase_intelligence.providers.google_trends_adapter import GoogleTrendsAdapter
+from apps.planning.services.purchase_recommendation_service import PurchaseRecommendationService
+from apps.planning.services.demand_analysis_service import DemandAnalysisService
+from apps.planning.services.market_providers.adapter import ExternalProviderRegistry
 
 from .recommendation_serializers import (
     PurchaseRecommendationSerializer,
@@ -79,12 +82,24 @@ class PurchaseRecommendationViewSet(viewsets.ModelViewSet):
         search = self.request.query_params.get("search")
         tenant = self.request.query_params.get("tenant_id", "default")
 
+        # Show only the newest open batch per warehouse. This also hides
+        # duplicate open batches left by earlier recommendation runs.
+        open_statuses = [PurchaseRecommendation.Status.DRAFT, PurchaseRecommendation.Status.UNDER_REVIEW]
+        newest_open_id = PurchaseRecommendation.objects.filter(
+            warehouse_id=OuterRef("warehouse_id"),
+            tenant_id=OuterRef("tenant_id"),
+            status__in=open_statuses,
+        ).order_by("-created_at", "-pk").values("pk")[:1]
+        qs = qs.filter(~Q(status__in=open_statuses) | Q(pk=Subquery(newest_open_id)))
+
         if tenant:
             qs = qs.filter(tenant_id=tenant)
         if wh and wh.upper() != "ALL":
             qs = qs.filter(Q(warehouse_id=wh) | Q(warehouse__name__icontains=wh) | Q(warehouse__code__icontains=wh))
         if st and st.upper() != "ALL":
             qs = qs.filter(status__iexact=st)
+        elif self.action == "list":
+            qs = qs.exclude(status=PurchaseRecommendation.Status.EXPIRED)
         if priority and priority.upper() != "ALL":
             qs = qs.filter(priority__iexact=priority)
         if search:
@@ -176,6 +191,7 @@ class PurchaseRecommendationViewSet(viewsets.ModelViewSet):
                 "seasonal": float(config.weight_seasonal_events),
                 "supply": float(config.weight_supply_cost),
             },
+            "providers_health": ExternalProviderRegistry.get_providers_health(),
         })
 
     @action(detail=False, methods=["get"], url_path="dashboard-summary")
@@ -325,8 +341,8 @@ class PurchaseRecommendationViewSet(viewsets.ModelViewSet):
 
         try:
             for wh in warehouses_to_process:
-                rec = CoreRecommendationEngine.generate_recommendations_for_warehouse(
-                    warehouse=wh, user_actor=actor, tenant_id=tenant_id
+                rec = PurchaseRecommendationService.generate_recommendations(
+                    warehouse_id=wh.id, user_actor=actor, tenant_id=tenant_id
                 )
                 if rec:
                     total_items_evaluated += rec.total_items_count
@@ -700,8 +716,10 @@ class PurchaseRecommendationViewSet(viewsets.ModelViewSet):
         return Response({
             "trends": trends,
             "providers": providers_data,
+            "providers_health": ExternalProviderRegistry.get_providers_health(),
             "data_sources": sources_data,
             "external_products": products_data,
+            "discovered_products": DemandAnalysisService.get_market_opportunities(limit=20),
             "opportunities": opportunities_data,
             "data_freshness": {
                 "last_sync": timezone.now().strftime("%Y-%m-%d %H:%M"),

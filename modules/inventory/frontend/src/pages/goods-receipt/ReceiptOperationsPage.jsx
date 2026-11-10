@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect } from "react";
+import React, { useMemo, useRef, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   ClipboardList,
@@ -6,13 +6,13 @@ import {
   FileWarning,
   Split,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { ReceiptRegisterPage } from "./ReceiptRegisterPage.jsx";
 import { ReceiptInspectionPage } from "./ReceiptInspectionPage.jsx";
 import { ReceiptDiscrepancyPage } from "./ReceiptDiscrepancyPage.jsx";
 import { PartialAcceptancePage } from "./ReceiptOutcomePages.jsx";
+import { TabStrip } from "../../components/ScrollableTabs.jsx";
+import { FaGreaterThan, FaLessThan } from "react-icons/fa";
 
 const SUB_MODULE_TABS = [
   {
@@ -27,14 +27,7 @@ const SUB_MODULE_TABS = [
     label: "Receipt Inspection",
     icon: ScanSearch,
     badge: "Inspection Queue",
-    description: "Inbound goods inspection, pass/fail results, and disposition approvals",
-  },
-  {
-    id: "discrepancies",
-    label: "Receipt Discrepancy",
-    icon: FileWarning,
-    badge: "Discrepancy Audit",
-    description: "Shortages, overages, damaged stock, and variance resolution logs",
+    description: "Inbound goods inspection, accepted/rejected quantities, and line approvals",
   },
   {
     id: "partial",
@@ -43,6 +36,13 @@ const SUB_MODULE_TABS = [
     badge: "Split Acceptance",
     description: "Split receipts with partial accepted quantities and pending inspection lines",
   },
+  {
+    id: "discrepancies",
+    label: "Receipt Discrepancy",
+    icon: FileWarning,
+    badge: "Discrepancy Audit",
+    description: "Shortages, overages, damaged stock, and variance resolution logs",
+  },
 ];
 
 export function ReceiptOperationsPage() {
@@ -50,12 +50,14 @@ export function ReceiptOperationsPage() {
   const rawTab = (searchParams.get("tab") || "register").toLowerCase();
 
   const tabsContainerRef = useRef(null);
+
+  const [tabsOverflow, setTabsOverflow] = useState(false);
   const activeTabRef = useRef(null);
 
   const activeTab = useMemo(() => {
     if (rawTab === "inspection" || rawTab === "inspect") return "inspection";
-    if (rawTab === "discrepancies" || rawTab === "discrepancy" || rawTab === "variance") return "discrepancies";
     if (rawTab === "partial" || rawTab === "split") return "partial";
+    if (rawTab === "discrepancies" || rawTab === "discrepancy" || rawTab === "variance") return "discrepancies";
     return "register";
   }, [rawTab]);
 
@@ -114,7 +116,7 @@ export function ReceiptOperationsPage() {
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                Maintain receipt register, inbound inspection queue, receipt discrepancies, and partial acceptance in a single sub-module.
+                Maintain receipt register, inbound inspection queue, partial acceptance, and discrepancies in a single sub-module.
               </p>
             </div>
           </div>
@@ -130,25 +132,28 @@ export function ReceiptOperationsPage() {
         {/* Sub-Module Navigation Tabs with < and > controls */}
         <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/80 p-1.5 dark:border-zinc-800 dark:bg-zinc-950/60">
           {/* Less Than (<) Navigation Button */}
-          <button
-            type="button"
-            onClick={goToPrevTab}
-            disabled={!canGoPrev}
-            title={canGoPrev ? `Previous: ${SUB_MODULE_TABS[currentIndex - 1]?.label} (<)` : "Start of tabs (<)"}
-            aria-label="Previous tab (<)"
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-sm font-bold transition-all ${
-              canGoPrev
-                ? "border-slate-200 bg-white text-slate-700 shadow-2xs hover:bg-slate-100 hover:text-slate-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
-                : "border-transparent text-slate-300 dark:text-zinc-600 cursor-not-allowed opacity-30"
-            }`}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
+          {tabsOverflow && (
+            <button
+              type="button"
+              onClick={goToPrevTab}
+              disabled={!canGoPrev}
+              title={canGoPrev ? `Previous: ${SUB_MODULE_TABS[currentIndex - 1]?.label} (<)` : "Start of tabs (<)"}
+              aria-label="Previous tab (<)"
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-sm font-bold transition-all ${
+                canGoPrev
+                  ? "border-slate-200 bg-white text-slate-700 shadow-2xs hover:bg-slate-100 hover:text-slate-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                  : "border-transparent text-slate-300 dark:text-zinc-600 cursor-not-allowed opacity-30"
+              }`}
+            >
+              <FaLessThan className="h-3 w-3" />
+            </button>
+          )}
 
           {/* Tabs Strip - Scrollbar hidden completely, no moving line */}
-          <div
+          <TabStrip
             ref={tabsContainerRef}
-            className="flex flex-1 items-center gap-2 overflow-x-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            onScrollState={(st) => setTabsOverflow(st.left || st.right)}
+            className="flex flex-1 items-center gap-2"
             role="tablist"
             aria-label="Goods Receipt Operations sub-module sections"
           >
@@ -190,23 +195,25 @@ export function ReceiptOperationsPage() {
                 </button>
               );
             })}
-          </div>
+          </TabStrip>
 
           {/* Greater Than (>) Navigation Button */}
-          <button
-            type="button"
-            onClick={goToNextTab}
-            disabled={!canGoNext}
-            title={canGoNext ? `Next: ${SUB_MODULE_TABS[currentIndex + 1]?.label} (>)` : "End of tabs (>)"}
-            aria-label="Next tab (>)"
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-sm font-bold transition-all ${
-              canGoNext
-                ? "border-slate-200 bg-white text-slate-700 shadow-2xs hover:bg-slate-100 hover:text-slate-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
-                : "border-transparent text-slate-300 dark:text-zinc-600 cursor-not-allowed opacity-30"
-            }`}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+          {tabsOverflow && (
+            <button
+              type="button"
+              onClick={goToNextTab}
+              disabled={!canGoNext}
+              title={canGoNext ? `Next: ${SUB_MODULE_TABS[currentIndex + 1]?.label} (>)` : "End of tabs (>)"}
+              aria-label="Next tab (>)"
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-sm font-bold transition-all ${
+                canGoNext
+                  ? "border-slate-200 bg-white text-slate-700 shadow-2xs hover:bg-slate-100 hover:text-slate-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                  : "border-transparent text-slate-300 dark:text-zinc-600 cursor-not-allowed opacity-30"
+              }`}
+            >
+              <FaGreaterThan className="h-3 w-3" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -214,12 +221,11 @@ export function ReceiptOperationsPage() {
       <div role="tabpanel" className="transition-all duration-150">
         {activeTab === "register" && <ReceiptRegisterPage key="register" view="register" />}
         {activeTab === "inspection" && <ReceiptInspectionPage />}
-        {activeTab === "discrepancies" && <ReceiptDiscrepancyPage />}
         {activeTab === "partial" && <PartialAcceptancePage />}
+        {activeTab === "discrepancies" && <ReceiptDiscrepancyPage />}
       </div>
     </div>
   );
 }
 
 export default ReceiptOperationsPage;
-

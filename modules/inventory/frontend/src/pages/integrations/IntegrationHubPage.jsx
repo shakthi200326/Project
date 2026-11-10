@@ -23,6 +23,7 @@ import {
   Check,
   X,
 } from "lucide-react";
+import { ScrollableTabs } from "../../components/ScrollableTabs.jsx";
 
 export function IntegrationHubPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -375,7 +376,7 @@ export function IntegrationHubPage() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex border-b border-slate-800 space-x-1 overflow-x-auto">
+      <ScrollableTabs stripClassName="flex border-b border-slate-800 space-x-1" role="group">
         {[
           { id: "dashboard", label: "Dashboard & Metrics", icon: Activity },
           { id: "outbox", label: `Outbox Events (${data.outbox.total || 0})`, icon: ArrowUpRight },
@@ -411,7 +412,7 @@ export function IntegrationHubPage() {
             </button>
           );
         })}
-      </div>
+      </ScrollableTabs>
 
       {/* TAB 1: DASHBOARD */}
       {activeTab === "dashboard" && (

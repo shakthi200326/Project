@@ -17,6 +17,7 @@ import {
   Field,
   FilterBar,
   GrnPage,
+  Modal,
   Notice,
   Pagination,
   ReadOnly,
@@ -26,6 +27,7 @@ import {
   StatusBadge,
   SubmoduleGate,
   btnPrimary,
+  btnSecondary,
   errorInputCls,
   fmtDate,
   fmtQty,
@@ -60,7 +62,7 @@ export function useWarehouses() {
 }
 
 /** Pending-inspection queue shared by receipt and quality inspection screens. */
-export function PendingInspectionQueue({ selected, onSelect, reloadKey }) {
+export function PendingInspectionQueue({ selected, onSelect, reloadKey, actionLabel = "Inspect" }) {
   const warehouses = useWarehouses();
   const { data, loading, error, filters, setFilter, reload } = usePagedQuery(
     (params) => fetchReceiptLines("pending_inspection", { ...params, page_size: 200 }),
@@ -99,6 +101,23 @@ export function PendingInspectionQueue({ selected, onSelect, reloadKey }) {
     { key: "inspected", label: "Inspected", align: "right", render: (r) => <span className="whitespace-nowrap">{fmtQty(Number(r.accepted_quantity) + Number(r.rejected_quantity))}</span> },
     { key: "pending_inspection_quantity", label: "Pending", align: "right", render: (r) => <span className="whitespace-nowrap font-semibold text-amber-600 dark:text-amber-400">{fmtQty(r.pending_inspection_quantity)}</span> },
     { key: "warehouse_code", label: "Warehouse", render: (r) => <span className="whitespace-nowrap font-mono text-[11px]">{r.warehouse_code || "—"}</span> },
+    {
+      key: "action",
+      label: "Action",
+      align: "right",
+      render: (r) => (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(r);
+          }}
+          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-300 dark:hover:bg-indigo-900/60 transition-colors border border-indigo-200/80 dark:border-indigo-800/80 cursor-pointer shadow-2xs whitespace-nowrap"
+        >
+          {actionLabel}
+        </button>
+      ),
+    },
   ];
 
   return (
@@ -134,7 +153,7 @@ export function PendingInspectionQueue({ selected, onSelect, reloadKey }) {
 }
 
 function InspectionWorkspace({ grn }) {
-  const [selected, setSelected] = useState(null);
+  const [inspectingLine, setInspectingLine] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [latestInspection, setLatestInspection] = useState(null);
   const [toastNode, toast] = useToast();
@@ -147,27 +166,32 @@ function InspectionWorkspace({ grn }) {
   return (
     <div className="space-y-5">
       {toastNode}
-      <PendingInspectionQueue selected={selected} onSelect={setSelected} reloadKey={reloadKey} />
-      {selected ? (
-        <InspectionForm
-          key={selected.id}
-          line={selected}
+      <PendingInspectionQueue
+        selected={inspectingLine}
+        onSelect={setInspectingLine}
+        reloadKey={reloadKey}
+        actionLabel="Inspect Line"
+      />
+      {inspectingLine && (
+        <InspectionModal
+          key={inspectingLine.id}
+          line={inspectingLine}
           grn={grn}
+          onClose={() => setInspectingLine(null)}
           onSaved={(rec) => {
             setLatestInspection(rec);
-            toast(`${rec.inspection_number} recorded: ${fmtQty(rec.accepted_quantity)} accepted, ${fmtQty(rec.rejected_quantity)} rejected.`);
+            toast(`${rec.inspection_number || "Inspection"} recorded: ${fmtQty(rec.accepted_quantity)} accepted, ${fmtQty(rec.rejected_quantity)} rejected.`);
+            setInspectingLine(null);
             setReloadKey((k) => k + 1);
           }}
         />
-      ) : (
-        <Notice tone="blue">Select a line from the queue to record an inspection.</Notice>
       )}
       <InspectionLog ref={inspectionLogRef} reloadKey={reloadKey} latestInspection={latestInspection} />
     </div>
   );
 }
 
-function InspectionForm({ line, grn, onSaved }) {
+export function InspectionModal({ line, grn, onClose, onSaved }) {
   const rejCfg = grn.settings("rejected");
   const partialCfg = grn.settings("partial");
   const qualityCfg = grn.settings("quality");
@@ -232,7 +256,7 @@ function InspectionForm({ line, grn, onSaved }) {
     setBusy(true);
     try {
       const rec = await recordInspection({
-        receipt: line.receipt_id,
+        receipt: line.receipt_id || line.receipt,
         line: line.id,
         inspection_quantity: String(inspected),
         accepted_quantity: String(acc),
@@ -246,22 +270,14 @@ function InspectionForm({ line, grn, onSaved }) {
         inspection_date: form.inspection_date,
         remarks: form.remarks,
       });
+      if (files.length) {
+        try {
+          for (const f of files) await uploadAttachment(ATTACHMENT_OWNERS.inspection, rec.id, f, grn.username);
+        } catch (uploadErr) {
+          console.warn("Attachment upload warning:", uploadErr);
+        }
+      }
       onSaved(rec);
-      setForm({
-        accepted_quantity: "",
-        rejected_quantity: "",
-        hold_quantity: "",
-        rejection_reason: "",
-        rejection_disposition: rejCfg.default_disposition || "",
-        rejected_serial_numbers: [],
-        held_serial_numbers: [],
-        inspector: grn.username,
-        inspection_date: today(),
-        remarks: "",
-      });
-      setErrors({});
-      for (const f of files) await uploadAttachment(ATTACHMENT_OWNERS.inspection, rec.id, f, grn.username);
-      setFiles([]);
     } catch (err) {
       setErrors(err.errors || {});
       setError(err);
@@ -271,37 +287,78 @@ function InspectionForm({ line, grn, onSaved }) {
   };
 
   const cls = (k) => `${inputCls} ${errors[k] ? errorInputCls : ""}`;
+
   return (
-    <Card title="Record Inspection">
-      <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <ReadOnly label="Receipt" value={<ReceiptLink id={line.receipt_id} number={line.receipt_number} />} />
-          <ReadOnly label="Receipt Line" value={`#${line.id} · ${line.item_code}${line.variant_sku ? ` / ${line.variant_sku}` : ""}`} mono />
-          <ReadOnly label="Received" value={`${fmtQty(line.received_quantity)} ${line.uom}`} />
-          <ReadOnly label="Previously Inspected" value={fmtQty(Number(line.accepted_quantity) + Number(line.rejected_quantity) + Number(line.hold_quantity || 0))} />
-          <ReadOnly label="Pending Before" value={fmtQty(pending)} />
-          <ReadOnly label="Inspection Status" value={<StatusBadge status={line.inspection_status} />} />
+    <Modal
+      title={`Record Receipt Inspection — Line #${line.id} · ${line.item_code || line.sku}`}
+      wide
+      onClose={onClose}
+      footer={
+        <div className="flex items-center justify-end gap-2 w-full">
+          <button type="button" className={btnSecondary} onClick={onClose} disabled={busy}>
+            Cancel
+          </button>
+          <button type="button" className={btnPrimary} onClick={submit} disabled={busy}>
+            {busy && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5 inline" />} Record Inspection
+          </button>
         </div>
-        {qualityCfg.enabled && qualityCfg.quality_inspection_required && (
-          <Notice tone="blue">Quality inspection is mandatory: accepting goods requires a passing or conditional quality result on this line.</Notice>
-        )}
-        <div className="grid grid-cols-4 gap-3">
+      }
+    >
+      <div className="space-y-4">
+        {/* Receipt and Line Context Card */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-800 text-xs">
+          <ReadOnly label="Receipt" value={<ReceiptLink id={line.receipt_id || line.receipt} number={line.receipt_number} />} />
+          <ReadOnly label="Receipt Line" value={`#${line.id} · ${line.item_code || line.sku}${line.variant_sku ? ` / ${line.variant_sku}` : ""}`} mono />
+          <ReadOnly label="Received Qty" value={`${fmtQty(line.received_quantity)} ${line.uom}`} />
+          <ReadOnly label="Pending Before" value={<span className="font-bold text-amber-600 dark:text-amber-400">{fmtQty(pending)} {line.uom}</span>} />
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Field label="Accepted Qty" error={errors.accepted_quantity}>
-            <input type="number" min="0" max={Math.max(0, pending - rej)} step="any" className={cls("accepted_quantity")} value={form.accepted_quantity} onChange={(e) => set("accepted_quantity", e.target.value)} />
+            <input
+              type="number"
+              min="0"
+              max={Math.max(0, pending - rej)}
+              step="any"
+              className={cls("accepted_quantity")}
+              value={form.accepted_quantity}
+              placeholder="0.00"
+              onChange={(e) => set("accepted_quantity", e.target.value)}
+            />
           </Field>
           <Field label="Rejected Qty" error={errors.rejected_quantity}>
-            <input type="number" min="0" max={Math.max(0, pending - acc)} step="any" className={cls("rejected_quantity")} value={form.rejected_quantity} onChange={(e) => set("rejected_quantity", e.target.value)} />
+            <input
+              type="number"
+              min="0"
+              max={Math.max(0, pending - acc)}
+              step="any"
+              className={cls("rejected_quantity")}
+              value={form.rejected_quantity}
+              placeholder="0.00"
+              onChange={(e) => set("rejected_quantity", e.target.value)}
+            />
           </Field>
           <Field label="Hold Qty" error={errors.hold_quantity}>
-            <input type="number" min="0" max={Math.max(0, pending - acc - rej)} step="any" className={cls("hold_quantity")} value={form.hold_quantity} onChange={(e) => set("hold_quantity", e.target.value)} />
+            <input
+              type="number"
+              min="0"
+              max={Math.max(0, pending - acc - rej)}
+              step="any"
+              className={cls("hold_quantity")}
+              value={form.hold_quantity}
+              placeholder="0.00"
+              onChange={(e) => set("hold_quantity", e.target.value)}
+            />
           </Field>
-          <ReadOnly label="Inspection Qty" value={fmtQty(inspected)} />
+          <ReadOnly label="Inspecting Qty" value={<span className="font-bold text-slate-900 dark:text-white">{fmtQty(inspected)} {line.uom}</span>} />
         </div>
-        <p className={`text-[11px] ${pendingAfter < 0 ? "text-red-600" : "text-slate-500"}`}>
-          Pending after this inspection: <b>{fmtQty(pendingAfter)}</b> (received = accepted + rejected + hold + pending)
+
+        <p className={`text-[11px] ${pendingAfter < 0 ? "text-red-600 font-semibold" : "text-slate-500"}`}>
+          Pending remaining after this inspection: <b>{fmtQty(pendingAfter)}</b> (received = accepted + rejected + hold + pending)
         </p>
+
         {rej > 0 && (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-xl border border-red-200/80 dark:border-red-900/40 bg-red-50/40 dark:bg-red-950/20">
             <Field label="Rejection Reason" required={rejCfg.require_rejection_reason} error={errors.rejection_reason}>
               <select className={cls("rejection_reason")} value={form.rejection_reason} onChange={(e) => set("rejection_reason", e.target.value)}>
                 <option value="">Select reason…</option>
@@ -323,13 +380,14 @@ function InspectionForm({ line, grn, onSaved }) {
             </Field>
           </div>
         )}
+
         {rej > 0 && line.tracking?.serial && (
           <Field label="Rejected Serial Numbers" required error={errors.rejected_serial_numbers}>
-            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 rounded-lg bg-slate-50 dark:bg-zinc-800 border border-slate-200/80 dark:border-zinc-700">
               {(line.serial_numbers || [])
                 .filter((s) => !alreadyRejectedSerials.has(s))
                 .map((s) => (
-                  <label key={s} className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded-lg bg-slate-50 dark:bg-zinc-800">
+                  <label key={s} className="flex items-center gap-1.5 text-[11px] font-mono px-2 py-1 rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={form.rejected_serial_numbers.includes(s)}
@@ -346,11 +404,12 @@ function InspectionForm({ line, grn, onSaved }) {
             </div>
           </Field>
         )}
+
         {hold > 0 && line.tracking?.serial && (
           <Field label="Held Serial Numbers" required error={errors.held_serial_numbers}>
-            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 rounded-lg bg-amber-50/50 dark:bg-zinc-800 border border-amber-200/80 dark:border-zinc-700">
               {(line.serial_numbers || []).filter((s) => !alreadyRejectedSerials.has(s) && !alreadyHeldSerials.has(s)).map((s) => (
-                <label key={s} className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded-lg bg-amber-50 dark:bg-zinc-800">
+                <label key={s} className="flex items-center gap-1.5 text-[11px] font-mono px-2 py-1 rounded-md bg-white dark:bg-zinc-900 border border-amber-200 dark:border-zinc-700 cursor-pointer">
                   <input type="checkbox" checked={form.held_serial_numbers.includes(s)} onChange={(e) => set("held_serial_numbers", e.target.checked ? [...form.held_serial_numbers, s] : form.held_serial_numbers.filter((x) => x !== s))} />
                   {s}
                 </label>
@@ -358,7 +417,8 @@ function InspectionForm({ line, grn, onSaved }) {
             </div>
           </Field>
         )}
-        <div className="grid grid-cols-2 gap-3">
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Inspector" error={errors.inspector}>
             <input className={cls("inspector")} value={form.inspector} maxLength={120} onChange={(e) => set("inspector", e.target.value)} />
           </Field>
@@ -367,21 +427,18 @@ function InspectionForm({ line, grn, onSaved }) {
           </Field>
         </div>
         <Field label="Inspection Remarks">
-          <textarea rows={2} className={inputCls} value={form.remarks} onChange={(e) => set("remarks", e.target.value)} />
+          <textarea rows={2} className={inputCls} placeholder="Inspection notes, condition upon delivery, observations..." value={form.remarks} onChange={(e) => set("remarks", e.target.value)} />
         </Field>
         <Field label="Attachments" hint="Uploaded with the inspection record (max 25 MB each).">
           <input type="file" multiple className="text-xs" onChange={(e) => setFiles([...(e.target.files || [])].filter((f) => f.size <= 25 * 1024 * 1024))} />
         </Field>
         <ErrorBanner error={error} />
-        <div className="flex justify-end">
-          <button className={btnPrimary} onClick={submit} disabled={busy}>
-            {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Record Inspection
-          </button>
-        </div>
       </div>
-    </Card>
+    </Modal>
   );
 }
+
+export const InspectionForm = InspectionModal;
 
 const withLatestInspection = (data, latestInspection) => {
   if (!latestInspection) return data;

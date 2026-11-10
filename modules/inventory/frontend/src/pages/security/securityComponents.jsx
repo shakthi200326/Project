@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
+import { ScrollableTabs } from "../../components/ScrollableTabs.jsx";
 import {
   Shield,
   Users,
@@ -90,42 +91,6 @@ export function StatusBadge({ status }) {
 }
 
 export function SecurityNavPills({ activeTab }) {
-  const tabsRef = useRef(null);
-  const activeTabRef = useRef(null);
-  const [scrollState, setScrollState] = useState({ left: false, right: false });
-
-  const updateScrollState = useCallback(() => {
-    const tabs = tabsRef.current;
-    if (!tabs) return;
-    setScrollState({
-      left: tabs.scrollLeft > 0,
-      right: tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 1,
-    });
-  }, []);
-
-  useEffect(() => {
-    const tabs = tabsRef.current;
-    if (!tabs) return undefined;
-    updateScrollState();
-    const observer = new ResizeObserver(updateScrollState);
-    observer.observe(tabs);
-    window.addEventListener("resize", updateScrollState);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", updateScrollState);
-    };
-  }, [updateScrollState]);
-
-  useEffect(() => {
-    activeTabRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
-    updateScrollState();
-  }, [activeTab, updateScrollState]);
-
-  const scrollTabs = (direction) => {
-    const tabs = tabsRef.current;
-    tabs?.scrollBy({ left: direction * Math.max(180, tabs.clientWidth * 0.7), behavior: "smooth" });
-  };
-
   const tabs = [
     { key: "users", label: "User Access", path: "/security/users", icon: Users },
     { key: "roles", label: "Role Management", path: "/security/roles", icon: KeyRound },
@@ -138,28 +103,18 @@ export function SecurityNavPills({ activeTab }) {
   ];
 
   return (
-    <div className="flex min-w-0 items-center gap-1 border-b border-slate-200/80 pb-2 text-xs dark:border-zinc-800/80">
-      <button
-        type="button"
-        aria-label="Scroll security tabs left"
-        disabled={!scrollState.left}
-        onClick={() => scrollTabs(-1)}
-        className="shrink-0 rounded-lg px-2 py-1.5 font-bold text-slate-500 hover:bg-slate-100 disabled:cursor-default disabled:opacity-30 dark:text-zinc-400 dark:hover:bg-zinc-800"
-      >
-        {"<"}
-      </button>
-      <div
-        ref={tabsRef}
-        onScroll={updateScrollState}
-        className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-hidden"
-      >
+    <ScrollableTabs
+      className="border-b border-slate-200/80 pb-2 text-xs dark:border-zinc-800/80"
+      stripClassName="flex items-center gap-1.5"
+      role="navigation"
+    >
         {tabs.map((t) => {
           const Icon = t.icon;
           const isActive = activeTab === t.key;
           return (
             <Link
               key={t.key}
-              ref={isActive ? activeTabRef : undefined}
+              data-active={isActive ? "true" : undefined}
               to={t.path}
               className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
                 isActive
@@ -172,16 +127,6 @@ export function SecurityNavPills({ activeTab }) {
             </Link>
           );
         })}
-      </div>
-      <button
-        type="button"
-        aria-label="Scroll security tabs right"
-        disabled={!scrollState.right}
-        onClick={() => scrollTabs(1)}
-        className="shrink-0 rounded-lg px-2 py-1.5 font-bold text-slate-500 hover:bg-slate-100 disabled:cursor-default disabled:opacity-30 dark:text-zinc-400 dark:hover:bg-zinc-800"
-      >
-        {">"}
-      </button>
-    </div>
+    </ScrollableTabs>
   );
 }

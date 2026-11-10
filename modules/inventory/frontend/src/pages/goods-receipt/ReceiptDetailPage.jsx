@@ -49,6 +49,7 @@ import {
   useGrnContext,
   useToast,
 } from "./grnComponents";
+import { ScrollableTabs } from "../../components/ScrollableTabs.jsx";
 
 export function ReceiptDetailPage() {
   const grn = useGrnContext();
@@ -222,11 +223,6 @@ function ReceiptDetail({ grn, view }) {
               <ScanSearch className="h-3.5 w-3.5" /> Inspect
             </button>
           )}
-          {can("quality") && (
-            <button className={btnSecondary} onClick={() => goto("/inventory/goods-receipt/quality?tab=quality")}>
-              <FlaskConical className="h-3.5 w-3.5" /> Quality Check
-            </button>
-          )}
           {can("putaway") && Number(t.accepted) > Number(t.putaway) && Number(t.pending) === 0 && (
             <button className={btnSecondary} onClick={() => goto("/inventory/goods-receipt/putaway")}>
               <Layers className="h-3.5 w-3.5" /> Putaway
@@ -320,11 +316,10 @@ function ReceiptDetail({ grn, view }) {
         </div>
       </Card>
 
-      <div className="flex gap-1.5 overflow-x-auto border-b border-slate-200 dark:border-zinc-800 text-xs">
+      <ScrollableTabs stripClassName="flex gap-1.5 border-b border-slate-200 dark:border-zinc-800 text-xs" role="group">
         {[
           ["lines", "Lines"],
           ["inspections", "Inspections"],
-          ["quality", "Quality"],
           ["putaways", "Putaway"],
           ["discrepancies", "Discrepancies"],
           ["attachments", "Attachments"],
@@ -340,11 +335,10 @@ function ReceiptDetail({ grn, view }) {
             {label}
           </button>
         ))}
-      </div>
+      </ScrollableTabs>
 
       {tab === "lines" && <LinesTable lines={receiptLines} />}
       {tab === "inspections" && <RecordTab fetcher={() => fetchInspections({ receipt: rec.id })} columns={INSPECTION_COLUMNS} empty="No receipt inspections recorded." />}
-      {tab === "quality" && <RecordTab fetcher={() => fetchQualityInspections({ receipt: rec.id })} columns={QUALITY_COLUMNS} empty="No quality inspections recorded." />}
       {tab === "putaways" && <RecordTab fetcher={() => fetchPutaways({ receipt: rec.id })} columns={PUTAWAY_COLUMNS} empty="No putaway recorded." />}
       {tab === "discrepancies" && <RecordTab fetcher={() => fetchDiscrepancies({ receipt: rec.id })} columns={DISCREPANCY_COLUMNS} empty="No discrepancies." />}
       {tab === "attachments" && (

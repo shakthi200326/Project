@@ -13,6 +13,7 @@ import {
   ErrorBanner,
   Field,
   GrnPage,
+  Modal,
   Notice,
   Pagination,
   ReadOnly,
@@ -21,6 +22,7 @@ import {
   StatusBadge,
   SubmoduleGate,
   btnPrimary,
+  btnSecondary,
   errorInputCls,
   fmtDate,
   fmtQty,
@@ -47,38 +49,52 @@ export function QualityInspectionPage() {
 }
 
 function QualityWorkspace({ grn }) {
-  const [selected, setSelected] = useState(null);
+  const [inspectingLine, setInspectingLine] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [toastNode, toast] = useToast();
   return (
     <div className="space-y-5">
       {toastNode}
-      <PendingInspectionQueue selected={selected} onSelect={setSelected} reloadKey={reloadKey} />
-      {selected ? (
-        <QualityForm
-          key={selected.id}
-          line={selected}
+      <PendingInspectionQueue
+        selected={inspectingLine}
+        onSelect={setInspectingLine}
+        reloadKey={reloadKey}
+        actionLabel="Quality Check"
+      />
+      {inspectingLine && (
+        <QualityInspectionModal
+          key={inspectingLine.id}
+          line={inspectingLine}
           grn={grn}
+          onClose={() => setInspectingLine(null)}
           onSaved={(rec) => {
             const inspNum = rec?.inspection_number || "Quality Inspection";
             const qResult = rec?.quality_result || rec?.status || "COMPLETED";
             toast(`${inspNum}: quality result ${qResult}.`, qResult === "FAIL" ? "error" : "success");
+            setInspectingLine(null);
             setReloadKey((k) => k + 1);
           }}
         />
-      ) : (
-        <Notice tone="blue">Select a line from the queue to record a quality inspection.</Notice>
       )}
       <QualityLog reloadKey={reloadKey} />
     </div>
   );
 }
 
-function QualityForm({ line, grn, onSaved }) {
+export function QualityInspectionModal({ line, grn, onClose, onSaved }) {
   const cfg = grn.settings("quality");
-  const criteria = cfg.criteria || [];
+  const defaultCriteria = [
+    { code: "PACK_INTEG", name: "Packaging & Tamper-Proof Seal", type: "BOOLEAN", mandatory: true },
+    { code: "DIM_CHECK", name: "Dimensional & Physical Tolerance", type: "BOOLEAN", mandatory: true },
+    { code: "SPEC_BARCODE", name: "Specification, Rating & Barcode Scan", type: "BOOLEAN", mandatory: true },
+  ];
+  const criteria = (cfg.criteria && cfg.criteria.length > 0) ? cfg.criteria : defaultCriteria;
+  const inspectionTypes = (cfg.inspection_types && cfg.inspection_types.length > 0)
+    ? cfg.inspection_types
+    : ["Visual", "Dimensional", "Functional", "Laboratory"];
+
   const [form, setForm] = useState({
-    inspection_type: cfg.inspection_types?.[0] || "",
+    inspection_type: inspectionTypes[0] || "Visual",
     sample_quantity: "",
     failed_quantity: "0",
     inspector: grn.username,
@@ -125,7 +141,7 @@ function QualityForm({ line, grn, onSaved }) {
     setBusy(true);
     try {
       const rec = await recordQualityInspection({
-        receipt: line.receipt_id,
+        receipt: line.receipt_id || line.receipt,
         line: line.id,
         inspection_type: form.inspection_type,
         sample_quantity: String(sample),
@@ -138,7 +154,13 @@ function QualityForm({ line, grn, onSaved }) {
         inspection_date: form.inspection_date,
         remarks: form.remarks,
       });
-      for (const f of files) await uploadAttachment(ATTACHMENT_OWNERS.inspection, rec.id, f, grn.username);
+      if (files.length) {
+        try {
+          for (const f of files) await uploadAttachment(ATTACHMENT_OWNERS.inspection, rec.id, f, grn.username);
+        } catch (uploadErr) {
+          console.warn("Attachment upload warning:", uploadErr);
+        }
+      }
       onSaved(rec);
       setBusy(false);
     } catch (err) {
@@ -150,19 +172,34 @@ function QualityForm({ line, grn, onSaved }) {
 
   const cls = (k) => `${inputCls} ${errors[k] ? errorInputCls : ""}`;
   return (
-    <Card title="Record Quality Inspection">
-      <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <ReadOnly label="Receipt" value={<ReceiptLink id={line.receipt_id} number={line.receipt_number} />} />
-          <ReadOnly label="Item / Variant" value={`${line.item_code}${line.variant_sku ? ` / ${line.variant_sku}` : ""}`} mono />
-          <ReadOnly label="Received" value={`${fmtQty(line.received_quantity)} ${line.uom}`} />
+    <Modal
+      wide
+      title={`Record Quality Inspection — ${line.receipt_number || "Receipt Line"}`}
+      onClose={onClose}
+      footer={
+        <>
+          <button type="button" className={btnSecondary} onClick={onClose} disabled={busy}>
+            Cancel
+          </button>
+          <button type="button" className={btnPrimary} onClick={submit} disabled={busy}>
+            {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Record Quality Result
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-800">
+          <ReadOnly label="Receipt" value={<ReceiptLink id={line.receipt_id || line.receipt} number={line.receipt_number} />} />
+          <ReadOnly label="Item / Variant" value={`${line.item_name ? `${line.item_name} (${line.item_code || line.sku})` : (line.item_code || line.sku)}${line.variant_sku ? ` / ${line.variant_sku}` : ""}`} mono />
+          <ReadOnly label="Received Qty" value={`${fmtQty(line.received_quantity)} ${line.uom || ""}`} />
           <ReadOnly label="Batch" value={line.batch_number || "—"} />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <Field label="Inspection Type" required error={errors.inspection_type}>
             <select className={cls("inspection_type")} value={form.inspection_type} onChange={(e) => set("inspection_type", e.target.value)}>
               <option value="">Select…</option>
-              {(cfg.inspection_types || []).map((t) => (
+              {(inspectionTypes || []).map((t) => (
                 <option key={t} value={t}>
                   {t}
                 </option>
@@ -170,12 +207,12 @@ function QualityForm({ line, grn, onSaved }) {
             </select>
           </Field>
           <Field label="Sample Quantity" required error={errors.sample_quantity}>
-            <input type="number" min="0" step="any" className={cls("sample_quantity")} value={form.sample_quantity} onChange={(e) => set("sample_quantity", e.target.value)} />
+            <input type="number" min="0" step="any" className={cls("sample_quantity")} value={form.sample_quantity} placeholder="0.00" onChange={(e) => set("sample_quantity", e.target.value)} />
           </Field>
           <Field label="Failed Quantity" error={errors.failed_quantity || errors.passed_quantity}>
-            <input type="number" min="0" step="any" className={cls("failed_quantity")} value={form.failed_quantity} onChange={(e) => set("failed_quantity", e.target.value)} />
+            <input type="number" min="0" step="any" className={cls("failed_quantity")} value={form.failed_quantity} placeholder="0.00" onChange={(e) => set("failed_quantity", e.target.value)} />
           </Field>
-          <ReadOnly label="Passed Quantity" value={sample > 0 ? fmtQty(passed) : "—"} />
+          <ReadOnly label="Passed Quantity" value={sample > 0 ? `${fmtQty(passed)} ${line.uom || ""}` : "—"} />
         </div>
         <p className="text-[11px] text-slate-500">
           Result is decided by the server: any failed mandatory criterion or a failure rate above {cfg.max_failure_rate_percent}% is a FAIL.
@@ -184,57 +221,59 @@ function QualityForm({ line, grn, onSaved }) {
         <div className="space-y-2">
           <span className="text-[11px] font-semibold text-slate-600 dark:text-zinc-300">Inspection Criteria</span>
           {criteria.length === 0 && <p className="text-[11px] text-slate-400">No criteria configured. Add them in Goods Receipt settings → Quality Inspection.</p>}
-          {criteria.map((c) => {
-            const pass = criterionPasses(c);
-            const err = errors[`criteria_results.${c.code}`];
-            return (
-              <div key={c.code} className="flex items-center gap-3 rounded-xl border border-slate-200/80 dark:border-zinc-800 px-3 py-2">
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-semibold">
-                    {c.name}
-                    {(c.mandatory ?? true) && <span className="text-red-500 ml-0.5">*</span>}
+          <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+            {criteria.map((c) => {
+              const pass = criterionPasses(c);
+              const err = errors[`criteria_results.${c.code}`];
+              return (
+                <div key={c.code} className="flex items-center gap-3 rounded-xl border border-slate-200/80 dark:border-zinc-800 px-3 py-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold">
+                      {c.name}
+                      {(c.mandatory ?? true) && <span className="text-red-500 ml-0.5">*</span>}
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      {c.code} · {c.type}
+                      {c.type === "NUMERIC" && ` · range ${c.min ?? "−∞"} – ${c.max ?? "∞"}`}
+                    </div>
+                    {err && <div className="text-[11px] text-red-600">{err}</div>}
                   </div>
-                  <div className="text-[10px] text-slate-400">
-                    {c.code} · {c.type}
-                    {c.type === "NUMERIC" && ` · range ${c.min ?? "−∞"} – ${c.max ?? "∞"}`}
-                  </div>
-                  {err && <div className="text-[11px] text-red-600">{err}</div>}
+                  {c.type === "BOOLEAN" ? (
+                    <div className="flex gap-1">
+                      {[true, false].map((v) => (
+                        <button
+                          key={String(v)}
+                          type="button"
+                          onClick={() => setValues((s) => ({ ...s, [c.code]: v }))}
+                          className={`px-2 py-1 rounded-lg text-[11px] font-bold border cursor-pointer ${
+                            values[c.code] === v
+                              ? v
+                                ? "bg-emerald-600 text-white border-emerald-600"
+                                : "bg-red-600 text-white border-red-600"
+                              : "border-slate-200 dark:border-zinc-700"
+                          }`}
+                        >
+                          {v ? "Pass" : "Fail"}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <input
+                      type={c.type === "NUMERIC" ? "number" : "text"}
+                      step="any"
+                      className={`${inputCls} w-32`}
+                      value={values[c.code]}
+                      onChange={(e) => setValues((s) => ({ ...s, [c.code]: e.target.value }))}
+                    />
+                  )}
+                  {pass !== null && <StatusBadge status={pass ? "PASS" : "FAIL"} />}
                 </div>
-                {c.type === "BOOLEAN" ? (
-                  <div className="flex gap-1">
-                    {[true, false].map((v) => (
-                      <button
-                        key={String(v)}
-                        type="button"
-                        onClick={() => setValues((s) => ({ ...s, [c.code]: v }))}
-                        className={`px-2 py-1 rounded-lg text-[11px] font-bold border cursor-pointer ${
-                          values[c.code] === v
-                            ? v
-                              ? "bg-emerald-600 text-white border-emerald-600"
-                              : "bg-red-600 text-white border-red-600"
-                            : "border-slate-200 dark:border-zinc-700"
-                        }`}
-                      >
-                        {v ? "Pass" : "Fail"}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <input
-                    type={c.type === "NUMERIC" ? "number" : "text"}
-                    step="any"
-                    className={`${inputCls} w-32`}
-                    value={values[c.code]}
-                    onChange={(e) => setValues((s) => ({ ...s, [c.code]: e.target.value }))}
-                  />
-                )}
-                {pass !== null && <StatusBadge status={pass ? "PASS" : "FAIL"} />}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Inspector">
             <input className={inputCls} value={form.inspector} maxLength={120} onChange={(e) => set("inspector", e.target.value)} />
           </Field>
@@ -243,21 +282,18 @@ function QualityForm({ line, grn, onSaved }) {
           </Field>
         </div>
         <Field label="Remarks">
-          <textarea rows={2} className={inputCls} value={form.remarks} onChange={(e) => set("remarks", e.target.value)} />
+          <textarea rows={2} className={inputCls} value={form.remarks} placeholder="Inspection observations, defects notes, etc." onChange={(e) => set("remarks", e.target.value)} />
         </Field>
         <Field label="Attachments" hint="Test reports or photos (max 25 MB each).">
           <input type="file" multiple className="text-xs" onChange={(e) => setFiles([...(e.target.files || [])].filter((f) => f.size <= 25 * 1024 * 1024))} />
         </Field>
         <ErrorBanner error={error} />
-        <div className="flex justify-end">
-          <button className={btnPrimary} onClick={submit} disabled={busy}>
-            {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Record Quality Result
-          </button>
-        </div>
       </div>
-    </Card>
+    </Modal>
   );
 }
+
+export const QualityForm = QualityInspectionModal;
 
 function QualityLog({ reloadKey }) {
   const [page, setPage] = useState(1);

@@ -103,7 +103,12 @@ DEFAULTS: Dict[str, Dict[str, Any]] = {
         "document_type": "Quality Inspection",
         "quality_inspection_required": False,
         "inspection_types": ["Visual", "Dimensional", "Functional", "Laboratory"],
-        "criteria": [],
+        "criteria": [
+            {"code": "PACK_INTEG", "name": "Packaging & Tamper-Proof Seal", "type": "BOOLEAN", "mandatory": True},
+            {"code": "DIM_CHECK", "name": "Dimensional & Physical Tolerance", "type": "BOOLEAN", "mandatory": True},
+            {"code": "SPEC_BARCODE", "name": "Specification, Rating & Barcode Scan", "type": "BOOLEAN", "mandatory": True},
+            {"code": "SURFACE_FINISH", "name": "Surface Finish & Corrosion Inspection", "type": "BOOLEAN", "mandatory": False},
+        ],
         "max_failure_rate_percent": 0,
         "notifications": _notifications(["quality_failed"]),
     },
@@ -275,6 +280,9 @@ class GoodsReceiptConfigService:
         version = cls.active_version(submodule, on_date)
         if version:
             merged.update(version.settings or {})
+        if submodule == Submodule.QUALITY:
+            if not merged.get("criteria"):
+                merged["criteria"] = copy.deepcopy(cls.defaults(Submodule.QUALITY).get("criteria") or [])
         return merged
 
     @classmethod

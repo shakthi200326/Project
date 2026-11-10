@@ -9,6 +9,7 @@ import {
   Field,
   FilterBar,
   GrnPage,
+  Modal,
   Notice,
   Pagination,
   ReadOnly,
@@ -19,6 +20,7 @@ import {
   SubmoduleGate,
   btnDanger,
   btnPrimary,
+  btnSecondary,
   errorInputCls,
   fmtDate,
   fmtQty,
@@ -50,17 +52,26 @@ export function PutawayManagementPage() {
 function PutawayWorkspace({ grn }) {
   const cfg = grn.settings("putaway");
   const warehouses = useWarehouses();
-  const [selected, setSelected] = useState(null);
+  const [puttingAway, setPuttingAway] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [toastNode, toast] = useToast();
   const { data, loading, error, filters, setFilter, reload } = usePagedQuery(
     (params) => fetchReceiptLines("pending_putaway", params),
     ["receipt", "search", "warehouse"]
   );
+
   useEffect(() => {
-    if (selected && data?.results) setSelected(data.results.find((r) => r.id === selected.id) || null);
+    if (puttingAway && data?.results) {
+      const fresh = data.results.find((r) => r.id === puttingAway.id);
+      if (fresh !== puttingAway) setPuttingAway(fresh || null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
+
+  useEffect(() => {
+    if (reloadKey) reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadKey]);
 
   const columns = [
     { key: "receipt_number", label: "Receipt", render: (r) => <ReceiptLink id={r.receipt_id} number={r.receipt_number} /> },
@@ -68,8 +79,8 @@ function PutawayWorkspace({ grn }) {
       key: "item",
       label: "Item / Variant",
       render: (r) => (
-        <div>
-          <div className="font-semibold">{r.item_name}</div>
+        <div className="min-w-0 max-w-[260px] 2xl:max-w-[340px]">
+          <div className="font-semibold truncate" title={r.item_name}>{r.item_name}</div>
           <div className="text-[10px] font-mono text-slate-400">
             {r.sku}
             {r.batch_number ? ` · ${r.batch_number}` : ""}
@@ -80,8 +91,25 @@ function PutawayWorkspace({ grn }) {
     { key: "warehouse_code", label: "Warehouse", render: (r) => <span className="whitespace-nowrap font-mono text-[11px]">{r.warehouse_code || "—"}</span> },
     { key: "accepted_quantity", label: "Accepted", align: "right", render: (r) => <span className="whitespace-nowrap font-medium">{fmtQty(r.accepted_quantity)} {r.uom}</span> },
     { key: "putaway_quantity", label: "Put Away", align: "right", render: (r) => <span className="whitespace-nowrap">{fmtQty(r.putaway_quantity)}</span> },
-    { key: "pending_putaway_quantity", label: "Pending", align: "right", render: (r) => fmtQty(r.pending_putaway_quantity) },
+    { key: "pending_putaway_quantity", label: "Pending", align: "right", render: (r) => <span className="whitespace-nowrap font-semibold text-emerald-600 dark:text-emerald-400">{fmtQty(r.pending_putaway_quantity)} {r.uom}</span> },
     { key: "putaway_status", label: "Status", render: (r) => <StatusBadge status={r.putaway_status} /> },
+    {
+      key: "action",
+      label: "Action",
+      align: "right",
+      render: (r) => (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setPuttingAway(r);
+          }}
+          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60 transition-colors border border-emerald-200/80 dark:border-emerald-800/80 cursor-pointer shadow-2xs whitespace-nowrap"
+        >
+          Put Away
+        </button>
+      ),
+    },
   ];
 
   return (
@@ -94,8 +122,9 @@ function PutawayWorkspace({ grn }) {
           : "any accepted quantity not put away is posted to the receiving location."}{" "}
         {cfg.allow_multiple_locations ? "A line may be split across several locations." : "Each line must go to a single location."}
       </Notice>
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
-        <div className="xl:col-span-7 2xl:col-span-8 space-y-3 min-w-0">
+
+      <Card title="Pending Putaway Queue">
+        <div className="space-y-3">
           <FilterBar count={data?.count}>
             <SearchInput value={filters.search} onChange={(v) => setFilter("search", v)} placeholder="Receipt no., item, batch…" />
             <SelectFilter
@@ -116,35 +145,35 @@ function PutawayWorkspace({ grn }) {
             loading={loading}
             error={error}
             onRetry={reload}
-            onRowClick={setSelected}
-            selectedKey={selected?.id}
+            onRowClick={setPuttingAway}
+            selectedKey={puttingAway?.id}
             empty="No accepted goods are waiting for putaway."
           />
           <Pagination data={data} page={filters.page} onPage={(p) => setFilter("page", p)} />
         </div>
-        <div className="xl:col-span-5 2xl:col-span-4 min-w-0">
-          {selected ? (
-            <PutawayForm
-              key={`${selected.id}-${selected.putaway_quantity}`}
-              line={selected}
-              grn={grn}
-              onSaved={(rec) => {
-                toast(`${rec.putaway_number}: ${fmtQty(rec.quantity)} put away to ${rec.location_code}.`);
-                reload();
-                setReloadKey((k) => k + 1);
-              }}
-            />
-          ) : (
-            <Notice tone="blue">Select a line to put away.</Notice>
-          )}
-        </div>
-      </div>
+      </Card>
+
+      {puttingAway && (
+        <PutawayModal
+          key={`${puttingAway.id}-${puttingAway.putaway_quantity}`}
+          line={puttingAway}
+          grn={grn}
+          onClose={() => setPuttingAway(null)}
+          onSaved={(rec) => {
+            toast(`${rec.putaway_number}: ${fmtQty(rec.quantity)} put away to ${rec.location_code}.`);
+            setPuttingAway(null);
+            reload();
+            setReloadKey((k) => k + 1);
+          }}
+        />
+      )}
+
       <PutawayLog reloadKey={reloadKey} onChanged={() => reload()} />
     </div>
   );
 }
 
-function PutawayForm({ line, grn, onSaved }) {
+export function PutawayModal({ line, grn, onClose, onSaved }) {
   const cfg = grn.settings("putaway");
   const [locations, setLocations] = useState([]);
   const [form, setForm] = useState({
@@ -169,6 +198,7 @@ function PutawayForm({ line, grn, onSaved }) {
     setForm((f) => ({ ...f, [k]: v }));
     setErrors((e) => ({ ...e, [k]: undefined }));
   };
+
   const submit = async () => {
     const e = {};
     const qty = Number(form.quantity);
@@ -198,21 +228,37 @@ function PutawayForm({ line, grn, onSaved }) {
       setBusy(false);
     }
   };
+
   const cls = (k) => `${inputCls} ${errors[k] ? errorInputCls : ""}`;
 
   return (
-    <Card title="Record Putaway">
-      <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+    <Modal
+      wide
+      title={`Record Putaway — ${line.receipt_number || "Receipt Line"}`}
+      onClose={onClose}
+      footer={
+        <>
+          <button type="button" className={btnSecondary} onClick={onClose} disabled={busy}>
+            Cancel
+          </button>
+          <button type="button" className={btnPrimary} onClick={submit} disabled={busy}>
+            {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Confirm Putaway
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-800">
           <ReadOnly label="Receipt" value={<ReceiptLink id={line.receipt_id} number={line.receipt_number} />} />
-          <ReadOnly label="Receipt Line" value={`#${line.id} · ${line.item_code}${line.variant_sku ? ` / ${line.variant_sku}` : ""}`} mono />
+          <ReadOnly label="Receipt Line" value={`#${line.id} · ${line.item_name || line.item_code}${line.variant_sku ? ` / ${line.variant_sku}` : ""}`} mono />
           <ReadOnly label="Warehouse" value={line.warehouse_code} />
-          <ReadOnly label="Accepted" value={`${fmtQty(line.accepted_quantity)} ${line.uom}`} />
-          <ReadOnly label="Previously Put Away" value={fmtQty(line.putaway_quantity)} />
-          <ReadOnly label="Pending Putaway" value={fmtQty(pending)} />
+          <ReadOnly label="Accepted Qty" value={`${fmtQty(line.accepted_quantity)} ${line.uom || ""}`} />
+          <ReadOnly label="Previously Put Away" value={`${fmtQty(line.putaway_quantity)} ${line.uom || ""}`} />
+          <ReadOnly label="Pending Putaway" value={<span className="font-bold text-emerald-600 dark:text-emerald-400">{fmtQty(pending)} {line.uom || ""}</span>} />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Destination Location" required error={errors.location}>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Destination Location" required error={errors.location} hint="Storage bin/rack for accepted items.">
             <select className={cls("location")} value={form.location} onChange={(e) => set("location", e.target.value)}>
               <option value="">Select location…</option>
               {locations.map((l) => (
@@ -222,29 +268,49 @@ function PutawayForm({ line, grn, onSaved }) {
               ))}
             </select>
           </Field>
-          <Field label="Putaway Quantity" required error={errors.quantity}>
-            <input type="number" min="0" step="any" className={cls("quantity")} value={form.quantity} onChange={(e) => set("quantity", e.target.value)} />
+          <Field label="Putaway Quantity" required error={errors.quantity} hint={`Max available: ${fmtQty(pending)} ${line.uom || ""}`}>
+            <input
+              type="number"
+              min="0"
+              max={pending}
+              step="any"
+              className={cls("quantity")}
+              value={form.quantity}
+              onChange={(e) => set("quantity", e.target.value)}
+            />
           </Field>
           <Field label="Putaway By">
             <input className={inputCls} value={form.putaway_by} maxLength={120} onChange={(e) => set("putaway_by", e.target.value)} />
           </Field>
           <Field label="Putaway Date" required error={errors.putaway_date}>
-            <input type="date" className={cls("putaway_date")} value={form.putaway_date} min={line.receipt_date} max={today()} onChange={(e) => set("putaway_date", e.target.value)} />
+            <input
+              type="date"
+              className={cls("putaway_date")}
+              value={form.putaway_date}
+              min={line.receipt_date}
+              max={today()}
+              onChange={(e) => set("putaway_date", e.target.value)}
+            />
           </Field>
         </div>
+
         <Field label="Remarks">
-          <textarea rows={2} className={inputCls} value={form.remarks} onChange={(e) => set("remarks", e.target.value)} />
+          <textarea
+            rows={2}
+            className={inputCls}
+            placeholder="Placement details, shelf bin reference, handling notes…"
+            value={form.remarks}
+            onChange={(e) => set("remarks", e.target.value)}
+          />
         </Field>
+
         <ErrorBanner error={error} />
-        <div className="flex justify-end">
-          <button className={btnPrimary} onClick={submit} disabled={busy}>
-            {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Confirm Putaway
-          </button>
-        </div>
       </div>
-    </Card>
+    </Modal>
   );
 }
+
+export const PutawayForm = PutawayModal;
 
 function PutawayLog({ reloadKey, onChanged }) {
   const [page, setPage] = useState(1);

@@ -11,6 +11,7 @@ import { ProductMediaPage } from "./ProductMediaPage.jsx";
 import { ProductImportPage } from "./ProductImportPage.jsx";
 import { ProductExportPage } from "./ProductExportPage.jsx";
 import { ProductImportHistoryPage } from "./ProductImportHistoryPage.jsx";
+import { ScrollableTabs } from "../components/ScrollableTabs.jsx";
 
 const tabs = [
   { id: "attachments", label: "Images & Attachments", icon: Camera },
@@ -51,11 +52,8 @@ export function ItemDataManagementPage({ hideHeader = false }) {
         </div>
       )}
 
-      <div
-        className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1.5 dark:border-slate-800 dark:bg-slate-900"
-        role="tablist"
-        aria-label="Item data management sections"
-      >
+      <ScrollableTabs stripClassName="flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1.5 dark:border-slate-800 dark:bg-slate-900" role="tablist"
+        aria-label="Item data management sections">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const selected = activeTab === tab.id;
@@ -77,7 +75,7 @@ export function ItemDataManagementPage({ hideHeader = false }) {
             </button>
           );
         })}
-      </div>
+      </ScrollableTabs>
 
       <div role="tabpanel">
         {activeTab === "attachments" && <ProductMediaPage />}

@@ -1001,7 +1001,10 @@ class GoodsReceiptService:
             except ValidationError as exc:
                 raise ValidationError({field: exc.messages[0]}) from exc
 
-        results, mandatory_failed, optional_failed = cls._evaluate_criteria(q_cfg["criteria"], data.get("criteria_results") or [])
+        criteria_to_evaluate = q_cfg.get("criteria")
+        if not criteria_to_evaluate:
+            criteria_to_evaluate = cls.DEFAULT_CRITERIA_CATALOG
+        results, mandatory_failed, optional_failed = cls._evaluate_criteria(criteria_to_evaluate, data.get("criteria_results") or [])
         failure_rate = failed / sample * Decimal("100")
         if mandatory_failed or failure_rate > Decimal(str(q_cfg["max_failure_rate_percent"])):
             result = ReceiptInspection.QualityResult.FAIL
@@ -1036,8 +1039,15 @@ class GoodsReceiptService:
             cls.notify("quality_failed", tx, {"inspection_number": record.inspection_number, "item_code": line.item.code})
         return record
 
-    @staticmethod
-    def _evaluate_criteria(criteria: List[Dict[str, Any]], submitted: List[Dict[str, Any]]):
+    DEFAULT_CRITERIA_CATALOG: List[Dict[str, Any]] = [
+        {"code": "PACK_INTEG", "name": "Packaging & Tamper-Proof Seal", "type": "BOOLEAN", "mandatory": True},
+        {"code": "DIM_CHECK", "name": "Dimensional & Physical Tolerance", "type": "BOOLEAN", "mandatory": True},
+        {"code": "SPEC_BARCODE", "name": "Specification, Rating & Barcode Scan", "type": "BOOLEAN", "mandatory": True},
+        {"code": "SURFACE_FINISH", "name": "Surface Finish & Corrosion Inspection", "type": "BOOLEAN", "mandatory": False},
+    ]
+
+    @classmethod
+    def _evaluate_criteria(cls, criteria: List[Dict[str, Any]], submitted: List[Dict[str, Any]]):
         by_code = {}
         if not isinstance(submitted, list):
             raise ValidationError({"criteria_results": "Must be a list of criteria results."})
@@ -1048,14 +1058,27 @@ class GoodsReceiptService:
             if code in by_code:
                 raise ValidationError({"criteria_results": f"Criterion '{code}' was supplied more than once."})
             by_code[code] = entry.get("value")
-        known = {c["code"] for c in criteria}
+
+        active_criteria = [dict(c) for c in (criteria or [])]
+        if not active_criteria:
+            active_criteria = [dict(c) for c in cls.DEFAULT_CRITERIA_CATALOG]
+
+        known = {c["code"] for c in active_criteria}
+        catalog_map = {c["code"]: c for c in cls.DEFAULT_CRITERIA_CATALOG}
+
         unknown = set(by_code) - known
+        for code in list(unknown):
+            if code in catalog_map:
+                active_criteria.append(dict(catalog_map[code]))
+                known.add(code)
+                unknown.remove(code)
+
         if unknown:
             raise ValidationError({"criteria_results": f"Unknown criteria: {', '.join(sorted(unknown))}."})
 
         results, mandatory_failed, optional_failed = [], False, False
         errors = {}
-        for crit in criteria:
+        for crit in active_criteria:
             code, kind = crit["code"], crit["type"]
             mandatory = bool(crit.get("mandatory", True))
             value = by_code.get(code)

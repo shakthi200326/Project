@@ -5,6 +5,7 @@ Receipts are StockTransaction(RECEIPT) rows; all business rules live in
 GoodsReceiptService. Every endpoint is gated by its submodule's `enabled`
 flag and `required_permission` from the GRN configuration.
 """
+import logging
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -35,6 +36,8 @@ from services.goods_receipt_service import (
     AlreadyPostedError,
     GoodsReceiptService,
 )
+
+logger = logging.getLogger(__name__)
 
 S = StockTransaction.Status
 ZERO = Decimal("0.0000")
@@ -683,6 +686,9 @@ class ReceiptInspectionViewSet(_RecordViewSet):
                 record = GoodsReceiptService.record_inspection(tx, request.data, actor_of(request))
         except ValidationError as exc:
             return error_response(exc)
+        except Exception as exc:
+            logger.exception("Failed to record inspection: %s", exc)
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         record.refresh_from_db()
         return Response(InspectionSerializer(record).data, status=status.HTTP_201_CREATED)
 
@@ -696,6 +702,9 @@ class ReceiptInspectionViewSet(_RecordViewSet):
             record = GoodsReceiptService.set_disposition(record, str(request.data.get("rejection_disposition") or ""))
         except ValidationError as exc:
             return error_response(exc)
+        except Exception as exc:
+            logger.exception("Failed to set rejection disposition: %s", exc)
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(InspectionSerializer(record).data)
 
 
@@ -722,6 +731,9 @@ class ReceiptPutawayViewSet(_RecordViewSet):
             record = GoodsReceiptService.record_putaway(self._receipt(request.data), request.data, actor_of(request))
         except ValidationError as exc:
             return error_response(exc)
+        except Exception as exc:
+            logger.exception("Failed to record putaway: %s", exc)
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         record.refresh_from_db()
         return Response(PutawaySerializer(record).data, status=status.HTTP_201_CREATED)
 
@@ -735,6 +747,9 @@ class ReceiptPutawayViewSet(_RecordViewSet):
             record = GoodsReceiptService.cancel_putaway(record, actor_of(request))
         except ValidationError as exc:
             return error_response(exc)
+        except Exception as exc:
+            logger.exception("Failed to cancel putaway: %s", exc)
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(PutawaySerializer(record).data)
 
 
@@ -759,6 +774,9 @@ class ReceiptDiscrepancyViewSet(_RecordViewSet):
             record = GoodsReceiptService.create_discrepancy(self._receipt(request.data), request.data, actor_of(request))
         except ValidationError as exc:
             return error_response(exc)
+        except Exception as exc:
+            logger.exception("Failed to create discrepancy: %s", exc)
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(DiscrepancySerializer(record).data, status=status.HTTP_201_CREATED)
 
     def partial_update(self, request, pk=None):
@@ -770,6 +788,9 @@ class ReceiptDiscrepancyViewSet(_RecordViewSet):
             record = GoodsReceiptService.update_discrepancy(record, request.data, actor_of(request))
         except ValidationError as exc:
             return error_response(exc)
+        except Exception as exc:
+            logger.exception("Failed to update discrepancy: %s", exc)
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(DiscrepancySerializer(record).data)
 
 

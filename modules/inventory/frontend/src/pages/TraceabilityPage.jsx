@@ -15,6 +15,7 @@ import {
   fetchRecallActions,
   fetchItems,
 } from "../services/api";
+import { ScrollableTabs } from "../components/ScrollableTabs.jsx";
 
 // ─── Shared Utilities ────────────────────────────────────────────────────────
 
@@ -1476,7 +1477,7 @@ export function TraceabilityPage() {
 
         {/* Tab Navigation */}
         <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
-          <nav className="-mb-px flex overflow-x-auto gap-0">
+          <ScrollableTabs stripClassName="-mb-px flex gap-0" role="group">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -1491,7 +1492,7 @@ export function TraceabilityPage() {
                 {tab.label}
               </button>
             ))}
-          </nav>
+          </ScrollableTabs>
         </div>
 
         {/* Tab Content */}

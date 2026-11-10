@@ -6,127 +6,154 @@ import { AppShell } from "@shared/shell-app/AppShell.jsx";
 import LoadingState from "@ui/components/LoadingState.jsx";
 import { ErrorBoundary } from "../components/ErrorBoundary.jsx";
 
+// Every page chunk is registered here so it can be prefetched in the background.
+// Navigating from the sidebar / tabs then renders instantly instead of waiting on a chunk download.
+const pageLoaders = [];
+function lazyPage(loader) {
+  pageLoaders.push(loader);
+  return lazy(loader);
+}
+
+function prefetchAllPages() {
+  const queue = [...pageLoaders];
+  const next = () => {
+    const loader = queue.shift();
+    if (!loader) return;
+    loader().catch(() => {}).finally(() => schedule(next));
+  };
+  const schedule = (fn) =>
+    typeof window.requestIdleCallback === "function"
+      ? window.requestIdleCallback(fn, { timeout: 2000 })
+      : setTimeout(fn, 150);
+  // warm several chunks in parallel so the whole app is ready within a few seconds
+  for (let i = 0; i < 3; i += 1) schedule(next);
+}
+
 // Lazy-loaded page components for optimal production chunking and lightning-fast load times
-const DashboardPage = lazy(() => import("../pages/DashboardPage.jsx").then(m => ({ default: m.DashboardPage })));
-const NotificationsAlertsPage = lazy(() => import("../pages/NotificationsAlertsPage.jsx").then(m => ({ default: m.NotificationsAlertsPage || m.default })));
+const DashboardPage = lazyPage(() => import("../pages/DashboardPage.jsx").then(m => ({ default: m.DashboardPage })));
+const NotificationsAlertsPage = lazyPage(() => import("../pages/NotificationsAlertsPage.jsx").then(m => ({ default: m.NotificationsAlertsPage || m.default })));
 
-const ProductOverviewPage = lazy(() => import("../pages/ProductOverviewPage.jsx").then(m => ({ default: m.ProductOverviewPage || m.default })));
-const ItemMasterPage = lazy(() => import("../pages/ItemMasterPage.jsx").then(m => ({ default: m.ItemMasterPage || m.default })));
-const ProductClassificationPage = lazy(() => import("../pages/ProductClassificationPage.jsx").then(m => ({ default: m.ProductClassificationPage || m.default })));
-const ProductVariantsPage = lazy(() => import("../pages/ProductVariantsPage.jsx").then(m => ({ default: m.ProductVariantsPage || m.default })));
-const ProductAttributesPage = lazy(() => import("../pages/ProductAttributesPage.jsx").then(m => ({ default: m.ProductAttributesPage || m.default })));
-const SkuManagementPage = lazy(() => import("../pages/SkuManagementPage.jsx").then(m => ({ default: m.SkuManagementPage || m.default })));
-const ItemDataManagementPage = lazy(() => import("../pages/ItemDataManagementPage.jsx").then(m => ({ default: m.ItemDataManagementPage || m.default })));
+const ProductOverviewPage = lazyPage(() => import("../pages/ProductOverviewPage.jsx").then(m => ({ default: m.ProductOverviewPage || m.default })));
+const ItemMasterPage = lazyPage(() => import("../pages/ItemMasterPage.jsx").then(m => ({ default: m.ItemMasterPage || m.default })));
+const ProductClassificationPage = lazyPage(() => import("../pages/ProductClassificationPage.jsx").then(m => ({ default: m.ProductClassificationPage || m.default })));
+const ProductVariantsPage = lazyPage(() => import("../pages/ProductVariantsPage.jsx").then(m => ({ default: m.ProductVariantsPage || m.default })));
+const ProductAttributesPage = lazyPage(() => import("../pages/ProductAttributesPage.jsx").then(m => ({ default: m.ProductAttributesPage || m.default })));
+const SkuManagementPage = lazyPage(() => import("../pages/SkuManagementPage.jsx").then(m => ({ default: m.SkuManagementPage || m.default })));
+const ItemDataManagementPage = lazyPage(() => import("../pages/ItemDataManagementPage.jsx").then(m => ({ default: m.ItemDataManagementPage || m.default })));
 
-const ProductsPage = lazy(() => import("../pages/ProductsPage.jsx").then(m => ({ default: m.ProductsPage })));
-const CategoriesPage = lazy(() => import("../pages/CategoriesPage.jsx").then(m => ({ default: m.CategoriesPage })));
-const BrandsPage = lazy(() => import("../pages/BrandsPage.jsx").then(m => ({ default: m.BrandsPage })));
-const UnitsPage = lazy(() => import("../pages/UnitsPage.jsx").then(m => ({ default: m.UnitsPage })));
-const BarcodesPage = lazy(() => import("../pages/BarcodesPage.jsx").then(m => ({ default: m.BarcodesPage })));
-const WarehousesPage = lazy(() => import("../pages/WarehousesPage.jsx").then(m => ({ default: m.WarehousesPage })));
-const LocationsPage = lazy(() => import("../pages/LocationsPage.jsx").then(m => ({ default: m.LocationsPage })));
-const RackBinPage = lazy(() => import("../pages/RackBinPage.jsx").then(m => ({ default: m.RackBinPage || m.default })));
-const LocationUtilizationPage = lazy(() => import("../pages/LocationUtilizationPage.jsx").then(m => ({ default: m.LocationUtilizationPage || m.default })));
-const WarehouseConfigPage = lazy(() => import("../pages/WarehouseConfigPage.jsx").then(m => ({ default: m.WarehouseConfigPage || m.default })));
-const StockMovementsPage = lazy(() => import("../pages/StockMovementsPage.jsx").then(m => ({ default: m.StockMovementsPage })));
-const ReceiptOperationsPage = lazy(() => import("../pages/goods-receipt/ReceiptOperationsPage.jsx").then(m => ({ default: m.ReceiptOperationsPage || m.default })));
-const QualityManagementPage = lazy(() => import("../pages/goods-receipt/QualityManagementPage.jsx").then(m => ({ default: m.QualityManagementPage || m.default })));
-const ReceiptRegisterPage = lazy(() => import("../pages/goods-receipt/ReceiptRegisterPage.jsx").then(m => ({ default: m.ReceiptRegisterPage })));
-const ReceiptFormPage = lazy(() => import("../pages/goods-receipt/ReceiptFormPage.jsx").then(m => ({ default: m.ReceiptFormPage })));
-const ReceiptDetailPage = lazy(() => import("../pages/goods-receipt/ReceiptDetailPage.jsx").then(m => ({ default: m.ReceiptDetailPage })));
-const ReceiptInspectionPage = lazy(() => import("../pages/goods-receipt/ReceiptInspectionPage.jsx").then(m => ({ default: m.ReceiptInspectionPage })));
-const QualityInspectionPage = lazy(() => import("../pages/goods-receipt/QualityInspectionPage.jsx").then(m => ({ default: m.QualityInspectionPage })));
-const AcceptedGoodsPage = lazy(() => import("../pages/goods-receipt/ReceiptOutcomePages.jsx").then(m => ({ default: m.AcceptedGoodsPage })));
-const RejectedGoodsPage = lazy(() => import("../pages/goods-receipt/ReceiptOutcomePages.jsx").then(m => ({ default: m.RejectedGoodsPage })));
-const PartialAcceptancePage = lazy(() => import("../pages/goods-receipt/ReceiptOutcomePages.jsx").then(m => ({ default: m.PartialAcceptancePage })));
-const PutawayManagementPage = lazy(() => import("../pages/goods-receipt/PutawayManagementPage.jsx").then(m => ({ default: m.PutawayManagementPage })));
-const ReceiptDiscrepancyPage = lazy(() => import("../pages/goods-receipt/ReceiptDiscrepancyPage.jsx").then(m => ({ default: m.ReceiptDiscrepancyPage })));
-const GoodsReceiptSettingsPage = lazy(() => import("../pages/goods-receipt/GoodsReceiptSettingsPage.jsx").then(m => ({ default: m.GoodsReceiptSettingsPage })));
-const StockOperationsMasterPage = lazy(() => import("../pages/StockOperationsMasterPage.jsx").then(m => ({ default: m.StockOperationsMasterPage || m.default })));
-const StockInPage = lazy(() => import("../pages/StockInPage.jsx").then(m => ({ default: m.StockInPage || m.default })));
-const StockIssuePage = lazy(() => import("../pages/StockIssuePage.jsx").then(m => ({ default: m.StockIssuePage || m.default })));
-const StockTransferOperationsPage = lazy(() => import("../pages/StockTransferOperationsPage.jsx").then(m => ({ default: m.StockTransferOperationsPage || m.default })));
-const StockTransferPage = lazy(() => import("../pages/StockTransferPage.jsx").then(m => ({ default: m.StockTransferPage || m.default })));
-const StockAdjustmentOperationsPage = lazy(() => import("../pages/StockAdjustmentOperationsPage.jsx").then(m => ({ default: m.StockAdjustmentOperationsPage || m.default })));
-const StockAdjustmentPage = lazy(() => import("../pages/StockAdjustmentPage.jsx").then(m => ({ default: m.StockAdjustmentPage || m.default })));
-const OpeningStockPage = lazy(() => import("../pages/OpeningStockPage.jsx").then(m => ({ default: m.OpeningStockPage || m.default })));
-const OpeningStockImportPage = lazy(() => import("../pages/OpeningStockImportPage.jsx").then(m => ({ default: m.OpeningStockImportPage || m.default })));
-const StockReleasePage = lazy(() => import("../pages/StockReleasePage.jsx").then(m => ({ default: m.StockReleasePage || m.default })));
-const StockReclassificationPage = lazy(() => import("../pages/StockReclassificationPage.jsx").then(m => ({ default: m.StockReclassificationPage || m.default })));
-const StockOutPage = lazy(() => import("../pages/StockOutPage.jsx").then(m => ({ default: m.StockOutPage || m.default })));
-const StockLevelsMasterPage = lazy(() => import("../pages/StockLevelsMasterPage.jsx").then(m => ({ default: m.StockLevelsMasterPage || m.default })));
-const StockAgingHistoryPage = lazy(() => import("../pages/StockAgingHistoryPage.jsx").then(m => ({ default: m.StockAgingHistoryPage || m.default })));
-const StockOverviewPage = lazy(() => import("../pages/StockOverviewPage.jsx").then(m => ({ default: m.StockOverviewPage || m.default })));
-const ReorderLevelsPage = lazy(() => import("../pages/ReorderLevelsPage.jsx").then(m => ({ default: m.ReorderLevelsPage || m.default })));
-const StockHistoryPage = lazy(() => import("../pages/StockHistoryPage.jsx").then(m => ({ default: m.StockHistoryPage || m.default })));
-const StockLedgerPage = lazy(() => import("../pages/StockLedgerPage.jsx").then(m => ({ default: m.StockLedgerPage })));
-const StockInHistoryPage = lazy(() => import("../pages/StockInHistoryPage.jsx").then(m => ({ default: m.StockInHistoryPage })));
-const StockOutHistoryPage = lazy(() => import("../pages/StockOutHistoryPage.jsx").then(m => ({ default: m.StockOutHistoryPage })));
-const StockBalancesPage = lazy(() => import("../pages/StockBalancesPage.jsx").then(m => ({ default: m.StockBalancesPage })));
-const DamagedStockPage = lazy(() => import("../pages/DamagedStockPage.jsx").then(m => ({ default: m.DamagedStockPage })));
-const StockInTransitPage = lazy(() => import("../pages/StockInTransitPage.jsx").then(m => ({ default: m.StockInTransitPage })));
-const ValuationPage = lazy(() => import("../pages/ValuationPage.jsx").then(m => ({ default: m.ValuationPage })));
-const SettingsPage = lazy(() => import("../pages/SettingsPage.jsx").then(m => ({ default: m.SettingsPage })));
-const ReconciliationPage = lazy(() => import("../pages/ReconciliationPage.jsx").then(m => ({ default: m.ReconciliationPage })));
-const BatchTrackingPage = lazy(() => import("../pages/BatchTrackingPage.jsx").then(m => ({ default: m.BatchTrackingPage })));
-const SerialTrackingPage = lazy(() => import("../pages/SerialTrackingPage.jsx").then(m => ({ default: m.SerialTrackingPage })));
-const BatchManagementPage = lazy(() => import("../pages/BatchManagementPage.jsx").then(m => ({ default: m.BatchManagementPage || m.default })));
-const BatchMovementHistoryPage = lazy(() => import("../pages/BatchMovementHistoryPage.jsx").then(m => ({ default: m.BatchMovementHistoryPage || m.default })));
-const BatchQuarantinePage = lazy(() => import("../pages/BatchQuarantinePage.jsx").then(m => ({ default: m.BatchQuarantinePage || m.default })));
-const BatchReleasePage = lazy(() => import("../pages/BatchReleasePage.jsx").then(m => ({ default: m.BatchReleasePage || m.default })));
-const ExpiryManagementPage = lazy(() => import("../pages/ExpiryManagementPage.jsx").then(m => ({ default: m.ExpiryManagementPage || m.default })));
-const SerialManagementPage = lazy(() => import("../pages/SerialManagementPage.jsx").then(m => ({ default: m.SerialManagementPage || m.default })));
-const SerialMovementHistoryPage = lazy(() => import("../pages/SerialMovementHistoryPage.jsx").then(m => ({ default: m.SerialMovementHistoryPage || m.default })));
-const StockAllocationPage = lazy(() => import("../pages/StockAllocationPage.jsx").then(m => ({ default: m.StockAllocationPage || m.default })));
-const TraceabilityPage = lazy(() => import("../pages/TraceabilityPage.jsx").then(m => ({ default: m.TraceabilityPage || m.default })));
-const StockReservationOperationsPage = lazy(() => import("../pages/StockReservationOperationsPage.jsx").then(m => ({ default: m.StockReservationOperationsPage || m.default })));
-const StockReservationsPage = lazy(() => import("../pages/StockReservationsPage.jsx").then(m => ({ default: m.StockReservationsPage })));
-const StockReturnsPage = lazy(() => import("../pages/StockReturnsPage.jsx").then(m => ({ default: m.StockReturnsPage })));
-const ReorderRulesPage = lazy(() => import("../pages/ReorderRulesPage.jsx").then(m => ({ default: m.ReorderRulesPage || m.default })));
-const MinMaxStockPage = lazy(() => import("../pages/MinMaxStockPage.jsx").then(m => ({ default: m.MinMaxStockPage || m.default })));
-const ReplenishmentPlanningPage = lazy(() => import("../pages/ReplenishmentPlanningPage.jsx").then(m => ({ default: m.ReplenishmentPlanningPage || m.default })));
-const PurchaseSuggestionsPage = lazy(() => import("../pages/PurchaseSuggestionsPage.jsx").then(m => ({ default: m.PurchaseSuggestionsPage || m.default })));
-const StockForecastPage = lazy(() => import("../pages/StockForecastPage.jsx").then(m => ({ default: m.StockForecastPage || m.default })));
-const PhysicalStockCountPage = lazy(() => import("../pages/PhysicalStockCountPage.jsx").then(m => ({ default: m.PhysicalStockCountPage || m.default })));
-const CycleCountPage = lazy(() => import("../pages/CycleCountPage.jsx").then(m => ({ default: m.CycleCountPage || m.default })));
-const FullStockCountPage = lazy(() => import("../pages/FullStockCountPage.jsx").then(m => ({ default: m.FullStockCountPage || m.default })));
-const StockVariancePage = lazy(() => import("../pages/StockVariancePage.jsx").then(m => ({ default: m.StockVariancePage || m.default })));
-const AuditHistoryPage = lazy(() => import("../pages/AuditHistoryPage.jsx").then(m => ({ default: m.AuditHistoryPage || m.default })));
-const ReplenishmentPage = lazy(() => import("../pages/ReplenishmentPage.jsx").then(m => ({ default: m.ReplenishmentPage })));
-const ReportsMasterPage = lazy(() => import("../pages/ReportsMasterPage.jsx").then(m => ({ default: m.ReportsMasterPage || m.default })));
-const ReportsPage = lazy(() => import("../pages/ReportsPage.jsx").then(m => ({ default: m.ReportsPage })));
-const StockSummaryReportPage = lazy(() => import("../pages/StockSummaryReportPage.jsx").then(m => ({ default: m.StockSummaryReportPage || m.default })));
-const StockMovementReportPage = lazy(() => import("../pages/StockMovementReportPage.jsx").then(m => ({ default: m.StockMovementReportPage || m.default })));
-const StockLedgerReportPage = lazy(() => import("../pages/StockLedgerReportPage.jsx").then(m => ({ default: m.StockLedgerReportPage || m.default })));
-const StockValuationReportPage = lazy(() => import("../pages/StockValuationReportPage.jsx").then(m => ({ default: m.StockValuationReportPage || m.default })));
-const LowStockReportPage = lazy(() => import("../pages/LowStockReportPage.jsx").then(m => ({ default: m.LowStockReportPage || m.default })));
-const StockAgeingReportPage = lazy(() => import("../pages/StockAgeingReportPage.jsx").then(m => ({ default: m.StockAgeingReportPage || m.default })));
-const ExpiryReportPage = lazy(() => import("../pages/ExpiryReportPage.jsx").then(m => ({ default: m.ExpiryReportPage || m.default })));
-const WarehouseReportPage = lazy(() => import("../pages/WarehouseReportPage.jsx").then(m => ({ default: m.WarehouseReportPage || m.default })));
-const GeneralSettingsPage = lazy(() => import("../pages/GeneralSettingsPage.jsx").then(m => ({ default: m.GeneralSettingsPage || m.default })));
-const StockSettingsPage = lazy(() => import("../pages/StockSettingsPage.jsx").then(m => ({ default: m.StockSettingsPage || m.default })));
-const ProductTrackingSettingsPage = lazy(() => import("../pages/ProductTrackingSettingsPage.jsx").then(m => ({ default: m.ProductTrackingSettingsPage || m.default })));
-const ValuationSettingsPage = lazy(() => import("../pages/ValuationSettingsPage.jsx").then(m => ({ default: m.ValuationSettingsPage || m.default })));
-const DocumentNumberingPage = lazy(() => import("../pages/DocumentNumberingPage.jsx").then(m => ({ default: m.DocumentNumberingPage || m.default })));
-const ApprovalSettingsPage = lazy(() => import("../pages/ApprovalSettingsPage.jsx").then(m => ({ default: m.ApprovalSettingsPage || m.default })));
-const IntegrationDashboardPage = lazy(() => import("../pages/integrations/IntegrationDashboardPage.jsx").then(m => ({ default: m.IntegrationDashboardPage || m.default })));
-const IncomingEventsPage = lazy(() => import("../pages/integrations/IncomingEventsPage.jsx").then(m => ({ default: m.IncomingEventsPage || m.default })));
-const OutgoingEventsPage = lazy(() => import("../pages/integrations/OutgoingEventsPage.jsx").then(m => ({ default: m.OutgoingEventsPage || m.default })));
-const FailedEventsPage = lazy(() => import("../pages/integrations/FailedEventsPage.jsx").then(m => ({ default: m.FailedEventsPage || m.default })));
-const EventHistoryPage = lazy(() => import("../pages/integrations/EventHistoryPage.jsx").then(m => ({ default: m.EventHistoryPage || m.default })));
-const IntegrationSettingsPage = lazy(() => import("../pages/integrations/IntegrationSettingsPage.jsx").then(m => ({ default: m.IntegrationSettingsPage || m.default })));
+const ProductsPage = lazyPage(() => import("../pages/ProductsPage.jsx").then(m => ({ default: m.ProductsPage })));
+const CategoriesPage = lazyPage(() => import("../pages/CategoriesPage.jsx").then(m => ({ default: m.CategoriesPage })));
+const BrandsPage = lazyPage(() => import("../pages/BrandsPage.jsx").then(m => ({ default: m.BrandsPage })));
+const UnitsPage = lazyPage(() => import("../pages/UnitsPage.jsx").then(m => ({ default: m.UnitsPage })));
+const BarcodesPage = lazyPage(() => import("../pages/BarcodesPage.jsx").then(m => ({ default: m.BarcodesPage })));
+const WarehousesPage = lazyPage(() => import("../pages/WarehousesPage.jsx").then(m => ({ default: m.WarehousesPage })));
+const LocationsPage = lazyPage(() => import("../pages/LocationsPage.jsx").then(m => ({ default: m.LocationsPage })));
+const RackBinPage = lazyPage(() => import("../pages/RackBinPage.jsx").then(m => ({ default: m.RackBinPage || m.default })));
+const LocationUtilizationPage = lazyPage(() => import("../pages/LocationUtilizationPage.jsx").then(m => ({ default: m.LocationUtilizationPage || m.default })));
+const WarehouseConfigPage = lazyPage(() => import("../pages/WarehouseConfigPage.jsx").then(m => ({ default: m.WarehouseConfigPage || m.default })));
+const StockMovementsPage = lazyPage(() => import("../pages/StockMovementsPage.jsx").then(m => ({ default: m.StockMovementsPage })));
+const ReceiptOperationsPage = lazyPage(() => import("../pages/goods-receipt/ReceiptOperationsPage.jsx").then(m => ({ default: m.ReceiptOperationsPage || m.default })));
+const ReceiptOutcomesPage = lazyPage(() => import("../pages/goods-receipt/ReceiptOutcomesPage.jsx").then(m => ({ default: m.ReceiptOutcomesPage || m.default })));
+const ReceiptRegisterPage = lazyPage(() => import("../pages/goods-receipt/ReceiptRegisterPage.jsx").then(m => ({ default: m.ReceiptRegisterPage })));
+const ReceiptFormPage = lazyPage(() => import("../pages/goods-receipt/ReceiptFormPage.jsx").then(m => ({ default: m.ReceiptFormPage })));
+const ReceiptDetailPage = lazyPage(() => import("../pages/goods-receipt/ReceiptDetailPage.jsx").then(m => ({ default: m.ReceiptDetailPage })));
+const ReceiptInspectionPage = lazyPage(() => import("../pages/goods-receipt/ReceiptInspectionPage.jsx").then(m => ({ default: m.ReceiptInspectionPage })));
+const QualityInspectionPage = lazyPage(() => import("../pages/goods-receipt/QualityInspectionPage.jsx").then(m => ({ default: m.QualityInspectionPage })));
+const AcceptedGoodsPage = lazyPage(() => import("../pages/goods-receipt/ReceiptOutcomePages.jsx").then(m => ({ default: m.AcceptedGoodsPage })));
+const RejectedGoodsPage = lazyPage(() => import("../pages/goods-receipt/ReceiptOutcomePages.jsx").then(m => ({ default: m.RejectedGoodsPage })));
+const PartialAcceptancePage = lazyPage(() => import("../pages/goods-receipt/ReceiptOutcomePages.jsx").then(m => ({ default: m.PartialAcceptancePage })));
+const PutawayManagementPage = lazyPage(() => import("../pages/goods-receipt/PutawayManagementPage.jsx").then(m => ({ default: m.PutawayManagementPage })));
+const ReceiptDiscrepancyPage = lazyPage(() => import("../pages/goods-receipt/ReceiptDiscrepancyPage.jsx").then(m => ({ default: m.ReceiptDiscrepancyPage })));
+const GoodsReceiptSettingsPage = lazyPage(() => import("../pages/goods-receipt/GoodsReceiptSettingsPage.jsx").then(m => ({ default: m.GoodsReceiptSettingsPage })));
+const StockOperationsMasterPage = lazyPage(() => import("../pages/StockOperationsMasterPage.jsx").then(m => ({ default: m.StockOperationsMasterPage || m.default })));
+const StockInPage = lazyPage(() => import("../pages/StockInPage.jsx").then(m => ({ default: m.StockInPage || m.default })));
+const StockIssuePage = lazyPage(() => import("../pages/StockIssuePage.jsx").then(m => ({ default: m.StockIssuePage || m.default })));
+const StockTransferOperationsPage = lazyPage(() => import("../pages/StockTransferOperationsPage.jsx").then(m => ({ default: m.StockTransferOperationsPage || m.default })));
+const StockTransferPage = lazyPage(() => import("../pages/StockTransferPage.jsx").then(m => ({ default: m.StockTransferPage || m.default })));
+const StockAdjustmentOperationsPage = lazyPage(() => import("../pages/StockAdjustmentOperationsPage.jsx").then(m => ({ default: m.StockAdjustmentOperationsPage || m.default })));
+const StockAdjustmentPage = lazyPage(() => import("../pages/StockAdjustmentPage.jsx").then(m => ({ default: m.StockAdjustmentPage || m.default })));
+const OpeningStockPage = lazyPage(() => import("../pages/OpeningStockPage.jsx").then(m => ({ default: m.OpeningStockPage || m.default })));
+const OpeningStockImportPage = lazyPage(() => import("../pages/OpeningStockImportPage.jsx").then(m => ({ default: m.OpeningStockImportPage || m.default })));
+const StockReleasePage = lazyPage(() => import("../pages/StockReleasePage.jsx").then(m => ({ default: m.StockReleasePage || m.default })));
+const StockReclassificationPage = lazyPage(() => import("../pages/StockReclassificationPage.jsx").then(m => ({ default: m.StockReclassificationPage || m.default })));
+const StockOutPage = lazyPage(() => import("../pages/StockOutPage.jsx").then(m => ({ default: m.StockOutPage || m.default })));
+const StockLevelsMasterPage = lazyPage(() => import("../pages/StockLevelsMasterPage.jsx").then(m => ({ default: m.StockLevelsMasterPage || m.default })));
+const StockAgingHistoryPage = lazyPage(() => import("../pages/StockAgingHistoryPage.jsx").then(m => ({ default: m.StockAgingHistoryPage || m.default })));
+const StockOverviewPage = lazyPage(() => import("../pages/StockOverviewPage.jsx").then(m => ({ default: m.StockOverviewPage || m.default })));
+const ReorderLevelsPage = lazyPage(() => import("../pages/ReorderLevelsPage.jsx").then(m => ({ default: m.ReorderLevelsPage || m.default })));
+const StockHistoryPage = lazyPage(() => import("../pages/StockHistoryPage.jsx").then(m => ({ default: m.StockHistoryPage || m.default })));
+const StockLedgerPage = lazyPage(() => import("../pages/StockLedgerPage.jsx").then(m => ({ default: m.StockLedgerPage })));
+const StockInHistoryPage = lazyPage(() => import("../pages/StockInHistoryPage.jsx").then(m => ({ default: m.StockInHistoryPage })));
+const StockOutHistoryPage = lazyPage(() => import("../pages/StockOutHistoryPage.jsx").then(m => ({ default: m.StockOutHistoryPage })));
+const StockBalancesPage = lazyPage(() => import("../pages/StockBalancesPage.jsx").then(m => ({ default: m.StockBalancesPage })));
+const DamagedStockPage = lazyPage(() => import("../pages/DamagedStockPage.jsx").then(m => ({ default: m.DamagedStockPage })));
+const StockInTransitPage = lazyPage(() => import("../pages/StockInTransitPage.jsx").then(m => ({ default: m.StockInTransitPage })));
+const ValuationPage = lazyPage(() => import("../pages/ValuationPage.jsx").then(m => ({ default: m.ValuationPage })));
+const SettingsPage = lazyPage(() => import("../pages/SettingsPage.jsx").then(m => ({ default: m.SettingsPage })));
+const ReconciliationPage = lazyPage(() => import("../pages/ReconciliationPage.jsx").then(m => ({ default: m.ReconciliationPage })));
+const BatchTrackingPage = lazyPage(() => import("../pages/BatchTrackingPage.jsx").then(m => ({ default: m.BatchTrackingPage })));
+const SerialTrackingPage = lazyPage(() => import("../pages/SerialTrackingPage.jsx").then(m => ({ default: m.SerialTrackingPage })));
+const BatchManagementPage = lazyPage(() => import("../pages/BatchManagementPage.jsx").then(m => ({ default: m.BatchManagementPage || m.default })));
+const BatchMovementHistoryPage = lazyPage(() => import("../pages/BatchMovementHistoryPage.jsx").then(m => ({ default: m.BatchMovementHistoryPage || m.default })));
+const BatchQuarantinePage = lazyPage(() => import("../pages/BatchQuarantinePage.jsx").then(m => ({ default: m.BatchQuarantinePage || m.default })));
+const BatchReleasePage = lazyPage(() => import("../pages/BatchReleasePage.jsx").then(m => ({ default: m.BatchReleasePage || m.default })));
+const ExpiryManagementPage = lazyPage(() => import("../pages/ExpiryManagementPage.jsx").then(m => ({ default: m.ExpiryManagementPage || m.default })));
+const SerialManagementPage = lazyPage(() => import("../pages/SerialManagementPage.jsx").then(m => ({ default: m.SerialManagementPage || m.default })));
+const SerialMovementHistoryPage = lazyPage(() => import("../pages/SerialMovementHistoryPage.jsx").then(m => ({ default: m.SerialMovementHistoryPage || m.default })));
+const StockAllocationPage = lazyPage(() => import("../pages/StockAllocationPage.jsx").then(m => ({ default: m.StockAllocationPage || m.default })));
+const TraceabilityPage = lazyPage(() => import("../pages/TraceabilityPage.jsx").then(m => ({ default: m.TraceabilityPage || m.default })));
+const StockReservationOperationsPage = lazyPage(() => import("../pages/StockReservationOperationsPage.jsx").then(m => ({ default: m.StockReservationOperationsPage || m.default })));
+const StockReservationsPage = lazyPage(() => import("../pages/StockReservationsPage.jsx").then(m => ({ default: m.StockReservationsPage })));
+const StockReturnsPage = lazyPage(() => import("../pages/StockReturnsPage.jsx").then(m => ({ default: m.StockReturnsPage })));
+const ReorderRulesPage = lazyPage(() => import("../pages/ReorderRulesPage.jsx").then(m => ({ default: m.ReorderRulesPage || m.default })));
+const MinMaxStockPage = lazyPage(() => import("../pages/MinMaxStockPage.jsx").then(m => ({ default: m.MinMaxStockPage || m.default })));
+const ReplenishmentPlanningPage = lazyPage(() => import("../pages/ReplenishmentPlanningPage.jsx").then(m => ({ default: m.ReplenishmentPlanningPage || m.default })));
+const PurchaseSuggestionsPage = lazyPage(() => import("../pages/PurchaseSuggestionsPage.jsx").then(m => ({ default: m.PurchaseSuggestionsPage || m.default })));
+const StockForecastPage = lazyPage(() => import("../pages/StockForecastPage.jsx").then(m => ({ default: m.StockForecastPage || m.default })));
+const PhysicalStockCountPage = lazyPage(() => import("../pages/PhysicalStockCountPage.jsx").then(m => ({ default: m.PhysicalStockCountPage || m.default })));
+const CycleCountPage = lazyPage(() => import("../pages/CycleCountPage.jsx").then(m => ({ default: m.CycleCountPage || m.default })));
+const FullStockCountPage = lazyPage(() => import("../pages/FullStockCountPage.jsx").then(m => ({ default: m.FullStockCountPage || m.default })));
+const StockVariancePage = lazyPage(() => import("../pages/StockVariancePage.jsx").then(m => ({ default: m.StockVariancePage || m.default })));
+const AuditHistoryPage = lazyPage(() => import("../pages/AuditHistoryPage.jsx").then(m => ({ default: m.AuditHistoryPage || m.default })));
+const ReplenishmentPage = lazyPage(() => import("../pages/ReplenishmentPage.jsx").then(m => ({ default: m.ReplenishmentPage })));
+const ReportsMasterPage = lazyPage(() => import("../pages/ReportsMasterPage.jsx").then(m => ({ default: m.ReportsMasterPage || m.default })));
+const ReportsPage = lazyPage(() => import("../pages/ReportsPage.jsx").then(m => ({ default: m.ReportsPage })));
+const StockSummaryReportPage = lazyPage(() => import("../pages/StockSummaryReportPage.jsx").then(m => ({ default: m.StockSummaryReportPage || m.default })));
+const StockMovementReportPage = lazyPage(() => import("../pages/StockMovementReportPage.jsx").then(m => ({ default: m.StockMovementReportPage || m.default })));
+const StockLedgerReportPage = lazyPage(() => import("../pages/StockLedgerReportPage.jsx").then(m => ({ default: m.StockLedgerReportPage || m.default })));
+const StockValuationReportPage = lazyPage(() => import("../pages/StockValuationReportPage.jsx").then(m => ({ default: m.StockValuationReportPage || m.default })));
+const LowStockReportPage = lazyPage(() => import("../pages/LowStockReportPage.jsx").then(m => ({ default: m.LowStockReportPage || m.default })));
+const StockAgeingReportPage = lazyPage(() => import("../pages/StockAgeingReportPage.jsx").then(m => ({ default: m.StockAgeingReportPage || m.default })));
+const ExpiryReportPage = lazyPage(() => import("../pages/ExpiryReportPage.jsx").then(m => ({ default: m.ExpiryReportPage || m.default })));
+const WarehouseReportPage = lazyPage(() => import("../pages/WarehouseReportPage.jsx").then(m => ({ default: m.WarehouseReportPage || m.default })));
+const GeneralSettingsPage = lazyPage(() => import("../pages/GeneralSettingsPage.jsx").then(m => ({ default: m.GeneralSettingsPage || m.default })));
+const StockSettingsPage = lazyPage(() => import("../pages/StockSettingsPage.jsx").then(m => ({ default: m.StockSettingsPage || m.default })));
+const ProductTrackingSettingsPage = lazyPage(() => import("../pages/ProductTrackingSettingsPage.jsx").then(m => ({ default: m.ProductTrackingSettingsPage || m.default })));
+const ValuationSettingsPage = lazyPage(() => import("../pages/ValuationSettingsPage.jsx").then(m => ({ default: m.ValuationSettingsPage || m.default })));
+const DocumentNumberingPage = lazyPage(() => import("../pages/DocumentNumberingPage.jsx").then(m => ({ default: m.DocumentNumberingPage || m.default })));
+const ApprovalSettingsPage = lazyPage(() => import("../pages/ApprovalSettingsPage.jsx").then(m => ({ default: m.ApprovalSettingsPage || m.default })));
+const IntegrationDashboardPage = lazyPage(() => import("../pages/integrations/IntegrationDashboardPage.jsx").then(m => ({ default: m.IntegrationDashboardPage || m.default })));
+const IncomingEventsPage = lazyPage(() => import("../pages/integrations/IncomingEventsPage.jsx").then(m => ({ default: m.IncomingEventsPage || m.default })));
+const OutgoingEventsPage = lazyPage(() => import("../pages/integrations/OutgoingEventsPage.jsx").then(m => ({ default: m.OutgoingEventsPage || m.default })));
+const FailedEventsPage = lazyPage(() => import("../pages/integrations/FailedEventsPage.jsx").then(m => ({ default: m.FailedEventsPage || m.default })));
+const EventHistoryPage = lazyPage(() => import("../pages/integrations/EventHistoryPage.jsx").then(m => ({ default: m.EventHistoryPage || m.default })));
+const IntegrationSettingsPage = lazyPage(() => import("../pages/integrations/IntegrationSettingsPage.jsx").then(m => ({ default: m.IntegrationSettingsPage || m.default })));
 
 // 09. Security & Audit Pages
-const UserAccessPage = lazy(() => import("../pages/security/UserAccessPage.jsx").then(m => ({ default: m.UserAccessPage || m.default })));
-const RoleManagementPage = lazy(() => import("../pages/security/RoleManagementPage.jsx").then(m => ({ default: m.RoleManagementPage || m.default })));
-const PermissionManagementPage = lazy(() => import("../pages/security/PermissionManagementPage.jsx").then(m => ({ default: m.PermissionManagementPage || m.default })));
-const WarehousePermissionsPage = lazy(() => import("../pages/security/WarehousePermissionsPage.jsx").then(m => ({ default: m.WarehousePermissionsPage || m.default })));
-const ActionPermissionsPage = lazy(() => import("../pages/security/ActionPermissionsPage.jsx").then(m => ({ default: m.ActionPermissionsPage || m.default })));
-const ActivityLogsPage = lazy(() => import("../pages/security/ActivityLogsPage.jsx").then(m => ({ default: m.ActivityLogsPage || m.default })));
-const DocumentAuditTrailPage = lazy(() => import("../pages/security/DocumentAuditTrailPage.jsx").then(m => ({ default: m.DocumentAuditTrailPage || m.default })));
-const DataChangeHistoryPage = lazy(() => import("../pages/security/DataChangeHistoryPage.jsx").then(m => ({ default: m.DataChangeHistoryPage || m.default })));
+const UserAccessPage = lazyPage(() => import("../pages/security/UserAccessPage.jsx").then(m => ({ default: m.UserAccessPage || m.default })));
+const RoleManagementPage = lazyPage(() => import("../pages/security/RoleManagementPage.jsx").then(m => ({ default: m.RoleManagementPage || m.default })));
+const PermissionManagementPage = lazyPage(() => import("../pages/security/PermissionManagementPage.jsx").then(m => ({ default: m.PermissionManagementPage || m.default })));
+const WarehousePermissionsPage = lazyPage(() => import("../pages/security/WarehousePermissionsPage.jsx").then(m => ({ default: m.WarehousePermissionsPage || m.default })));
+const ActionPermissionsPage = lazyPage(() => import("../pages/security/ActionPermissionsPage.jsx").then(m => ({ default: m.ActionPermissionsPage || m.default })));
+const ActivityLogsPage = lazyPage(() => import("../pages/security/ActivityLogsPage.jsx").then(m => ({ default: m.ActivityLogsPage || m.default })));
+const DocumentAuditTrailPage = lazyPage(() => import("../pages/security/DocumentAuditTrailPage.jsx").then(m => ({ default: m.DocumentAuditTrailPage || m.default })));
+const DataChangeHistoryPage = lazyPage(() => import("../pages/security/DataChangeHistoryPage.jsx").then(m => ({ default: m.DataChangeHistoryPage || m.default })));
 
 export default function App() {
+  React.useEffect(() => {
+    prefetchAllPages();
+  }, []);
+
   return (
     <ThemeProvider>
       <WorkspaceProvider>
@@ -201,9 +228,10 @@ export default function App() {
                 <Route path="/inventory/goods-receipt/receipts/:id" element={<ReceiptDetailPage />} />
                 <Route path="/inventory/goods-receipt/receipts/:id/edit" element={<ReceiptFormPage />} />
                 <Route path="/inventory/goods-receipt/inspection" element={<Navigate to="/inventory/goods-receipt/register?tab=inspection" replace />} />
-                <Route path="/inventory/goods-receipt/quality" element={<QualityManagementPage />} />
-                <Route path="/inventory/goods-receipt/accepted" element={<Navigate to="/inventory/goods-receipt/quality?tab=accepted" replace />} />
-                <Route path="/inventory/goods-receipt/rejected" element={<Navigate to="/inventory/goods-receipt/quality?tab=rejected" replace />} />
+                <Route path="/inventory/goods-receipt/quality" element={<Navigate to="/inventory/goods-receipt/register" replace />} />
+                <Route path="/inventory/goods-receipt/outcomes" element={<ReceiptOutcomesPage />} />
+                <Route path="/inventory/goods-receipt/accepted" element={<Navigate to="/inventory/goods-receipt/outcomes?tab=accepted" replace />} />
+                <Route path="/inventory/goods-receipt/rejected" element={<Navigate to="/inventory/goods-receipt/outcomes?tab=rejected" replace />} />
                 <Route path="/inventory/goods-receipt/partial" element={<Navigate to="/inventory/goods-receipt/register?tab=partial" replace />} />
                 <Route path="/inventory/goods-receipt/putaway" element={<PutawayManagementPage />} />
                 <Route path="/inventory/goods-receipt/discrepancies" element={<Navigate to="/inventory/goods-receipt/register?tab=discrepancies" replace />} />

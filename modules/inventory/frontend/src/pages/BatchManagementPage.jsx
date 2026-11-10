@@ -11,6 +11,7 @@ import {
   fetchItems,
   fetchVariants,
 } from "../services/api";
+import { ScrollableTabs } from "../components/ScrollableTabs.jsx";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1150,7 +1151,7 @@ export function BatchManagementPage() {
       </div>
 
       {/* Tab Bar */}
-      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 overflow-x-auto">
+      <ScrollableTabs stripClassName="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4" role="group">
         <div className="flex gap-2 min-w-max">
           {TABS.map((tab) => (
             <button
@@ -1166,7 +1167,7 @@ export function BatchManagementPage() {
             </button>
           ))}
         </div>
-      </div>
+      </ScrollableTabs>
 
       {/* Tab Content */}
       <div className="p-6">

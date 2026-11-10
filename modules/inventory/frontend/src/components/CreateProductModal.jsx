@@ -25,6 +25,7 @@ import {
   generateEan13,
   uploadAttachment,
 } from "../services/api";
+import { ScrollableTabs } from "./ScrollableTabs.jsx";
 
 // Blank form; also used to reset after a product is saved.
 const EMPTY_PRODUCT_FORM = {
@@ -359,7 +360,7 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
         </div>
 
         {/* Tab Buttons */}
-        <div className="flex items-center gap-2 px-6 border-b border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs overflow-x-auto">
+        <ScrollableTabs stripClassName="flex items-center gap-2 px-6 border-b border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs" role="group">
           {steps.map((t, index) => (
             <button
               key={t.key}
@@ -378,7 +379,7 @@ export function CreateProductModal({ isOpen, onClose, onCreated }) {
               {t.label}
             </button>
           ))}
-        </div>
+        </ScrollableTabs>
 
         {/* Error alert */}
         {error && (

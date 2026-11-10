@@ -9,6 +9,7 @@ import {
   deleteShelfLifePolicy,
   fetchItems,
 } from "../services/api";
+import { ScrollableTabs } from "../components/ScrollableTabs.jsx";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -1303,7 +1304,7 @@ export function ExpiryManagementPage() {
 
         {/* Tab Nav */}
         <div className="border-b border-gray-200 dark:border-gray-700">
-          <nav className="-mb-px flex gap-0 overflow-x-auto">
+          <ScrollableTabs stripClassName="-mb-px flex gap-0" role="group">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -1317,7 +1318,7 @@ export function ExpiryManagementPage() {
                 {tab.label}
               </button>
             ))}
-          </nav>
+          </ScrollableTabs>
         </div>
 
         {/* Tab Content */}

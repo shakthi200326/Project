@@ -110,11 +110,9 @@ function ReceiptForm({ grn, receiptId }) {
 
   const manualAllowed = cfg.allow_manual_number && grn.hasPerm(cfg.manual_number_permission);
   const inspectionForced =
-    (qualityCfg.enabled && qualityCfg.quality_inspection_required) ||
     !inspCfg.enabled ||
     inspCfg.inspection_mode !== "OPTIONAL";
   const inspectionForcedValue =
-    (qualityCfg.enabled && qualityCfg.quality_inspection_required) ||
     (inspCfg.enabled && inspCfg.inspection_mode === "MANDATORY");
 
   useEffect(() => {

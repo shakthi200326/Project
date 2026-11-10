@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect } from "react";
+import React, { useMemo, useRef, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   ArrowDownLeft,
@@ -6,13 +6,13 @@ import {
   Upload,
   RotateCcw,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { StockInPage } from "./StockInPage.jsx";
 import { StockIssuePage } from "./StockIssuePage.jsx";
 import { StockOutPage } from "./StockOutPage.jsx";
 import { StockReturnsPage } from "./StockReturnsPage.jsx";
+import { TabStrip } from "../components/ScrollableTabs.jsx";
+import { FaGreaterThan, FaLessThan } from "react-icons/fa";
 
 const SUB_MODULE_TABS = [
   {
@@ -50,6 +50,8 @@ export function StockOperationsMasterPage() {
   const rawTab = (searchParams.get("tab") || "stock-in").toLowerCase();
 
   const tabsContainerRef = useRef(null);
+
+  const [tabsOverflow, setTabsOverflow] = useState(false);
   const activeTabRef = useRef(null);
 
   const activeTab = useMemo(() => {
@@ -130,7 +132,7 @@ export function StockOperationsMasterPage() {
         {/* Sub-Module Navigation Tabs with < and > controls */}
         <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/80 p-1.5 dark:border-zinc-800 dark:bg-zinc-950/60">
           {/* Less Than (<) Navigation Button */}
-          <button
+          {tabsOverflow && (<button
             type="button"
             onClick={goToPrevTab}
             disabled={!canGoPrev}
@@ -142,13 +144,14 @@ export function StockOperationsMasterPage() {
                 : "border-transparent text-slate-300 dark:text-zinc-600 cursor-not-allowed opacity-30"
             }`}
           >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
+            <FaLessThan className="h-3 w-3" />
+          </button>)}
 
           {/* Tabs Strip - Scrollbar hidden completely, no moving line */}
-          <div
+          <TabStrip
             ref={tabsContainerRef}
-            className="flex flex-1 items-center gap-2 overflow-x-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            onScrollState={(st) => setTabsOverflow(st.left || st.right)}
+            className="flex flex-1 items-center gap-2"
             role="tablist"
             aria-label="Stock Operations sub-module sections"
           >
@@ -190,10 +193,10 @@ export function StockOperationsMasterPage() {
                 </button>
               );
             })}
-          </div>
+          </TabStrip>
 
           {/* Greater Than (>) Navigation Button */}
-          <button
+          {tabsOverflow && (<button
             type="button"
             onClick={goToNextTab}
             disabled={!canGoNext}
@@ -205,8 +208,8 @@ export function StockOperationsMasterPage() {
                 : "border-transparent text-slate-300 dark:text-zinc-600 cursor-not-allowed opacity-30"
             }`}
           >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+            <FaGreaterThan className="h-3 w-3" />
+          </button>)}
         </div>
       </div>
 

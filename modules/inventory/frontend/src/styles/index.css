@@ -1275,3 +1275,17 @@ table.inventory-global-table tbody tr:hover {
 .dark .overflow-x-auto {
   scrollbar-color: rgb(63 63 70) transparent;
 }
+
+/* Tab strips: never show a scrollbar/moving line. Navigation uses the < and > buttons,
+   mouse wheel, touchpad swipe or drag (see components/ScrollableTabs.jsx). */
+.tab-strip-clean,
+.overflow-x-auto.tab-strip-clean,
+.dark .overflow-x-auto.tab-strip-clean {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+.tab-strip-clean::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}

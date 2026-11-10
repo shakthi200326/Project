@@ -43,6 +43,7 @@ import {
   updateStockTransactionStatus,
 } from "../services/api";
 import { StockTransactionModal } from "../components/StockTransactionModal.jsx";
+import { ScrollableTabs } from "../components/ScrollableTabs.jsx";
 
 const movementPipelineData = [
   { value: 1650, name: "Inbound PO Receipts", fill: "#3b82f6", dropoff: "0%", rate: "100%", sla: "2.1h avg", subtitle: "Dock Unloading & Staging" },
@@ -502,7 +503,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
       </div>
 
       {/* Modern Filter Tabs */}
-      <div className="flex items-center gap-1 overflow-x-auto border-b border-slate-200/80 dark:border-zinc-800/80 text-xs">
+      <ScrollableTabs stripClassName="flex items-center gap-1 border-b border-slate-200/80 dark:border-zinc-800/80 text-xs" role="group">
         {[
           { key: "ALL", label: "All Movements" },
           { key: "RECEIPT", label: "Goods Receipts (In)" },
@@ -528,7 +529,7 @@ export function StockMovementsPage({ initialType = "ALL" }) {
             {tab.label}
           </button>
         ))}
-      </div>
+      </ScrollableTabs>
 
       {/* Search & Filter Toolbar */}
       <div className="p-3 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-xs flex items-center justify-between gap-3">

@@ -8,6 +8,7 @@ import {
   fetchItems,
   fetchBatchesFiltered,
 } from "../services/api";
+import { ScrollableTabs } from "../components/ScrollableTabs.jsx";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -919,7 +920,7 @@ export function SerialManagementPage() {
 
         {/* Tab Bar */}
         <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
-          <nav className="-mb-px flex gap-1 overflow-x-auto" aria-label="Tabs">
+          <ScrollableTabs stripClassName="-mb-px flex gap-1" aria-label="Tabs" role="group">
             {TABS.map((tab, idx) => (
               <button
                 key={tab}
@@ -935,7 +936,7 @@ export function SerialManagementPage() {
                 {tab}
               </button>
             ))}
-          </nav>
+          </ScrollableTabs>
         </div>
 
         {/* Tab Content */}
