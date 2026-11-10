@@ -68,6 +68,17 @@ from .goods_receipt_views import (
     GoodsReceiptLookupViewSet,
 )
 from .transfer_views import StockTransferViewSet
+from .recommendation_views import (
+    PurchaseRecommendationViewSet,
+    ReplenishmentPolicyViewSet,
+    RecommendationConfigurationViewSet,
+    SupplierProductProfileViewSet,
+    IndustryProfileViewSet,
+    MarketDataProviderViewSet,
+    MarketTrendViewSet,
+    ExternalMarketProductViewSet,
+    AnalysisExecutionHistoryViewSet,
+)
 from .configuration_views import (
     InventoryConfigurationView,
     DocumentNumberingViewSet,
@@ -139,6 +150,15 @@ router.register(r"planning/stock-levels", StockLevelViewSet, basename="stock-lev
 router.register(r"stock-levels", StockLevelViewSet, basename="stock-levels-root")
 router.register(r"planning/replenishment-plans", ReplenishmentPlanViewSet, basename="replenishment-plans")
 router.register(r"planning/purchase-suggestions", PurchaseSuggestionViewSet, basename="purchase-suggestions")
+router.register(r"planning/purchase-recommendations", PurchaseRecommendationViewSet, basename="purchase-recommendations")
+router.register(r"planning/replenishment-policies", ReplenishmentPolicyViewSet, basename="replenishment-policies")
+router.register(r"planning/recommendation-configs", RecommendationConfigurationViewSet, basename="recommendation-configs")
+router.register(r"planning/supplier-profiles", SupplierProductProfileViewSet, basename="supplier-profiles")
+router.register(r"planning/industry-profiles", IndustryProfileViewSet, basename="industry-profiles")
+router.register(r"planning/market-providers", MarketDataProviderViewSet, basename="market-providers")
+router.register(r"planning/market-trends", MarketTrendViewSet, basename="market-trends")
+router.register(r"planning/external-products", ExternalMarketProductViewSet, basename="external-products")
+router.register(r"planning/analysis-history", AnalysisExecutionHistoryViewSet, basename="analysis-history")
 router.register(r"planning/stock-forecast", StockForecastViewSet, basename="stock-forecast")
 router.register(r"audit/stock-counts", StockCountViewSet, basename="audit-stock-counts")
 router.register(r"audit/cycle-counts", CycleCountViewSet, basename="audit-cycle-counts")

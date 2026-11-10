@@ -4,6 +4,9 @@ import {
   Tag,
   Plus,
   Search,
+  Eye,
+  Pencil,
+  Trash2,
   Globe,
   CheckCircle2,
   Package,
@@ -30,7 +33,12 @@ import {
   ReferenceLine,
   Legend,
 } from "recharts";
-import { fetchBrands, createBrand } from "../services/api";
+import {
+  fetchBrands,
+  createBrand,
+  updateBrand,
+  deleteBrand,
+} from "../services/api";
 
 const brandSlaData = [
   {
@@ -146,6 +154,11 @@ export function BrandsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const [newBrand, setNewBrand] = useState({ name: "", code: "", country: "" });
+  const [editingBrand, setEditingBrand] = useState(null);
+  const [viewingBrand, setViewingBrand] = useState(null);
+  const [savingBrand, setSavingBrand] = useState(false);
+  const [deletingBrandId, setDeletingBrandId] = useState(null);
+  const [brandToDelete, setBrandToDelete] = useState(null);
 
   useEffect(() => {
     fetchBrands().then((res) => {
@@ -157,8 +170,8 @@ export function BrandsPage() {
     });
   }, []);
 
-  const showToast = (msg) => {
-    setToastMessage(msg);
+  const showToast = (message, type = "success") => {
+    setToastMessage({ message, type });
     setTimeout(() => setToastMessage(null), 3500);
   };
 
@@ -169,27 +182,66 @@ export function BrandsPage() {
       (b.country && b.country.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const handleCreate = async (e) => {
+  const handleSaveBrand = async (e) => {
     e.preventDefault();
-    if (!newBrand.name || !newBrand.code) return;
+    if (!newBrand.name.trim() || !newBrand.code.trim()) {
+      showToast("Brand name and code are required.", "error");
+      return;
+    }
+    setSavingBrand(true);
     try {
-      const createdItem = await createBrand({
+      const payload = {
         name: newBrand.name.trim(),
         code: newBrand.code.trim().toUpperCase(),
-        country: newBrand.country || "Global",
-      });
-      setBrands((prev) => [
-        createdItem,
-        ...prev.filter(
-          (b) => b.id !== createdItem.id && b.code !== createdItem.code
-        ),
-      ]);
-      showToast(`Brand OEM "${newBrand.name}" registered & persisted.`);
-      setNewBrand({ name: "", code: "", country: "" });
-      setIsModalOpen(false);
+        country: newBrand.country.trim() || "Global",
+      };
+      const item = editingBrand
+        ? await updateBrand(editingBrand.id, payload)
+        : await createBrand(payload);
+      setBrands((prev) => editingBrand
+        ? prev.map((brand) => String(brand.id) === String(item.id) ? item : brand)
+        : [item, ...prev.filter((brand) => brand.id !== item.id && brand.code !== item.code)]
+      );
+      showToast(`Brand "${item.name}" ${editingBrand ? "updated" : "registered"} successfully.`);
+      closeBrandForm();
     } catch (err) {
       console.error(err);
-      showToast(`Failed to register brand OEM: ${err.message}`);
+      showToast(`Failed to ${editingBrand ? "update" : "register"} brand: ${err.message}`, "error");
+    } finally {
+      setSavingBrand(false);
+    }
+  };
+
+  const openEditBrand = (brand) => {
+    setEditingBrand(brand);
+    setNewBrand({
+      name: brand.name || "",
+      code: brand.code || "",
+      country: brand.country || "",
+    });
+    setIsModalOpen(true);
+  };
+
+  const closeBrandForm = () => {
+    setIsModalOpen(false);
+    setEditingBrand(null);
+    setNewBrand({ name: "", code: "", country: "" });
+  };
+
+  const handleDeleteBrand = async () => {
+    if (!brandToDelete) return;
+    const brand = brandToDelete;
+    setDeletingBrandId(brand.id);
+    try {
+      await deleteBrand(brand.id);
+      setBrands((prev) => prev.filter((item) => String(item.id) !== String(brand.id)));
+      showToast(`Brand "${brand.name}" deleted.`);
+      setBrandToDelete(null);
+    } catch (err) {
+      console.error(err);
+      showToast(`Cannot delete brand: ${err.message}`, "error");
+    } finally {
+      setDeletingBrandId(null);
     }
   };
 
@@ -197,9 +249,13 @@ export function BrandsPage() {
     <div className="space-y-6">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-slate-900/95 dark:bg-zinc-800/95 backdrop-blur-md text-white text-xs font-medium shadow-2xl border border-slate-700/60 animate-in slide-in-from-top-2">
-          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-          <span>{toastMessage}</span>
+        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl backdrop-blur-md text-white text-xs font-medium shadow-2xl border animate-in slide-in-from-top-2 ${
+          toastMessage.type === "error"
+            ? "bg-rose-950/95 border-rose-700/60"
+            : "bg-slate-900/95 dark:bg-zinc-800/95 border-slate-700/60"
+        }`}>
+          <CheckCircle2 className={`h-4 w-4 shrink-0 ${toastMessage.type === "error" ? "text-rose-300" : "text-emerald-400"}`} />
+          <span>{toastMessage.message}</span>
         </div>
       )}
 
@@ -220,7 +276,10 @@ export function BrandsPage() {
         </div>
 
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            closeBrandForm();
+            setIsModalOpen(true);
+          }}
           className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs shadow-blue-500/25 transition-all active:scale-[0.98] cursor-pointer"
         >
           <Plus className="h-4 w-4" />
@@ -539,6 +598,36 @@ export function BrandsPage() {
                 </span>
               </div>
 
+              <div className="flex justify-end gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setViewingBrand(b)}
+                  aria-label={`View ${b.name}`}
+                  title="View brand"
+                  className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  <Eye className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openEditBrand(b)}
+                  aria-label={`Edit ${b.name}`}
+                  title="Edit brand"
+                  className="rounded-lg border border-blue-200 p-2 text-blue-700 hover:bg-blue-50 dark:border-blue-900/70 dark:text-blue-300 dark:hover:bg-blue-950/40"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBrandToDelete(b)}
+                  aria-label={`Delete ${b.name}`}
+                  title="Delete brand"
+                  className="rounded-lg border border-rose-200 p-2 text-rose-700 hover:bg-rose-50 dark:border-rose-900/70 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+
               <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-zinc-800/80 text-xs">
                 <span className="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400">
                   <Package className="h-3.5 w-3.5 text-slate-400" />
@@ -561,21 +650,22 @@ export function BrandsPage() {
       {/* Register Brand Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-2xl space-y-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="brand-form-title" className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <h2 id="brand-form-title" className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Tag className="h-4 w-4 text-blue-600" />
-                Register Brand OEM
+                {editingBrand ? "Edit Brand OEM" : "Register Brand OEM"}
               </h2>
               <button
-                onClick={() => setIsModalOpen(false)}
+                type="button"
+                onClick={closeBrandForm}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 text-xs cursor-pointer"
               >
                 Cancel
               </button>
             </div>
 
-            <form onSubmit={handleCreate} className="space-y-3.5 text-xs">
+            <form onSubmit={handleSaveBrand} className="space-y-3.5 text-xs">
               <div>
                 <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">
                   Brand / Manufacturer Name *
@@ -620,20 +710,118 @@ export function BrandsPage() {
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-zinc-800">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={closeBrandForm}
                   className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer shadow-xs shadow-blue-500/25 transition-all"
+                  disabled={savingBrand}
+                  className="px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer shadow-xs shadow-blue-500/25 transition-all disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Save Brand
+                  {savingBrand ? "Saving..." : editingBrand ? "Update Brand" : "Save Brand"}
                 </button>
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {viewingBrand && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <section role="dialog" aria-modal="true" aria-labelledby="brand-details-title" className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-zinc-800">
+              <h2 id="brand-details-title" className="text-sm font-bold text-slate-900 dark:text-white">Brand Details</h2>
+              <button
+                type="button"
+                onClick={() => setViewingBrand(null)}
+                aria-label="Close brand details"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
+              >
+                ×
+              </button>
+            </div>
+            <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <dt className="text-xs font-medium text-slate-500 dark:text-zinc-400">Brand Name</dt>
+                <dd className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{viewingBrand.name}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-slate-500 dark:text-zinc-400">Brand Code</dt>
+                <dd className="mt-1 font-mono text-sm font-semibold text-blue-700 dark:text-blue-300">{viewingBrand.code}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-slate-500 dark:text-zinc-400">Country of Origin</dt>
+                <dd className="mt-1 text-sm text-slate-900 dark:text-white">{viewingBrand.country || "Global"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-slate-500 dark:text-zinc-400">Status</dt>
+                <dd className="mt-1 text-sm text-slate-900 dark:text-white">{viewingBrand.is_active === false ? "Inactive" : "Active"}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-xs font-medium text-slate-500 dark:text-zinc-400">Description</dt>
+                <dd className="mt-1 whitespace-pre-wrap text-sm text-slate-800 dark:text-zinc-200">{viewingBrand.description || "No description provided."}</dd>
+              </div>
+            </dl>
+            <div className="mt-5 flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setViewingBrand(null)}
+                className="rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const brand = viewingBrand;
+                  setViewingBrand(null);
+                  openEditBrand(brand);
+                }}
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                <Pencil className="h-4 w-4" />
+                Edit Brand
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {brandToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <section role="alertdialog" aria-modal="true" aria-labelledby="delete-brand-title" aria-describedby="delete-brand-description" className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-rose-50 p-2 text-rose-600 dark:bg-rose-950/50 dark:text-rose-300">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 id="delete-brand-title" className="text-sm font-bold text-slate-900 dark:text-white">Delete brand?</h2>
+                <p id="delete-brand-description" className="mt-1 text-sm text-slate-600 dark:text-zinc-400">
+                  Delete <span className="font-semibold text-slate-900 dark:text-white">{brandToDelete.name}</span> ({brandToDelete.code})? This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setBrandToDelete(null)}
+                disabled={deletingBrandId !== null}
+                className="rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteBrand}
+                disabled={deletingBrandId !== null}
+                className="rounded-xl bg-rose-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {deletingBrandId !== null ? "Deleting..." : "Delete Brand"}
+              </button>
+            </div>
+          </section>
         </div>
       )}
     </div>

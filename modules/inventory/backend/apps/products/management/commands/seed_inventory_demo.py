@@ -32,6 +32,7 @@ class Command(BaseCommand):
 
         # 2. Units of Measure
         uom_ea, _ = UnitOfMeasure.objects.get_or_create(code="EA", defaults={"name": "Each / Unit", "symbol": "ea", "is_base": True, "decimal_places": 0})
+        uom_nos, _ = UnitOfMeasure.objects.get_or_create(code="NOS", defaults={"name": "Numbers", "symbol": "Nos", "is_base": True, "decimal_places": 0, "allow_fractional_quantity": False})
         uom_kg, _ = UnitOfMeasure.objects.get_or_create(code="KG", defaults={"name": "Kilogram", "symbol": "kg", "is_base": True, "decimal_places": 3})
         uom_ltr, _ = UnitOfMeasure.objects.get_or_create(code="LTR", defaults={"name": "Liter", "symbol": "L", "is_base": True, "decimal_places": 2})
         uom_mtr, _ = UnitOfMeasure.objects.get_or_create(code="MTR", defaults={"name": "Meter", "symbol": "m", "is_base": True, "decimal_places": 2})

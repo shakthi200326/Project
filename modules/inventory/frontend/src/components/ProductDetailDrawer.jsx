@@ -869,13 +869,13 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
                     <div className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/40">
                       <span className="text-slate-400">Standard Cost</span>
                       <div className="text-base font-bold text-slate-900 dark:text-white mt-1 tabular-nums">
-                        ${(product.standard_cost ?? product.unit_cost ?? 0).toFixed(2)}
+                        ${numberOr(product.standard_cost ?? product.unit_cost, 0).toFixed(2)}
                       </div>
                     </div>
                     <div className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/40">
                       <span className="text-slate-400">List Price</span>
                       <div className="text-base font-bold text-emerald-600 dark:text-emerald-400 mt-1 tabular-nums">
-                        ${(product.list_price ?? 0).toFixed(2)}
+                        ${numberOr(product.list_price, 0).toFixed(2)}
                       </div>
                     </div>
                     <div className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/40">
@@ -1105,7 +1105,7 @@ export function ProductDetailDrawer({ product, isOpen, onClose, onSave }) {
                                 {v.barcode || "N/A"}
                               </td>
                               <td className="py-2.5 px-3 text-right font-mono tabular-nums text-slate-700 dark:text-zinc-300">
-                                +${parseFloat(v.additional_cost || 0).toFixed(2)}
+                                +${numberOr(v.additional_cost, 0).toFixed(2)}
                               </td>
                               <td className="py-2.5 px-3 text-center">
                                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">

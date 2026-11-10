@@ -195,7 +195,7 @@ function ReceiptDetail({ grn, view }) {
   };
 
   const awaitingApproval = rec.status === "SUBMITTED" && can("approve");
-  const goto = (path) => navigate(`${path}?receipt=${rec.id}`);
+  const goto = (path) => navigate(path.includes("?") ? `${path}&receipt=${rec.id}` : `${path}?receipt=${rec.id}`);
   const t = rec.totals || {};
   const receiptLines = Array.isArray(rec.lines) ? rec.lines : [];
 
@@ -218,12 +218,12 @@ function ReceiptDetail({ grn, view }) {
             </button>
           )}
           {can("inspect") && (
-            <button className={btnSecondary} onClick={() => goto("/inventory/goods-receipt/inspection")}>
+            <button className={btnSecondary} onClick={() => goto("/inventory/goods-receipt/register?tab=inspection")}>
               <ScanSearch className="h-3.5 w-3.5" /> Inspect
             </button>
           )}
           {can("quality") && (
-            <button className={btnSecondary} onClick={() => goto("/inventory/goods-receipt/quality")}>
+            <button className={btnSecondary} onClick={() => goto("/inventory/goods-receipt/quality?tab=quality")}>
               <FlaskConical className="h-3.5 w-3.5" /> Quality Check
             </button>
           )}
@@ -233,7 +233,7 @@ function ReceiptDetail({ grn, view }) {
             </button>
           )}
           {can("discrepancy") && (
-            <button className={btnSecondary} onClick={() => goto("/inventory/goods-receipt/discrepancies")}>
+            <button className={btnSecondary} onClick={() => goto("/inventory/goods-receipt/register?tab=discrepancies")}>
               <FileWarning className="h-3.5 w-3.5" /> Discrepancy
             </button>
           )}
@@ -302,12 +302,13 @@ function ReceiptDetail({ grn, view }) {
           {rec.remarks && <div className="col-span-2 sm:col-span-3 lg:col-span-6"><ReadOnly label="Remarks" value={<span className="whitespace-pre-wrap">{rec.remarks}</span>} /></div>}
           {rec.reason && <div className="col-span-2 sm:col-span-3 lg:col-span-6"><ReadOnly label="Reason" value={rec.reason} /></div>}
         </div>
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mt-4 pt-4 border-t border-slate-100 dark:border-zinc-800">
+        <div className="grid grid-cols-3 sm:grid-cols-7 gap-3 mt-4 pt-4 border-t border-slate-100 dark:border-zinc-800">
           {[
             ["Lines", t.lines ?? receiptLines.length],
             ["Received", fmtQty(t.received)],
             ["Accepted", fmtQty(t.accepted)],
             ["Rejected", fmtQty(t.rejected)],
+            ["On Hold", fmtQty(t.hold || 0)],
             ["Pending Inspection", fmtQty(t.pending)],
             ["Put Away", fmtQty(t.putaway)],
           ].map(([k, v]) => (
@@ -408,6 +409,7 @@ function LinesTable({ lines }) {
     { key: "received_quantity", label: "Received", align: "right", render: (l) => fmtQty(l.received_quantity) },
     { key: "accepted_quantity", label: "Accepted", align: "right", render: (l) => fmtQty(l.accepted_quantity) },
     { key: "rejected_quantity", label: "Rejected", align: "right", render: (l) => fmtQty(l.rejected_quantity) },
+    { key: "hold_quantity", label: "On Hold", align: "right", render: (l) => <span className="font-semibold text-amber-600 dark:text-amber-400">{fmtQty(l.hold_quantity || 0)}</span> },
     { key: "pending_inspection_quantity", label: "Pending Insp.", align: "right", render: (l) => fmtQty(l.pending_inspection_quantity) },
     { key: "putaway_quantity", label: "Put Away", align: "right", render: (l) => fmtQty(l.putaway_quantity) },
     { key: "inspection_status", label: "Inspection", render: (l) => <StatusBadge status={l.inspection_status} /> },
@@ -449,6 +451,7 @@ const INSPECTION_COLUMNS = [
   { key: "inspection_quantity", label: "Inspected", align: "right", render: (r) => fmtQty(r.inspection_quantity) },
   { key: "accepted_quantity", label: "Accepted", align: "right", render: (r) => fmtQty(r.accepted_quantity) },
   { key: "rejected_quantity", label: "Rejected", align: "right", render: (r) => fmtQty(r.rejected_quantity) },
+  { key: "hold_quantity", label: "On Hold", align: "right", render: (r) => <span className="font-semibold text-amber-600 dark:text-amber-400">{fmtQty(r.hold_quantity || 0)}</span> },
   { key: "pending_quantity_after", label: "Pending After", align: "right", render: (r) => fmtQty(r.pending_quantity_after) },
   { key: "rejection_reason", label: "Reason", render: (r) => r.rejection_reason || "—" },
   { key: "rejection_disposition", label: "Disposition", render: (r) => r.rejection_disposition || "—" },
@@ -504,6 +507,20 @@ function Timeline({ id, canView }) {
               {fmtDateTime(e.at)} · {e.by || "system"}
             </div>
             {e.detail && <div className="text-[11px] text-slate-600 dark:text-zinc-400">{e.detail}</div>}
+            {Array.isArray(e.ledger_entries) && e.ledger_entries.length > 0 && (
+              <div className="mt-2 space-y-1 rounded-lg bg-slate-100 dark:bg-zinc-800/80 p-2 text-[10px] font-mono">
+                <div className="font-semibold text-slate-700 dark:text-zinc-300">Stock Ledger Postings ({e.ledger_entries.length}):</div>
+                {e.ledger_entries.map((entry, idx) => (
+                  <div key={idx} className="flex flex-wrap items-center gap-2 text-slate-600 dark:text-zinc-400">
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">Entry #{entry.id}</span>
+                    <span>Item: {entry.item_code}</span>
+                    <span>Qty: +{fmtQty(entry.quantity)}</span>
+                    <span>Loc: {entry.location_code}</span>
+                    <span>Bal After: {fmtQty(entry.balance_after)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </li>
         ))}
       </ol>

@@ -132,6 +132,7 @@ function RegisterTable({ view, grn }) {
     { key: "received", label: "Received", align: "right", render: (r) => fmtQty(r.totals?.received) },
     { key: "accepted", label: "Accepted", align: "right", render: (r) => fmtQty(r.totals?.accepted) },
     { key: "rejected", label: "Rejected", align: "right", render: (r) => fmtQty(r.totals?.rejected) },
+    { key: "hold", label: "On Hold", align: "right", render: (r) => <span className="font-semibold text-amber-600 dark:text-amber-400">{fmtQty(r.totals?.hold || 0)}</span> },
     { key: "pending", label: "Pending Insp.", align: "right", render: (r) => fmtQty(r.totals?.pending) },
     { key: "putaway_progress", label: "Putaway", render: (r) => <StatusBadge status={r.putaway_progress} /> },
     { key: "status", label: "Receipt Status", render: (r) => <StatusBadge status={r.status} label={r.status_label} /> },
@@ -158,7 +159,7 @@ function RegisterTable({ view, grn }) {
           <GrnMetricCard
             label="Under Inspection"
             value={metrics.under_inspection_count}
-            subtext={`${fmtQty(metrics.pending_inspection_units)} units pending`}
+            subtext={`${fmtQty(metrics.pending_inspection_units)} pending · ${fmtQty(metrics.held_units || 0)} on hold`}
             icon={AlertTriangle}
             color="amber"
           />

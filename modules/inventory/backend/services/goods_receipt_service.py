@@ -755,21 +755,24 @@ class GoodsReceiptService:
     def refresh_status(cls, tx: StockTransaction) -> str:
         totals = tx.lines.aggregate(
             accepted=Sum("accepted_quantity"), rejected=Sum("rejected_quantity"),
-            pending=Sum("pending_inspection_quantity"), putaway=Sum("putaway_quantity"),
+            hold=Sum("hold_quantity"), pending=Sum("pending_inspection_quantity"), putaway=Sum("putaway_quantity"),
         )
         accepted = totals["accepted"] or ZERO
         rejected = totals["rejected"] or ZERO
+        hold = totals["hold"] or ZERO
         pending = totals["pending"] or ZERO
         putaway = totals["putaway"] or ZERO
         inspected = tx.receipt_inspections.exists()
 
         if pending > 0:
             new = S.UNDER_INSPECTION if inspected or tx.status == S.UNDER_INSPECTION else tx.status
-        elif accepted == 0:
+        elif accepted == 0 and hold == 0:
             new = S.REJECTED
+        elif accepted == 0 and hold > 0:
+            new = S.UNDER_INSPECTION
         elif putaway == 0:
             if tx.inspection_required:
-                new = S.PARTIALLY_ACCEPTED if rejected > 0 else S.ACCEPTED
+                new = S.PARTIALLY_ACCEPTED if rejected > 0 or hold > 0 else S.ACCEPTED
             else:
                 new = S.APPROVED if tx.approved_at else S.SUBMITTED
         elif putaway < accepted:
@@ -794,9 +797,9 @@ class GoodsReceiptService:
     def _line_inspection_status(line: StockTransactionLine) -> str:
         if line.pending_inspection_quantity > 0:
             return LineInspection.PENDING
-        if line.rejected_quantity == 0:
+        if line.rejected_quantity == 0 and line.hold_quantity == 0:
             return LineInspection.PASSED
-        if line.accepted_quantity == 0:
+        if line.accepted_quantity == 0 and line.hold_quantity == 0:
             return LineInspection.FAILED
         return LineInspection.PARTIAL
 
@@ -816,15 +819,16 @@ class GoodsReceiptService:
 
         accepted = _dec(data.get("accepted_quantity") or 0, "accepted_quantity")
         rejected = _dec(data.get("rejected_quantity") or 0, "rejected_quantity")
-        if accepted < 0 or rejected < 0:
+        hold = _dec(data.get("hold_quantity") or 0, "hold_quantity")
+        if accepted < 0 or rejected < 0 or hold < 0:
             raise ValidationError({"accepted_quantity": "Quantities cannot be negative."})
-        inspected = accepted + rejected
+        inspected = accepted + rejected + hold
         if inspected <= 0:
             raise ValidationError({"accepted_quantity": "Inspect at least some quantity."})
         if "inspection_quantity" in data and data["inspection_quantity"] not in (None, ""):
             declared = _dec(data["inspection_quantity"], "inspection_quantity")
             if declared != inspected:
-                raise ValidationError({"inspection_quantity": "Inspection quantity must equal accepted + rejected."})
+                raise ValidationError({"inspection_quantity": "Inspection quantity must equal accepted + rejected + hold."})
         if inspected > line.pending_inspection_quantity:
             raise ValidationError({
                 "inspection_quantity": f"Only {line.pending_inspection_quantity} remains to inspect on this line "
@@ -834,6 +838,7 @@ class GoodsReceiptService:
         for field, quantity in (
             ("accepted_quantity", accepted),
             ("rejected_quantity", rejected),
+            ("hold_quantity", hold),
         ):
             try:
                 UOMConversionService.validate_fractional_allowed(line.transaction_uom, quantity)
@@ -859,6 +864,7 @@ class GoodsReceiptService:
         reason = str(data.get("rejection_reason") or "").strip()
         disposition = str(data.get("rejection_disposition") or "").strip()
         rejected_serials: List[str] = []
+        held_serials: List[str] = []
         if rejected > 0:
             if rej_cfg["require_rejection_reason"] and not reason:
                 raise ValidationError({"rejection_reason": "A rejection reason is required."})
@@ -869,7 +875,7 @@ class GoodsReceiptService:
                 raise ValidationError({"rejection_disposition": f"Disposition must be one of: {', '.join(rej_cfg['dispositions'])}."})
             if line.serial_numbers:
                 rejected_serials = [str(s).strip() for s in data.get("rejected_serial_numbers") or [] if str(s).strip()]
-                already = set(cls.rejected_serials(line))
+                already = set(cls.rejected_serials(line)) | set(cls.held_serials(line))
                 needed = rejected * line.conversion_factor_at_txn
                 if needed != needed.to_integral_value():
                     raise ValidationError({"rejected_quantity": "Serial-tracked quantities must be whole units."})
@@ -878,7 +884,16 @@ class GoodsReceiptService:
                 bad = [s for s in rejected_serials if s not in line.serial_numbers or s in already]
                 if bad:
                     raise ValidationError({"rejected_serial_numbers": f"Not available on this line: {', '.join(bad)}."})
-        else:
+        if hold > 0 and line.serial_numbers:
+            held_serials = [str(s).strip() for s in data.get("held_serial_numbers") or [] if str(s).strip()]
+            used = set(cls.rejected_serials(line)) | set(cls.held_serials(line))
+            needed = hold * line.conversion_factor_at_txn
+            if needed != needed.to_integral_value() or len(held_serials) != int(needed) or len(set(held_serials)) != len(held_serials):
+                raise ValidationError({"held_serial_numbers": f"Identify exactly {int(needed)} held serial number(s)."})
+            bad = [s for s in held_serials if s not in line.serial_numbers or s in used or s in rejected_serials]
+            if bad:
+                raise ValidationError({"held_serial_numbers": f"Not available on this line: {', '.join(bad)}."})
+        if rejected <= 0:
             disposition = ""
 
         if cls.quality_required() and accepted > 0:
@@ -894,6 +909,7 @@ class GoodsReceiptService:
 
         line.accepted_quantity += accepted
         line.rejected_quantity += rejected
+        line.hold_quantity += hold
         line.pending_inspection_quantity -= inspected
         line.inspection_status = cls._line_inspection_status(line)
         line.inspected_by, line.inspected_at = data.get("inspector") or actor, timezone.now()
@@ -910,9 +926,13 @@ class GoodsReceiptService:
             inspection_quantity=inspected,
             accepted_quantity=accepted,
             rejected_quantity=rejected,
+            hold_quantity=hold,
+            delivery_challan_reference=str(data.get("delivery_challan_reference") or "")[:100],
+            packaging_condition=str(data.get("packaging_condition") or "")[:60],
             pending_quantity_after=line.pending_inspection_quantity,
             rejection_reason=reason,
             rejected_serial_numbers=rejected_serials,
+            held_serial_numbers=held_serials,
             rejection_disposition=disposition,
             inspector=str(data.get("inspector") or actor)[:120],
             inspection_date=inspection_date,
@@ -935,6 +955,13 @@ class GoodsReceiptService:
         serials: List[str] = []
         for insp in line.inspections.filter(kind=ReceiptInspection.InspectionKind.RECEIPT):
             serials.extend(insp.rejected_serial_numbers or [])
+        return serials
+
+    @staticmethod
+    def held_serials(line: StockTransactionLine) -> List[str]:
+        serials: List[str] = []
+        for insp in line.inspections.filter(kind=ReceiptInspection.InspectionKind.RECEIPT):
+            serials.extend(insp.held_serial_numbers or [])
         return serials
 
     @classmethod
@@ -1190,7 +1217,7 @@ class GoodsReceiptService:
                 if mandatory:
                     raise ValidationError(f"Line {line.item.code}: {remainder} accepted quantity has not been put away.")
                 allocations.append((line.location or tx.receiving_location, remainder))
-            rejected = set(cls.rejected_serials(line))
+            rejected = set(cls.rejected_serials(line)) | set(cls.held_serials(line))
             plan[line.id] = {
                 "allocations": allocations,
                 "serials": [s for s in (line.serial_numbers or []) if s not in rejected],

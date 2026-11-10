@@ -705,7 +705,7 @@ export function DashboardPage() {
           </div>
 
           <Link
-            to="/inventory/planning/replenishment"
+            to="/inventory/planning/purchase-suggestions"
             className="pt-2 text-xs font-semibold text-amber-600 hover:text-amber-700 dark:text-amber-400 flex items-center justify-center gap-1 border-t border-slate-100 dark:border-zinc-800 cursor-pointer"
           >
             <span>View Replenishment Planning Engine</span>
@@ -773,7 +773,7 @@ export function DashboardPage() {
           </div>
 
           <Link
-            to="/inventory/planning/purchase-suggestions"
+            to="/inventory/planning/replenishment"
             className="pt-2 text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 flex items-center justify-center gap-1 border-t border-slate-100 dark:border-zinc-800 cursor-pointer"
           >
             <span>View Automated Purchase Suggestions</span>

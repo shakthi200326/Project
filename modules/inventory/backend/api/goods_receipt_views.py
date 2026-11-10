@@ -150,7 +150,7 @@ class ReceiptLineSerializer(serializers.ModelSerializer):
             "id", "receipt_id", "receipt_number", "receipt_status", "receipt_date", "warehouse", "warehouse_code",
             "supplier", "item", "item_code", "item_name", "variant", "variant_sku", "variant_name", "sku", "barcode",
             "description", "uom", "conversion_factor_at_txn", "quantity_base_uom", "expected_quantity",
-            "received_quantity", "accepted_quantity", "rejected_quantity", "pending_inspection_quantity",
+            "received_quantity", "accepted_quantity", "rejected_quantity", "hold_quantity", "pending_inspection_quantity",
             "inspection_status", "rejection_reason", "inspection_remarks", "inspected_by", "inspected_at",
             "putaway_quantity", "pending_putaway_quantity", "putaway_status", "putaway_location",
             "putaway_location_code", "location", "location_code", "unit_cost", "line_value", "batch_number",
@@ -370,6 +370,7 @@ class GoodsReceiptViewSet(viewsets.ViewSet):
             t_received=Coalesce(Sum("lines__quantity"), Value(ZERO), output_field=DEC),
             t_accepted=Coalesce(Sum("lines__accepted_quantity"), Value(ZERO), output_field=DEC),
             t_rejected=Coalesce(Sum("lines__rejected_quantity"), Value(ZERO), output_field=DEC),
+            t_hold=Coalesce(Sum("lines__hold_quantity"), Value(ZERO), output_field=DEC),
             t_pending=Coalesce(Sum("lines__pending_inspection_quantity"), Value(ZERO), output_field=DEC),
             t_putaway=Coalesce(Sum("lines__putaway_quantity"), Value(ZERO), output_field=DEC),
         )
@@ -437,6 +438,7 @@ class GoodsReceiptViewSet(viewsets.ViewSet):
             total_received_qty=Coalesce(Sum("lines__quantity"), Value(ZERO), output_field=DEC),
             total_accepted_qty=Coalesce(Sum("lines__accepted_quantity"), Value(ZERO), output_field=DEC),
             total_rejected_qty=Coalesce(Sum("lines__rejected_quantity"), Value(ZERO), output_field=DEC),
+            total_hold_qty=Coalesce(Sum("lines__hold_quantity"), Value(ZERO), output_field=DEC),
         )
         return Response({
             "total_receipts": total_count,
@@ -450,6 +452,7 @@ class GoodsReceiptViewSet(viewsets.ViewSet):
             "total_received_qty": str(received_agg["total_received_qty"]),
             "total_accepted_qty": str(received_agg["total_accepted_qty"]),
             "total_rejected_qty": str(received_agg["total_rejected_qty"]),
+            "total_hold_qty": str(received_agg["total_hold_qty"]),
         })
 
 

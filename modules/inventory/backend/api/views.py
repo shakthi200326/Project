@@ -531,7 +531,19 @@ from apps.serial_numbers.models import SerialNumber
 
 
 
-from apps.planning.models import ReorderRule, StockLevel, ReplenishmentPlan, PurchaseSuggestion
+from apps.planning.models import (
+    ReorderRule,
+    StockLevel,
+    ReplenishmentPlan,
+    PurchaseSuggestion,
+    IndustryProfile,
+    MarketDataSource,
+    MarketProductObservation,
+    SupplierMarketOffer,
+    ProductMarketMatch,
+    BusinessProfile,
+)
+
 
 
 
@@ -22695,1538 +22707,554 @@ class ReplenishmentPlanViewSet(viewsets.ModelViewSet):
 
 
 class PurchaseSuggestionViewSet(viewsets.ModelViewSet):
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    queryset = PurchaseSuggestion.objects.all().select_related("product", "warehouse")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    queryset = PurchaseSuggestion.objects.all().select_related(
+        "product", "warehouse", "suggested_transfer_warehouse", "market_observation", "market_observation__source", "market_observation__industry"
+    )
     serializer_class = PurchaseSuggestionSerializer
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     def get_queryset(self):
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         qs = super().get_queryset()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         prod = self.request.query_params.get("product")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         wh = self.request.query_params.get("warehouse")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         st = self.request.query_params.get("status")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        priority = self.request.query_params.get("priority")
+        action_type = self.request.query_params.get("action_type")
+        opp_type = self.request.query_params.get("opportunity_type")
+        industry = self.request.query_params.get("industry")
+        suit_status = self.request.query_params.get("suitability_status")
         search = self.request.query_params.get("search")
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        if suit_status:
+            qs = qs.filter(suitability_status__iexact=suit_status)
 
         if prod:
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            qs = qs.filter(Q(product_id=prod) | Q(product__name__icontains=prod) | Q(product__code__icontains=prod))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            qs = qs.filter(
+                Q(product_id=prod)
+                | Q(product__name__icontains=prod)
+                | Q(product__code__icontains=prod)
+                | Q(external_product_name__icontains=prod)
+            )
         if wh:
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
             qs = qs.filter(Q(warehouse_id=wh) | Q(warehouse__name__icontains=wh) | Q(warehouse__code__icontains=wh))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         if st:
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
             qs = qs.filter(status__iexact=st)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        if priority:
+            qs = qs.filter(priority__iexact=priority)
+        if action_type:
+            qs = qs.filter(recommended_action__iexact=action_type)
+        if opp_type:
+            qs = qs.filter(opportunity_type__iexact=opp_type)
+        if industry and industry.lower() != "all":
+            qs = qs.filter(industry_code__iexact=industry)
+        marketplace = self.request.query_params.get("marketplace")
+        if marketplace and marketplace.lower() != "all":
+            m = marketplace.lower()
+            if "amazon" in m:
+                qs = qs.filter(
+                    Q(data_source_name__icontains="amazon")
+                    | Q(market_observation__source__source_id="amazon_in")
+                    | Q(market_observation__external_id__startswith="AMZ")
+                )
+            elif "flipkart" in m:
+                qs = qs.filter(
+                    Q(data_source_name__icontains="flipkart")
+                    | Q(market_observation__source__source_id="flipkart")
+                    | Q(market_observation__external_id__startswith="FLP")
+                )
         if search:
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            qs = qs.filter(Q(product__name__icontains=search) | Q(product__code__icontains=search) | Q(suggestion_number__icontains=search))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            qs = qs.filter(
+                Q(product__name__icontains=search)
+                | Q(product__code__icontains=search)
+                | Q(external_product_name__icontains=search)
+                | Q(suggestion_number__icontains=search)
+                | Q(supplier__icontains=search)
+                | Q(data_source_name__icontains=search)
+                | Q(market_observation__category__icontains=search)
+            )
         return qs
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    @action(detail=True, methods=["post"])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    def approve(self, request, pk=None):
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        sug = self.get_object()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        sug.status = "Approved"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        sug.save()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        return Response({"message": f"Purchase suggestion {sug.suggestion_number} approved.", "status": sug.status})
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    @action(detail=True, methods=["post"])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    def reject(self, request, pk=None):
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        sug = self.get_object()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        sug.status = "Rejected"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        sug.save()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        return Response({"message": f"Purchase suggestion {sug.suggestion_number} rejected.", "status": sug.status})
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    @action(detail=True, methods=["post"])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    def convert(self, request, pk=None):
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        """Convert to Purchase Request (dispatches to Procurement / Purchase module)."""
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        sug = self.get_object()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        sug.status = "Converted"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        sug.save()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    @action(detail=False, methods=["get"], url_path="dashboard-metrics")
+    def dashboard_metrics(self, request):
+        """
+        Aggregated KPI metrics for the Purchase Suggestions Dashboard:
+        - Total Recommendations
+        - High Opportunity Products (Opportunity Score >= 75)
+        - Replenishment vs New Product vs Trending counts
+        - Total Outlay & Procurement Budget Status
+        - Industry breakdown
+        """
+        qs = self.get_queryset()
+        total_count = qs.count()
+        high_opp_count = qs.filter(
+            Q(market_score__gte=75) | Q(final_demand_score__gte=75) | Q(priority=PurchaseSuggestion.Priority.HIGH)
+        ).count()
+        replenishment_count = qs.filter(opportunity_type=PurchaseSuggestion.OpportunityType.REPLENISHMENT).count()
+        new_product_count = qs.filter(opportunity_type=PurchaseSuggestion.OpportunityType.NEW_PRODUCT_OPPORTUNITY).count()
+        trending_count = qs.filter(
+            Q(opportunity_type=PurchaseSuggestion.OpportunityType.EXISTING_PRODUCT_OPPORTUNITY)
+            | Q(opportunity_type=PurchaseSuggestion.OpportunityType.CROSS_INDUSTRY_OPPORTUNITY)
+        ).count()
+
+        pending_count = qs.filter(status=PurchaseSuggestion.Status.PENDING).count()
+        approved_count = qs.filter(status=PurchaseSuggestion.Status.APPROVED).count()
+        converted_count = qs.filter(status=PurchaseSuggestion.Status.CONVERTED).count()
+
+        from django.db.models import Sum, Avg, Count
+        total_outlay = qs.filter(status__in=[PurchaseSuggestion.Status.PENDING, PurchaseSuggestion.Status.APPROVED]).aggregate(
+            tot=Sum("estimated_total_cost")
+        )["tot"] or Decimal("0.00")
+
+        avg_score = qs.aggregate(avg=Avg("final_demand_score"))["avg"] or Decimal("0.00")
+        industry_counts = list(qs.values("industry_code").annotate(count=Count("id")).order_by("-count"))
+
+        profile = BusinessProfile.objects.filter(is_active=True).first()
+        budget = float(profile.procurement_budget) if profile else 500000.0
 
         return Response({
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            "message": f"Suggestion {sug.suggestion_number} successfully converted to Purchase Request.",
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            "status": sug.status,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            "purchase_request_id": f"PR-{timezone.now().year}-{random.randint(1000, 9999)}",
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            "total_recommendations": total_count,
+            "high_opportunity_count": high_opp_count,
+            "replenishment_count": replenishment_count,
+            "new_product_count": new_product_count,
+            "trending_count": trending_count,
+            "pending_count": pending_count,
+            "approved_count": approved_count,
+            "converted_count": converted_count,
+            "total_estimated_outlay": float(total_outlay),
+            "procurement_budget": budget,
+            "remaining_budget": max(0.0, budget - float(total_outlay)),
+            "average_recommendation_score": round(float(avg_score), 1),
+            "industry_breakdown": industry_counts,
         })
 
+    @action(detail=False, methods=["get"], url_path="marketplace-comparison")
+    def marketplace_comparison(self, request):
+        """
+        Cross-marketplace analytics comparing Amazon India vs Flipkart:
+        - Price spread across product categories
+        - Search interest & demand velocity gap
+        - Sourcing arbitrage opportunities
+        """
+        observations = MarketProductObservation.objects.all().select_related("source", "industry")
+        amz_obs = {o.product_name.lower(): o for o in observations if o.source and o.source.source_id == "amazon_in"}
+        flp_obs = {o.product_name.lower(): o for o in observations if o.source and o.source.source_id == "flipkart"}
 
+        comparison_data = []
+        for name, amz in amz_obs.items():
+            if name in flp_obs:
+                flp = flp_obs[name]
+                amz_price = float(amz.listed_retail_price)
+                flp_price = float(flp.listed_retail_price)
+                price_delta = round(amz_price - flp_price, 2)
+                lower_price_platform = "Flipkart" if flp_price < amz_price else ("Amazon India" if amz_price < flp_price else "Identical")
 
+                amz_growth = float(amz.search_trend_growth_pct)
+                flp_growth = float(flp.search_trend_growth_pct)
 
+                comparison_data.append({
+                    "product_name": amz.product_name,
+                    "category": amz.category,
+                    "industry": amz.industry.name if amz.industry else "Retail",
+                    "amazon": {
+                        "retail_price": amz_price,
+                        "discount_pct": float(amz.discount_percent),
+                        "search_growth_pct": amz_growth,
+                        "popularity_score": float(amz.popularity_indicator),
+                    },
+                    "flipkart": {
+                        "retail_price": flp_price,
+                        "discount_pct": float(flp.discount_percent),
+                        "search_growth_pct": flp_growth,
+                        "popularity_score": float(flp.popularity_indicator),
+                    },
+                    "price_delta": price_delta,
+                    "price_delta_pct": round((abs(price_delta) / max(amz_price, flp_price)) * 100.0, 1) if max(amz_price, flp_price) > 0 else 0,
+                    "lower_price_platform": lower_price_platform,
+                    "arbitrage_opportunity": "HIGH_ARBITRAGE" if abs(price_delta) > 100 else "NORMAL_SPREAD",
+                })
 
+        return Response({
+            "compared_products_count": len(comparison_data),
+            "marketplace_coverage": ["Amazon India Marketplace API", "Flipkart Marketplace API"],
+            "comparisons": comparison_data,
+        })
 
+    @action(detail=False, methods=["get"], url_path="market-overview")
+    def market_overview(self, request):
+        """
+        Returns Multi-Industry Market Intelligence overview:
+        Active data sources, health status, industry opportunity breakdown,
+        and high-potential discovered products across 8 industries.
+        """
+        from apps.planning.services.market_providers import MarketDiscoveryEngine
+        engine = MarketDiscoveryEngine()
+        engine.seed_infrastructure()
 
+        sources = MarketDataSource.objects.all()
+        industries = IndustryProfile.objects.filter(is_active=True)
+        observations = MarketProductObservation.objects.all()
 
+        source_stats = []
+        for s in sources:
+            source_stats.append({
+                "source_id": s.source_id,
+                "name": s.name,
+                "provider_type": s.provider_type,
+                "is_enabled": s.is_enabled,
+                "auth_configured": s.auth_configured,
+                "last_sync_time": s.last_sync_time,
+                "last_sync_status": s.last_sync_status,
+                "observation_count": observations.filter(source=s).count(),
+            })
 
+        industry_stats = []
+        for ind in industries:
+            ind_obs = observations.filter(industry=ind)
+            high_opp = ind_obs.filter(market_opportunity_score__gte=75.0).count()
+            industry_stats.append({
+                "code": ind.code,
+                "name": ind.name,
+                "total_observations": ind_obs.count(),
+                "high_opportunity_count": high_opp,
+                "market_signals": ind.market_signals,
+                "categories": ind.categories,
+            })
 
+        return Response({
+            "data_sources": source_stats,
+            "industry_intelligence": industry_stats,
+            "total_market_observations": observations.count(),
+            "trending_high_opportunity_count": observations.filter(opportunity_classification="HIGH_POTENTIAL").count(),
+        })
 
+    @action(detail=False, methods=["get", "put"], url_path="business-profile")
+    def business_profile(self, request):
+        """Manages the universal business profile and procurement constraints."""
+        from apps.planning.services.business_suitability_service import BusinessSuitabilityService
+        profile = BusinessSuitabilityService.get_or_create_default_profile()
 
+        if request.method == "PUT":
+            fields = [
+                "business_name", "business_type", "primary_industry_code",
+                "business_location", "target_customer_segment", "target_market_region",
+                "preferred_categories", "procurement_budget", "min_expected_gross_margin_pct",
+                "restricted_categories", "min_procurement_qty", "max_procurement_qty"
+            ]
+            for field in fields:
+                if field in request.data:
+                    setattr(profile, field, request.data[field])
+            profile.save()
 
+            from apps.planning.services.market_providers import MarketDiscoveryEngine
+            MarketDiscoveryEngine().execute_market_discovery()
 
+        return Response(BusinessProfileSerializer(profile).data)
 
+    @action(detail=False, methods=["get"], url_path="industries")
+    def list_industries(self, request):
+        """Returns all configured industry profiles with their categories and tracked signals."""
+        from apps.planning.services.market_providers import MarketDiscoveryEngine
+        MarketDiscoveryEngine.seed_infrastructure()
+        profiles = IndustryProfile.objects.filter(is_active=True).order_by("name")
+        return Response(IndustryProfileSerializer(profiles, many=True).data)
 
+    @action(detail=False, methods=["get"], url_path="data-sources")
+    def list_data_sources(self, request):
+        """Returns all authorized external data sources and current sync health."""
+        from apps.planning.services.market_providers import MarketDiscoveryEngine
+        engine = MarketDiscoveryEngine()
+        engine.seed_infrastructure()
+        engine.get_provider_health_summary()
+        sources = MarketDataSource.objects.all().order_by("provider_type", "name")
+        return Response(MarketDataSourceSerializer(sources, many=True).data)
 
+    @action(detail=False, methods=["post"], url_path="discover-market")
+    def discover_market(self, request):
+        """
+        Executes external market product discovery across specified or all industries.
+        Discovers products and computes market opportunity scores independently of internal stock.
+        """
+        industry = request.data.get("industry")
+        from apps.planning.services.market_providers import MarketDiscoveryEngine
+        engine = MarketDiscoveryEngine()
+        res = engine.execute_market_discovery(industry_code=industry)
+        return Response({
+            "message": (
+                f"Multi-Industry Market Discovery completed across {res['industries_analyzed']} industries: "
+                f"{res['created_observations']} new products discovered, {res['suggestions_synced']} purchase opportunities evaluated."
+            ),
+            "result": res,
+        })
 
+    @action(detail=True, methods=["post"], url_path="onboard-product")
+    def onboard_product(self, request, pk=None):
+        """
+        Safely onboards an externally discovered market product into Item Master (InventoryItem).
+        """
+        sug = self.get_object()
+        if not sug.market_observation:
+            return Response({"error": "This suggestion is not linked to an external market observation."}, status=status.HTTP_400_BAD_REQUEST)
 
+        warehouse_id = request.data.get("warehouse_id")
+        from apps.planning.services.market_providers import MarketDiscoveryEngine
+        engine = MarketDiscoveryEngine()
+        try:
+            res = engine.onboard_to_item_master(str(sug.market_observation.id), warehouse_id=warehouse_id)
+            return Response(res)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        sug = self.get_object()
+        if sug.status not in {
+            PurchaseSuggestion.Status.PENDING,
+            PurchaseSuggestion.Status.GENERATED,
+            PurchaseSuggestion.Status.UNDER_REVIEW,
+        }:
+            return Response(
+                {"error": f"Cannot approve a suggestion with status '{sug.status}'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        actor = getattr(request.user, "username", "procurement_officer") or "system"
+        sug.status = PurchaseSuggestion.Status.APPROVED
+        sug.approved_by = actor
 
+        hist = sug.lifecycle_history or []
+        hist.append({
+            "stage": "APPROVED",
+            "timestamp": timezone.now().isoformat(),
+            "actor": actor,
+            "details": "Purchase recommendation approved for procurement / transfer execution.",
+        })
+        sug.lifecycle_history = hist
+        sug.save()
+        return Response({
+            "message": f"Purchase suggestion {sug.suggestion_number} approved.",
+            "status": sug.status,
+            "approved_by": sug.approved_by,
+        })
 
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        sug = self.get_object()
+        if sug.status not in {
+            PurchaseSuggestion.Status.PENDING,
+            PurchaseSuggestion.Status.GENERATED,
+            PurchaseSuggestion.Status.UNDER_REVIEW,
+        }:
+            return Response(
+                {"error": f"Cannot reject a suggestion with status '{sug.status}'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        actor = getattr(request.user, "username", "procurement_officer") or "system"
+        reason = request.data.get("reason", "Manual rejection by inventory reviewer.")
+        sug.status = PurchaseSuggestion.Status.REJECTED
+        sug.rejection_reason = reason
 
+        hist = sug.lifecycle_history or []
+        hist.append({
+            "stage": "REJECTED",
+            "timestamp": timezone.now().isoformat(),
+            "actor": actor,
+            "details": f"Rejected. Reason: {reason}",
+        })
+        sug.lifecycle_history = hist
+        sug.save()
+        return Response({
+            "message": f"Purchase suggestion {sug.suggestion_number} rejected.",
+            "status": sug.status,
+            "rejection_reason": sug.rejection_reason,
+        })
 
+    @action(detail=True, methods=["post"])
+    def convert(self, request, pk=None):
+        """
+        Convert to Purchase Request (dispatches to Procurement / Purchase module).
+        Idempotent: prevents duplicate Purchase Requests if already converted.
+        """
+        sug = self.get_object()
+        if sug.status == PurchaseSuggestion.Status.CONVERTED and sug.purchase_request_id:
+            return Response({
+                "message": f"Suggestion {sug.suggestion_number} is already converted to {sug.purchase_request_id}.",
+                "status": sug.status,
+                "purchase_request_id": sug.purchase_request_id,
+            })
 
+        if sug.status != PurchaseSuggestion.Status.APPROVED:
+            return Response(
+                {"error": "Only approved purchase suggestions can be converted."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
+        actor = getattr(request.user, "username", "procurement_officer") or "system"
+        pr_id = f"PR-{timezone.now().year}-{random.randint(1000, 9999)}"
+        sug.status = PurchaseSuggestion.Status.CONVERTED
+        sug.purchase_request_id = pr_id
 
+        hist = sug.lifecycle_history or []
+        hist.append({
+            "stage": "CONVERTED_TO_PURCHASE_REQUEST",
+            "timestamp": timezone.now().isoformat(),
+            "actor": actor,
+            "details": f"Dispatched to Procurement Module as {pr_id}.",
+        })
+        sug.lifecycle_history = hist
+        sug.save()
 
+        # Try to dispatch outbox event if integration app is active
+        try:
+            from apps.integration.models import OutboxEvent
+            OutboxEvent.objects.create(
+                event_type="inventory.purchase_suggestion.converted",
+                payload={
+                    "suggestion_number": sug.suggestion_number,
+                    "purchase_request_id": pr_id,
+                    "product_code": sug.sku,
+                    "product_name": sug.product_name,
+                    "warehouse_code": sug.warehouse.code if sug.warehouse else "UNASSIGNED",
+                    "suggested_quantity": float(sug.suggested_quantity),
+                    "supplier": sug.supplier,
+                    "estimated_unit_price": float(sug.estimated_unit_price),
+                    "estimated_total_cost": float(sug.estimated_total_cost),
+                    "currency": sug.currency,
+                    "recommended_action": sug.recommended_action,
+                },
+                actor=actor,
+            )
+        except Exception:
+            pass
 
+        return Response({
+            "message": f"Suggestion {sug.suggestion_number} successfully converted to Purchase Request.",
+            "status": sug.status,
+            "purchase_request_id": pr_id,
+        })
 
+    @action(detail=True, methods=["post"], url_path="modify-quantity")
+    def modify_quantity(self, request, pk=None):
+        """
+        Allows authorized human reviewer to modify the recommended quantity.
+        Recalculates estimated total outlay, budget impact, and logs audit trail.
+        """
+        sug = self.get_object()
+        new_qty = request.data.get("suggested_quantity")
+        if new_qty is None:
+            return Response({"error": "suggested_quantity is required."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            qty_dec = Decimal(str(new_qty))
+            if qty_dec < Decimal("0.00"):
+                return Response({"error": "Quantity cannot be negative."}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            return Response({"error": "Invalid numerical quantity format."}, status=status.HTTP_400_BAD_REQUEST)
+
+        actor = getattr(request.user, "username", "procurement_officer") or "system"
+        notes = request.data.get("notes", "Quantity updated during review.")
+        old_qty = sug.suggested_quantity
+
+        sug.suggested_quantity = qty_dec
+        sug.estimated_total_cost = qty_dec * (sug.estimated_unit_price or Decimal("0.00"))
+        sug.reviewed_by = actor
+
+        hist = sug.lifecycle_history or []
+        hist.append({
+            "stage": "QUANTITY_MODIFIED",
+            "timestamp": timezone.now().isoformat(),
+            "actor": actor,
+            "details": f"Quantity modified from {old_qty} to {qty_dec}. Notes: {notes}",
+        })
+        sug.lifecycle_history = hist
+        sug.save()
+
+        return Response({
+            "message": f"Quantity updated to {qty_dec} for suggestion {sug.suggestion_number}.",
+            "suggested_quantity": float(sug.suggested_quantity),
+            "estimated_total_cost": float(sug.estimated_total_cost),
+            "status": sug.status,
+        })
 
     @action(detail=False, methods=["post"])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     def generate(self, request):
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        """Generate purchase suggestions for all products where Available Stock <= Reorder Point."""
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        created_count = 0
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        products = InventoryItem.objects.filter(is_active=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        warehouses = Warehouse.objects.filter(status="ACTIVE") or Warehouse.objects.all()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        for wh in warehouses:
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            for prod in products:
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                bal = StockBalance.objects.filter(item=prod, warehouse=wh).first()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                curr_stock = bal.on_hand_qty if bal else Decimal("0.0000")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                res_stock = bal.reserved_qty if bal else Decimal("0.0000")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                avail_stock = max(Decimal("0.0000"), curr_stock - res_stock)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                reorder_rl = ReorderRule.objects.filter(product=prod, warehouse=wh, status__in=["Active", "ACTIVE"]).first()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                stock_lvl = StockLevel.objects.filter(product=prod, warehouse=wh).first()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                if reorder_rl:
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    reorder_pt = reorder_rl.reorder_point
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    suggested_qty = reorder_rl.reorder_quantity
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                elif stock_lvl:
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    reorder_pt = stock_lvl.min_stock
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    suggested_qty = max(Decimal("1.0000"), stock_lvl.max_stock - avail_stock)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                else:
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    reorder_pt = prod.reorder_point or Decimal("20.0000")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    suggested_qty = prod.reorder_quantity or Decimal("40.0000")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                if avail_stock <= reorder_pt:
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    sug, created = PurchaseSuggestion.objects.get_or_create(
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                        product=prod,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                        warehouse=wh,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                        status="Pending",
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                        defaults={
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            "available_stock": avail_stock,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            "reorder_point": reorder_pt,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            "suggested_quantity": suggested_qty,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            "supplier": "Preferred Supplier Hub",
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            "status": "Pending",
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                        }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    if created:
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                        created_count += 1
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        """
+        Runs the centralized 10-feature Purchase Intelligence recommendation engine.
+        Coordinates Stock Ledger, Demand Forecast, Supplier Matrix, Multi-Warehouse Transfers,
+        Overstock Prevention, Seasonality, and Risk Analysis.
+        """
+        actor = getattr(request.user, "username", "user") or "system"
+        from apps.planning.services import RecommendationOrchestrator
+        result = RecommendationOrchestrator.generate_all_suggestions(user_actor=actor)
 
         return Response({
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            "message": f"Generated {created_count} purchase suggestions based on reorder triggers.",
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            "total_suggestions": PurchaseSuggestion.objects.count()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            "message": (
+                f"Purchase Intelligence Analysis completed: "
+                f"{result['created_count']} new recommendations generated, "
+                f"{result['updated_count']} existing pending suggestions refreshed."
+            ),
+            "created_count": result["created_count"],
+            "updated_count": result["updated_count"],
+            "total_pending": result["total_pending"],
+            "total_suggestions": PurchaseSuggestion.objects.count(),
         })
 
+    @action(detail=True, methods=["post"])
+    def simulate(self, request, pk=None):
+        """
+        What-If Simulator Endpoint.
+        Pure in-memory simulation of hypothetical purchasing parameters.
+        Does NOT alter stock, ledger, or database records.
+        """
+        sug = self.get_object()
+        sim_qty = request.data.get("simulated_quantity")
+        if sim_qty is None:
+            sim_qty = float(sug.suggested_quantity)
+        else:
+            sim_qty = float(sim_qty)
 
+        sim_unit_price = request.data.get("simulated_unit_price")
+        if sim_unit_price is not None:
+            sim_unit_price = float(sim_unit_price)
 
+        sim_lead_days = request.data.get("simulated_lead_time_days")
+        if sim_lead_days is not None:
+            sim_lead_days = int(sim_lead_days)
 
+        if sug.product and sug.warehouse:
+            from apps.planning.services import (
+                CalculationEngineService,
+                DemandIntelligenceService,
+                WhatIfSimulatorService,
+            )
 
+            stock_profile = CalculationEngineService.get_stock_profile(sug.product, sug.warehouse)
+            reorder_params = CalculationEngineService.get_reorder_parameters(sug.product, sug.warehouse)
+            demand_intel = DemandIntelligenceService.analyze_demand(sug.product, sug.warehouse)
 
+            sim_res = WhatIfSimulatorService.simulate_scenario(
+                base_stock_profile=stock_profile,
+                base_demand_intel=demand_intel,
+                base_reorder_params=reorder_params,
+                simulated_quantity=sim_qty,
+                simulated_unit_price=sim_unit_price,
+                simulated_lead_time_days=sim_lead_days,
+            )
+            return Response(sim_res)
+        else:
+            unit_price = sim_unit_price if sim_unit_price is not None else float(sug.estimated_unit_price)
+            outlay = sim_qty * unit_price
+            retail_p = float(sug.market_observation.listed_retail_price) if sug.market_observation else (unit_price * 1.35)
+            projected_revenue = sim_qty * retail_p
+            projected_gross_margin = projected_revenue - outlay
+            margin_pct = (projected_gross_margin / projected_revenue * 100.0) if projected_revenue > 0 else 0.0
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            return Response({
+                "simulated_quantity": sim_qty,
+                "simulated_unit_price": unit_price,
+                "projected_procurement_outlay": outlay,
+                "projected_revenue": projected_revenue,
+                "projected_gross_profit": projected_gross_margin,
+                "projected_gross_margin_percent": round(margin_pct, 2),
+                "scenario_type": "EXTERNAL_MARKET_DISCOVERY_PROJECTION",
+                "risk_assessment": "Low capital exposure" if outlay < 50000 else "Moderate capital exposure, test MOQ batch first",
+            })
 
 
 

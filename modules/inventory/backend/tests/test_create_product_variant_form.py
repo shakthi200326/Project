@@ -166,3 +166,28 @@ class TestCreateProductVariantFormWorkflow:
         variant = InventoryItemVariant.objects.get(pk=res.data["id"])
         assert variant.is_active is False
 
+    def test_04_list_variants_returns_data_for_product_management(self, api_client, setup_variant_data):
+        item = setup_variant_data["item"]
+        attribute = setup_variant_data["attr_color"]
+        value = setup_variant_data["val_red"]
+        variant = InventoryItemVariant.objects.create(
+            item=item,
+            sku="TSHIRT-001-RED",
+            variant_name="Enterprise Industrial Crew T-Shirt - Red",
+            attributes={"Color": "Red"},
+        )
+        ItemAttributeValue.objects.create(
+            item=item,
+            variant=variant,
+            attribute=attribute,
+            attribute_value=value,
+        )
+
+        response = api_client.get("/api/v1/inventory/variants/?ordering=-created_at")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["count"] == 1
+        listed_variant = response.data["results"][0]
+        assert listed_variant["id"] == variant.id
+        assert listed_variant["item_code"] == item.code
+        assert listed_variant["attributes"] == {"Color": "Red"}

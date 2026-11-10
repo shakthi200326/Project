@@ -271,6 +271,9 @@ export const recordQualityInspection = async (payload) => {
   try {
     return await request("/quality-inspections/", { method: "POST", body: payload });
   } catch (e) {
+    if (e.status && e.status >= 400 && e.status < 500) {
+      throw e;
+    }
     return apiRecordQualityInspection(payload);
   }
 };

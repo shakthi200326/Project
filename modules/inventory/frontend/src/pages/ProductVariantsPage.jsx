@@ -38,7 +38,17 @@ const inputClass =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100";
 
 function getErrorMessage(error) {
-  return error?.message || "Something went wrong. Please try again.";
+  if (typeof error === "string") return error;
+  if (error?.message) return error.message;
+  if (error && typeof error === "object") {
+    return Object.entries(error)
+      .map(([field, value]) => {
+        const message = Array.isArray(value) ? value.join(", ") : String(value);
+        return `${field}: ${message}`;
+      })
+      .join("; ");
+  }
+  return "Something went wrong. Please try again.";
 }
 
 function formatDate(value) {
@@ -202,7 +212,7 @@ export function ProductVariantsPage() {
       const failures = results.filter((result) => result.status === "rejected");
       setReferenceError(
         failures.length
-          ? "Some variant setup data could not be loaded. Refresh to retry."
+          ? getErrorMessage(failures[0].reason)
           : ""
       );
     });

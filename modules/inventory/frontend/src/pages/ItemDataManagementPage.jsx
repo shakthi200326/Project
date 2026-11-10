@@ -19,27 +19,37 @@ const tabs = [
   { id: "history", label: "Import History", icon: History },
 ];
 
-export function ItemDataManagementPage() {
+export function ItemDataManagementPage({ hideHeader = false }) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = tabs.some((tab) => tab.id === searchParams.get("tab"))
-    ? searchParams.get("tab")
-    : "attachments";
+  const subtabParam = searchParams.get("subtab");
+  const tabParam = searchParams.get("tab");
+
+  const activeTab = tabs.some((tab) => tab.id === subtabParam)
+    ? subtabParam
+    : (tabs.some((tab) => tab.id === tabParam) ? tabParam : "attachments");
 
   const selectTab = (tabId) => {
-    setSearchParams({ tab: tabId });
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", "data-management");
+      next.set("subtab", tabId);
+      return next;
+    });
   };
 
   return (
     <div className="space-y-6">
-      <div className="border-b border-slate-200 pb-5 dark:border-slate-800">
-        <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-          <Database className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-          Item Data Management
-        </h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Manage item attachments, spreadsheet imports, exports, and import audit history.
-        </p>
-      </div>
+      {!hideHeader && (
+        <div className="border-b border-slate-200 pb-5 dark:border-slate-800">
+          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            <Database className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+            Item Data Management
+          </h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Manage item attachments, spreadsheet imports, exports, and import audit history.
+          </p>
+        </div>
+      )}
 
       <div
         className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1.5 dark:border-slate-800 dark:bg-slate-900"

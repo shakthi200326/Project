@@ -174,9 +174,11 @@ function InspectionForm({ line, grn, onSaved }) {
   const [form, setForm] = useState({
     accepted_quantity: "",
     rejected_quantity: "",
+    hold_quantity: "",
     rejection_reason: "",
     rejection_disposition: rejCfg.default_disposition || "",
     rejected_serial_numbers: [],
+    held_serial_numbers: [],
     inspector: grn.username,
     inspection_date: today(),
     remarks: "",
@@ -189,9 +191,11 @@ function InspectionForm({ line, grn, onSaved }) {
   const pending = Number(line.pending_inspection_quantity);
   const acc = Number(form.accepted_quantity || 0);
   const rej = Number(form.rejected_quantity || 0);
-  const inspected = acc + rej;
+  const hold = Number(form.hold_quantity || 0);
+  const inspected = acc + rej + hold;
   const pendingAfter = pending - inspected;
   const alreadyRejectedSerials = useMemo(() => new Set(line.rejected_serial_numbers || []), [line]);
+  const alreadyHeldSerials = useMemo(() => new Set(line.held_serial_numbers || []), [line]);
   const set = (k, v) => {
     setForm((f) => ({ ...f, [k]: v }));
     setErrors((e) => ({ ...e, [k]: undefined }));
@@ -199,7 +203,7 @@ function InspectionForm({ line, grn, onSaved }) {
 
   const validate = () => {
     const e = {};
-    if (acc < 0 || rej < 0) e.accepted_quantity = "Quantities cannot be negative.";
+    if (acc < 0 || rej < 0 || hold < 0) e.accepted_quantity = "Quantities cannot be negative.";
     if (inspected <= 0) e.accepted_quantity = "Enter an accepted and/or rejected quantity.";
     if (inspected > pending) e.accepted_quantity = `Only ${fmtQty(pending)} remains to inspect.`;
     if (!partialCfg.allow_partial_acceptance) {
@@ -210,6 +214,8 @@ function InspectionForm({ line, grn, onSaved }) {
     if (rej > 0 && rejCfg.require_rejection_reason && !form.rejection_reason) e.rejection_reason = "Select a rejection reason.";
     if (rej > 0 && line.tracking?.serial && form.rejected_serial_numbers.length !== rej)
       e.rejected_serial_numbers = `Tick exactly ${fmtQty(rej)} rejected serial number(s).`;
+    if (hold > 0 && line.tracking?.serial && form.held_serial_numbers.length !== hold)
+      e.held_serial_numbers = `Tick exactly ${fmtQty(hold)} held serial number(s).`;
     if (!form.inspection_date) e.inspection_date = "Inspection date is required.";
     if (form.inspection_date > today() || form.inspection_date < line.receipt_date) e.inspection_date = "Must be between the receipt date and today.";
     return e;
@@ -231,9 +237,11 @@ function InspectionForm({ line, grn, onSaved }) {
         inspection_quantity: String(inspected),
         accepted_quantity: String(acc),
         rejected_quantity: String(rej),
+        hold_quantity: String(hold),
         rejection_reason: rej > 0 ? form.rejection_reason : "",
         rejection_disposition: rej > 0 ? form.rejection_disposition : "",
         rejected_serial_numbers: rej > 0 ? form.rejected_serial_numbers : [],
+        held_serial_numbers: hold > 0 ? form.held_serial_numbers : [],
         inspector: form.inspector,
         inspection_date: form.inspection_date,
         remarks: form.remarks,
@@ -242,9 +250,11 @@ function InspectionForm({ line, grn, onSaved }) {
       setForm({
         accepted_quantity: "",
         rejected_quantity: "",
+        hold_quantity: "",
         rejection_reason: "",
         rejection_disposition: rejCfg.default_disposition || "",
         rejected_serial_numbers: [],
+        held_serial_numbers: [],
         inspector: grn.username,
         inspection_date: today(),
         remarks: "",
@@ -268,24 +278,27 @@ function InspectionForm({ line, grn, onSaved }) {
           <ReadOnly label="Receipt" value={<ReceiptLink id={line.receipt_id} number={line.receipt_number} />} />
           <ReadOnly label="Receipt Line" value={`#${line.id} · ${line.item_code}${line.variant_sku ? ` / ${line.variant_sku}` : ""}`} mono />
           <ReadOnly label="Received" value={`${fmtQty(line.received_quantity)} ${line.uom}`} />
-          <ReadOnly label="Previously Inspected" value={fmtQty(Number(line.accepted_quantity) + Number(line.rejected_quantity))} />
+          <ReadOnly label="Previously Inspected" value={fmtQty(Number(line.accepted_quantity) + Number(line.rejected_quantity) + Number(line.hold_quantity || 0))} />
           <ReadOnly label="Pending Before" value={fmtQty(pending)} />
           <ReadOnly label="Inspection Status" value={<StatusBadge status={line.inspection_status} />} />
         </div>
         {qualityCfg.enabled && qualityCfg.quality_inspection_required && (
           <Notice tone="blue">Quality inspection is mandatory: accepting goods requires a passing or conditional quality result on this line.</Notice>
         )}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 gap-3">
           <Field label="Accepted Qty" error={errors.accepted_quantity}>
             <input type="number" min="0" max={Math.max(0, pending - rej)} step="any" className={cls("accepted_quantity")} value={form.accepted_quantity} onChange={(e) => set("accepted_quantity", e.target.value)} />
           </Field>
           <Field label="Rejected Qty" error={errors.rejected_quantity}>
             <input type="number" min="0" max={Math.max(0, pending - acc)} step="any" className={cls("rejected_quantity")} value={form.rejected_quantity} onChange={(e) => set("rejected_quantity", e.target.value)} />
           </Field>
+          <Field label="Hold Qty" error={errors.hold_quantity}>
+            <input type="number" min="0" max={Math.max(0, pending - acc - rej)} step="any" className={cls("hold_quantity")} value={form.hold_quantity} onChange={(e) => set("hold_quantity", e.target.value)} />
+          </Field>
           <ReadOnly label="Inspection Qty" value={fmtQty(inspected)} />
         </div>
         <p className={`text-[11px] ${pendingAfter < 0 ? "text-red-600" : "text-slate-500"}`}>
-          Pending after this inspection: <b>{fmtQty(pendingAfter)}</b> (received = accepted + rejected + pending)
+          Pending after this inspection: <b>{fmtQty(pendingAfter)}</b> (received = accepted + rejected + hold + pending)
         </p>
         {rej > 0 && (
           <div className="grid grid-cols-2 gap-3">
@@ -330,6 +343,18 @@ function InspectionForm({ line, grn, onSaved }) {
                     {s}
                   </label>
                 ))}
+            </div>
+          </Field>
+        )}
+        {hold > 0 && line.tracking?.serial && (
+          <Field label="Held Serial Numbers" required error={errors.held_serial_numbers}>
+            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+              {(line.serial_numbers || []).filter((s) => !alreadyRejectedSerials.has(s) && !alreadyHeldSerials.has(s)).map((s) => (
+                <label key={s} className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded-lg bg-amber-50 dark:bg-zinc-800">
+                  <input type="checkbox" checked={form.held_serial_numbers.includes(s)} onChange={(e) => set("held_serial_numbers", e.target.checked ? [...form.held_serial_numbers, s] : form.held_serial_numbers.filter((x) => x !== s))} />
+                  {s}
+                </label>
+              ))}
             </div>
           </Field>
         )}
@@ -405,6 +430,7 @@ const InspectionLog = React.forwardRef(function InspectionLog({ reloadKey, lates
     { key: "inspection_quantity", label: "Inspected", align: "right", render: (r) => fmtQty(r.inspection_quantity) },
     { key: "accepted_quantity", label: "Accepted", align: "right", render: (r) => fmtQty(r.accepted_quantity) },
     { key: "rejected_quantity", label: "Rejected", align: "right", render: (r) => fmtQty(r.rejected_quantity) },
+    { key: "hold_quantity", label: "Hold", align: "right", render: (r) => fmtQty(r.hold_quantity) },
     { key: "pending_quantity_after", label: "Pending", align: "right", render: (r) => fmtQty(r.pending_quantity_after) },
     { key: "rejection_reason", label: "Rejection Reason", render: (r) => r.rejection_reason || "—" },
     { key: "inspector", label: "Inspector" },

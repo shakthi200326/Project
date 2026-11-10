@@ -116,6 +116,151 @@ select option:disabled {
   background-color: #27272a;
 }
 
+/* Purchase recommendations uses light-only utility colors across its tabs.
+   Scope dark surface and text adjustments to this page so its light palette
+   remains unchanged and unrelated pages are unaffected. */
+.dark .purchase-suggestions-page {
+  background-color: #09090b;
+  color: #f4f4f5;
+}
+
+.dark .purchase-suggestions-page [class~="bg-white"] {
+  background-color: #18181b !important;
+}
+
+.dark .purchase-suggestions-page [class~="bg-slate-50"],
+.dark .purchase-suggestions-page [class~="bg-slate-100"] {
+  background-color: #27272a !important;
+}
+
+.dark .purchase-suggestions-page [class~="bg-slate-200"],
+.dark .purchase-suggestions-page [class~="bg-slate-300"] {
+  background-color: #3f3f46 !important;
+}
+
+.dark .purchase-suggestions-page [class*="bg-red-50"],
+.dark .purchase-suggestions-page [class*="bg-red-100"],
+.dark .purchase-suggestions-page [class*="bg-red-200"] {
+  background-color: color-mix(in srgb, #7f1d1d 24%, #18181b) !important;
+}
+
+.dark .purchase-suggestions-page [class*="bg-amber-50"],
+.dark .purchase-suggestions-page [class*="bg-amber-100"] {
+  background-color: color-mix(in srgb, #78350f 24%, #18181b) !important;
+}
+
+.dark .purchase-suggestions-page [class*="bg-yellow-100"] {
+  background-color: color-mix(in srgb, #713f12 24%, #18181b) !important;
+}
+
+.dark .purchase-suggestions-page [class*="bg-emerald-50"],
+.dark .purchase-suggestions-page [class*="bg-emerald-100"] {
+  background-color: color-mix(in srgb, #065f46 24%, #18181b) !important;
+}
+
+.dark .purchase-suggestions-page [class*="bg-blue-50"],
+.dark .purchase-suggestions-page [class*="bg-blue-100"] {
+  background-color: color-mix(in srgb, #1e3a8a 28%, #18181b) !important;
+}
+
+.dark .purchase-suggestions-page [class*="bg-indigo-50"],
+.dark .purchase-suggestions-page [class*="bg-indigo-100"] {
+  background-color: color-mix(in srgb, #312e81 30%, #18181b) !important;
+}
+
+.dark .purchase-suggestions-page [class~="text-slate-900"] {
+  color: #f4f4f5 !important;
+}
+
+.dark .purchase-suggestions-page [class~="text-slate-800"],
+.dark .purchase-suggestions-page [class~="text-slate-700"] {
+  color: #e4e4e7 !important;
+}
+
+.dark .purchase-suggestions-page [class~="text-slate-600"],
+.dark .purchase-suggestions-page [class~="text-slate-500"] {
+  color: #a1a1aa !important;
+}
+
+.dark .purchase-suggestions-page [class~="text-slate-400"],
+.dark .purchase-suggestions-page [class~="text-slate-300"] {
+  color: #71717a !important;
+}
+
+.dark .purchase-suggestions-page [class*="text-red-700"],
+.dark .purchase-suggestions-page [class*="text-red-800"],
+.dark .purchase-suggestions-page [class*="text-red-900"] {
+  color: #fca5a5 !important;
+}
+
+.dark .purchase-suggestions-page [class*="text-amber-700"],
+.dark .purchase-suggestions-page [class*="text-amber-800"] {
+  color: #fcd34d !important;
+}
+
+.dark .purchase-suggestions-page [class*="text-yellow-700"] {
+  color: #fde68a !important;
+}
+
+.dark .purchase-suggestions-page [class*="text-emerald-700"],
+.dark .purchase-suggestions-page [class*="text-emerald-800"],
+.dark .purchase-suggestions-page [class*="text-emerald-900"] {
+  color: #6ee7b7 !important;
+}
+
+.dark .purchase-suggestions-page [class*="text-blue-700"],
+.dark .purchase-suggestions-page [class*="text-indigo-700"],
+.dark .purchase-suggestions-page [class*="text-indigo-800"],
+.dark .purchase-suggestions-page [class*="text-indigo-900"] {
+  color: #a5b4fc !important;
+}
+
+.dark .purchase-suggestions-page [class*="border-slate-100"],
+.dark .purchase-suggestions-page [class*="border-slate-200"],
+.dark .purchase-suggestions-page [class*="border-slate-300"] {
+  border-color: #3f3f46 !important;
+}
+
+.dark .purchase-suggestions-page [class*="border-red-200"],
+.dark .purchase-suggestions-page [class*="border-red-300"] {
+  border-color: #7f1d1d !important;
+}
+
+.dark .purchase-suggestions-page [class*="border-amber-200"] {
+  border-color: #78350f !important;
+}
+
+.dark .purchase-suggestions-page [class*="border-emerald-200"],
+.dark .purchase-suggestions-page [class*="border-emerald-300"] {
+  border-color: #065f46 !important;
+}
+
+.dark .purchase-suggestions-page [class*="border-blue-200"],
+.dark .purchase-suggestions-page [class*="border-indigo-100"],
+.dark .purchase-suggestions-page [class*="border-indigo-200"],
+.dark .purchase-suggestions-page [class*="border-indigo-300"] {
+  border-color: #3730a3 !important;
+}
+
+.dark .purchase-suggestions-page input:not([type="checkbox"]):not([type="radio"]),
+.dark .purchase-suggestions-page select,
+.dark .purchase-suggestions-page textarea {
+  background-color: #18181b;
+  border-color: #52525b;
+  color: #f4f4f5;
+}
+
+.dark .purchase-suggestions-page input::placeholder,
+.dark .purchase-suggestions-page textarea::placeholder {
+  color: #71717a;
+}
+
+.dark .purchase-suggestions-page .recharts-default-tooltip {
+  background-color: #18181b !important;
+  border-color: #3f3f46 !important;
+  color: #f4f4f5;
+}
+
 /* --- Dark-mode hover fallback -----------------------------------------------
    Many buttons and rows only declare a light hover tint (hover:bg-slate-50,
    hover:bg-blue-100, ...), which flashes a pale block on dark surfaces.

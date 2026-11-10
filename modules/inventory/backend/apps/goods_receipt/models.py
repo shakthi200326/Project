@@ -34,10 +34,14 @@ class ReceiptInspection(models.Model):
     inspection_quantity = models.DecimalField(max_digits=20, decimal_places=4, default=Decimal("0.0000"))
     accepted_quantity = models.DecimalField(max_digits=20, decimal_places=4, default=Decimal("0.0000"))
     rejected_quantity = models.DecimalField(max_digits=20, decimal_places=4, default=Decimal("0.0000"))
+    hold_quantity = models.DecimalField(max_digits=20, decimal_places=4, default=Decimal("0.0000"))
     pending_quantity_after = models.DecimalField(max_digits=20, decimal_places=4, default=Decimal("0.0000"))
     rejection_reason = models.CharField(max_length=255, blank=True, default="")
     rejected_serial_numbers = models.JSONField(default=list, blank=True)
+    held_serial_numbers = models.JSONField(default=list, blank=True)
     rejection_disposition = models.CharField(max_length=60, blank=True, default="")
+    delivery_challan_reference = models.CharField(max_length=100, blank=True, default="")
+    packaging_condition = models.CharField(max_length=60, blank=True, default="")
 
     # Quality inspection: passed_quantity + failed_quantity = sample_quantity
     inspection_type = models.CharField(max_length=60, blank=True, default="")
@@ -61,6 +65,7 @@ class ReceiptInspection(models.Model):
                 condition=models.Q(inspection_quantity__gte=0)
                 & models.Q(accepted_quantity__gte=0)
                 & models.Q(rejected_quantity__gte=0)
+                & models.Q(hold_quantity__gte=0)
                 & models.Q(pending_quantity_after__gte=0)
                 & models.Q(sample_quantity__gte=0)
                 & models.Q(passed_quantity__gte=0)
@@ -68,7 +73,7 @@ class ReceiptInspection(models.Model):
                 name="inv_rcpt_insp_qty_nonneg",
             ),
             models.CheckConstraint(
-                condition=models.Q(inspection_quantity=models.F("accepted_quantity") + models.F("rejected_quantity")),
+                condition=models.Q(inspection_quantity=models.F("accepted_quantity") + models.F("rejected_quantity") + models.F("hold_quantity")),
                 name="inv_rcpt_insp_qty_reconciles",
             ),
             models.CheckConstraint(

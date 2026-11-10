@@ -18,6 +18,10 @@ import {
   ArrowUpRight,
   Target,
   BarChart3,
+  Eye,
+  Pencil,
+  Trash2,
+  X,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -31,7 +35,12 @@ import {
   CartesianGrid,
   ReferenceLine,
 } from "recharts";
-import { fetchCategories, createCategory } from "../services/api";
+import {
+  fetchCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+} from "../services/api";
 
 const categoryTreemapData = [
   {
@@ -175,11 +184,16 @@ export function CategoriesPage() {
   const [search, setSearch] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newCat, setNewCat] = useState({ name: "", code: "", parent: "" });
-  const [toastMessage, setToastMessage] = useState("");
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [viewingCategory, setViewingCategory] = useState(null);
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [deletingCategoryId, setDeletingCategoryId] = useState(null);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
 
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(""), 3500);
+  const showToast = (msg, type = "success") => {
+    setToastMessage({ message: msg, type });
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
   useEffect(() => {
@@ -204,22 +218,68 @@ export function CategoriesPage() {
       showToast("Category name and code are required.");
       return;
     }
+    setSavingCategory(true);
     try {
-      const item = await createCategory({
+      const payload = {
         name: newCat.name.trim(),
         code: newCat.code.trim().toUpperCase(),
         parent: newCat.parent || null,
-      });
-      setCategories((prev) => [
-        item,
-        ...prev.filter((c) => c.id !== item.id && c.code !== item.code),
-      ]);
-      showToast(`Category "${newCat.name}" created successfully.`);
+      };
+      const item = editingCategory
+        ? await updateCategory(editingCategory.id, payload)
+        : await createCategory(payload);
+      setCategories((prev) =>
+        editingCategory
+          ? prev.map((category) =>
+              String(category.id) === String(item.id) ? item : category
+            )
+          : [item, ...prev.filter((category) => category.id !== item.id && category.code !== item.code)]
+      );
+      showToast(
+        `Category "${item.name}" ${editingCategory ? "updated" : "created"} successfully.`
+      );
       setNewCat({ name: "", code: "", parent: "" });
+      setEditingCategory(null);
       setIsCreateOpen(false);
     } catch (err) {
       console.error(err);
-      showToast(`Failed to create category: ${err.message}`);
+      showToast(`Failed to ${editingCategory ? "update" : "create"} category: ${err.message}`, "error");
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
+  const openEditCategory = (category) => {
+    setEditingCategory(category);
+    setNewCat({
+      name: category.name || "",
+      code: category.code || "",
+      parent: category.parent ? String(category.parent) : "",
+    });
+    setIsCreateOpen(true);
+  };
+
+  const closeCategoryForm = () => {
+    setIsCreateOpen(false);
+    setEditingCategory(null);
+    setNewCat({ name: "", code: "", parent: "" });
+  };
+
+  const handleDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+    const category = categoryToDelete;
+    setDeletingCategoryId(category.id);
+    try {
+      await deleteCategory(category.id);
+      setCategories((prev) =>
+        prev.filter((item) => String(item.id) !== String(category.id))
+      );
+      showToast(`Category "${category.name}" deleted.`);
+      setCategoryToDelete(null);
+    } catch (err) {
+      showToast(`Cannot delete category: ${err.message}`, "error");
+    } finally {
+      setDeletingCategoryId(null);
     }
   };
 
@@ -227,9 +287,13 @@ export function CategoriesPage() {
     <div className="space-y-6">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-slate-900/95 dark:bg-zinc-800/95 backdrop-blur-md text-white text-xs font-medium shadow-2xl border border-slate-700/60 animate-in slide-in-from-top-2">
-          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-          <span>{toastMessage}</span>
+        <div className={`fixed top-4 right-4 z-50 flex max-w-lg items-center gap-2.5 rounded-2xl border px-4 py-3 text-xs font-medium text-white shadow-2xl backdrop-blur-md animate-in slide-in-from-top-2 ${
+          toastMessage.type === "error"
+            ? "border-rose-700/60 bg-rose-950/95 dark:bg-rose-950/95"
+            : "border-slate-700/60 bg-slate-900/95 dark:bg-zinc-800/95"
+        }`}>
+          <CheckCircle2 className={`h-4 w-4 shrink-0 ${toastMessage.type === "error" ? "text-rose-300" : "text-emerald-400"}`} />
+          <span>{toastMessage.message}</span>
         </div>
       )}
 
@@ -250,7 +314,10 @@ export function CategoriesPage() {
         </div>
 
         <button
-          onClick={() => setIsCreateOpen(true)}
+          onClick={() => {
+            closeCategoryForm();
+            setIsCreateOpen(true);
+          }}
           className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs shadow-blue-500/25 transition-all active:scale-[0.98] cursor-pointer"
         >
           <Plus className="h-4 w-4" />
@@ -534,6 +601,36 @@ export function CategoriesPage() {
                 </span>
               </div>
 
+              <div className="flex justify-end gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setViewingCategory(cat)}
+                  aria-label={`View ${cat.name}`}
+                  title="View category"
+                  className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  <Eye className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openEditCategory(cat)}
+                  aria-label={`Edit ${cat.name}`}
+                  title="Edit category"
+                  className="rounded-lg border border-blue-200 p-2 text-blue-700 hover:bg-blue-50 dark:border-blue-900/70 dark:text-blue-300 dark:hover:bg-blue-950/40"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCategoryToDelete(cat)}
+                  aria-label={`Delete ${cat.name}`}
+                  title="Delete category"
+                  className="rounded-lg border border-rose-200 p-2 text-rose-700 hover:bg-rose-50 dark:border-rose-900/70 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+
               <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-zinc-800/80 text-[11px] text-slate-500 dark:text-zinc-400">
                 <span className="flex items-center gap-1.5">
                   <FolderTree className="h-3.5 w-3.5 text-slate-400" />
@@ -555,14 +652,15 @@ export function CategoriesPage() {
       {/* Create Modal */}
       {isCreateOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-2xl space-y-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="category-form-title" className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <h2 id="category-form-title" className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Layers className="h-4 w-4 text-blue-600" />
-                Create New Category
+                {editingCategory ? "Edit Category" : "Create New Category"}
               </h2>
               <button
-                onClick={() => setIsCreateOpen(false)}
+                type="button"
+                onClick={closeCategoryForm}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 text-xs cursor-pointer"
               >
                 Cancel
@@ -608,31 +706,151 @@ export function CategoriesPage() {
                   className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="">No parent (top-level)</option>
-                  {categories.map((category) => (
+                  {categories
+                    .filter((category) => !editingCategory || String(category.id) !== String(editingCategory.id))
+                    .map((category) => (
                     <option key={category.id} value={category.id}>
                       {category.name} ({category.code})
                     </option>
-                  ))}
+                    ))}
                 </select>
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-zinc-800">
                 <button
                   type="button"
-                  onClick={() => setIsCreateOpen(false)}
+                  onClick={closeCategoryForm}
                   className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer shadow-xs shadow-blue-500/25 transition-all"
+                  disabled={savingCategory}
+                  className="px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer shadow-xs shadow-blue-500/25 transition-all disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Save Category
+                  {savingCategory ? "Saving..." : editingCategory ? "Update Category" : "Save Category"}
                 </button>
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {viewingCategory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="category-details-title"
+            className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-3 dark:border-zinc-800">
+              <div>
+                <h2 id="category-details-title" className="text-base font-bold text-slate-900 dark:text-white">
+                  Category Details
+                </h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-zinc-400">{viewingCategory.name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingCategory(null)}
+                aria-label="Close category details"
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <dt className="text-xs font-medium text-slate-500 dark:text-zinc-400">Category Name</dt>
+                <dd className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{viewingCategory.name}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-slate-500 dark:text-zinc-400">Category Code</dt>
+                <dd className="mt-1 font-mono text-sm font-semibold text-blue-700 dark:text-blue-300">{viewingCategory.code}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-slate-500 dark:text-zinc-400">Parent Category</dt>
+                <dd className="mt-1 text-sm text-slate-900 dark:text-white">
+                  {categories.find((category) => String(category.id) === String(viewingCategory.parent))?.name || "Root Category"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-slate-500 dark:text-zinc-400">Status</dt>
+                <dd className="mt-1 text-sm text-slate-900 dark:text-white">{viewingCategory.is_active === false ? "Inactive" : "Active"}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-xs font-medium text-slate-500 dark:text-zinc-400">Description</dt>
+                <dd className="mt-1 whitespace-pre-wrap text-sm text-slate-800 dark:text-zinc-200">{viewingCategory.description || "No description provided."}</dd>
+              </div>
+            </dl>
+            <div className="mt-5 flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setViewingCategory(null)}
+                className="rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const category = viewingCategory;
+                  setViewingCategory(null);
+                  openEditCategory(category);
+                }}
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                <Pencil className="h-4 w-4" />
+                Edit Category
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {categoryToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <section
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-category-title"
+            aria-describedby="delete-category-description"
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+          >
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-rose-50 p-2 text-rose-600 dark:bg-rose-950/50 dark:text-rose-300">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 id="delete-category-title" className="text-sm font-bold text-slate-900 dark:text-white">
+                  Delete category?
+                </h2>
+                <p id="delete-category-description" className="mt-1 text-sm text-slate-600 dark:text-zinc-400">
+                  Delete <span className="font-semibold text-slate-900 dark:text-white">{categoryToDelete.name}</span> ({categoryToDelete.code})? This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setCategoryToDelete(null)}
+                disabled={deletingCategoryId !== null}
+                className="rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteCategory}
+                disabled={deletingCategoryId !== null}
+                className="rounded-xl bg-rose-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {deletingCategoryId !== null ? "Deleting..." : "Delete Category"}
+              </button>
+            </div>
+          </section>
         </div>
       )}
     </div>

@@ -159,10 +159,11 @@ class StockTransactionLine(models.Model):
     description = models.CharField(max_length=255, blank=True, default="")
 
     # Goods receipt / return inspection.
-    # Invariant once inspected: received = accepted + rejected + pending_inspection.
+    # Invariant once inspected: received = accepted + rejected + hold + pending_inspection.
     expected_quantity = models.DecimalField(max_digits=20, decimal_places=4, null=True, blank=True)
     accepted_quantity = models.DecimalField(max_digits=20, decimal_places=4, default=Decimal("0.0000"))
     rejected_quantity = models.DecimalField(max_digits=20, decimal_places=4, default=Decimal("0.0000"))
+    hold_quantity = models.DecimalField(max_digits=20, decimal_places=4, default=Decimal("0.0000"))
     pending_inspection_quantity = models.DecimalField(max_digits=20, decimal_places=4, default=Decimal("0.0000"))
     inspection_status = models.CharField(max_length=20, choices=InspectionStatus.choices, default=InspectionStatus.NOT_REQUIRED)
     rejection_reason = models.CharField(max_length=255, blank=True, default="")
@@ -198,6 +199,7 @@ class StockTransactionLine(models.Model):
             models.CheckConstraint(
                 condition=models.Q(accepted_quantity__gte=0)
                 & models.Q(rejected_quantity__gte=0)
+                & models.Q(hold_quantity__gte=0)
                 & models.Q(pending_inspection_quantity__gte=0)
                 & models.Q(putaway_quantity__gte=0),
                 name="inv_txline_inspection_qty_nonneg",
@@ -205,10 +207,11 @@ class StockTransactionLine(models.Model):
             # Uninspected lines carry zeros; once quantities are split they must reconcile.
             models.CheckConstraint(
                 condition=(
-                    models.Q(accepted_quantity=0, rejected_quantity=0, pending_inspection_quantity=0)
+                    models.Q(accepted_quantity=0, rejected_quantity=0, hold_quantity=0, pending_inspection_quantity=0)
                     | models.Q(
                         quantity=models.F("accepted_quantity")
                         + models.F("rejected_quantity")
+                        + models.F("hold_quantity")
                         + models.F("pending_inspection_quantity")
                     )
                 ),

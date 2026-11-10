@@ -56,7 +56,16 @@ from apps.batches.models import (
 
 from apps.serial_numbers.models import SerialNumber
 
-from apps.planning.models import ReorderRule, StockLevel, ReplenishmentPlan, PurchaseSuggestion
+from apps.planning.models import (
+    BusinessProfile,
+    IndustryProfile,
+    MarketDataSource,
+    MarketProductObservation,
+    PurchaseSuggestion,
+    ReorderRule,
+    ReplenishmentPlan,
+    StockLevel,
+)
 
 class CategorySerializer(serializers.ModelSerializer):
 
@@ -2166,20 +2175,40 @@ class ReplenishmentPlanSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class PurchaseSuggestionSerializer(serializers.ModelSerializer):
-
     product_name = serializers.CharField(source="product.name", read_only=True)
-
     sku = serializers.CharField(source="product.code", read_only=True)
-
     warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
-
     warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
-
+    suggested_transfer_warehouse_name = serializers.CharField(source="suggested_transfer_warehouse.name", read_only=True, default=None)
+    suggested_transfer_warehouse_code = serializers.CharField(source="suggested_transfer_warehouse.code", read_only=True, default=None)
     class Meta:
-
         model = PurchaseSuggestion
-
         fields = "__all__"
+
+
+class IndustryProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IndustryProfile
+        fields = "__all__"
+
+
+class MarketDataSourceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MarketDataSource
+        fields = "__all__"
+
+
+class MarketProductObservationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MarketProductObservation
+        fields = "__all__"
+
+
+class BusinessProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BusinessProfile
+        fields = "__all__"
+
 
 class ProductImportHistorySerializer(serializers.ModelSerializer):
 

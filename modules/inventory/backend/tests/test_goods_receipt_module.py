@@ -349,6 +349,23 @@ class InspectionWorkflowTests(GoodsReceiptApiBase):
                                {"rejection_disposition": "Burn"}, format="json")
         self.assertEqual(res.status_code, 400)
 
+    def test_hold_quantity_reconciles_and_never_enters_stock(self):
+        rec = self.submitted()
+        line_id = rec["lines"][0]["id"]
+        res = self.client.post(f"{BASE}/inspections/", {
+            "receipt": rec["id"], "line": line_id, "inspection_quantity": "100",
+            "accepted_quantity": "90", "rejected_quantity": "7", "hold_quantity": "3",
+            "rejection_reason": "Damaged", "inspector": "tester",
+        }, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.data)
+        line = self.get(rec["id"])["lines"][0]
+        self.assertEqual(line["accepted_quantity"], "90.0000")
+        self.assertEqual(line["rejected_quantity"], "7.0000")
+        self.assertEqual(line["hold_quantity"], "3.0000")
+        self.assertEqual(line["pending_inspection_quantity"], "0.0000")
+        self.act(rec["id"], "post")
+        self.assertEqual(StockBalance.objects.get(item=self.std, location=self.dock).on_hand_qty, D("90"))
+
 
 class QualityInspectionTests(GoodsReceiptApiBase):
     def setUp(self):

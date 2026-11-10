@@ -60,7 +60,9 @@ function QualityWorkspace({ grn }) {
           line={selected}
           grn={grn}
           onSaved={(rec) => {
-            toast(`${rec.inspection_number}: quality result ${rec.quality_result}.`, rec.quality_result === "FAIL" ? "error" : "success");
+            const inspNum = rec?.inspection_number || "Quality Inspection";
+            const qResult = rec?.quality_result || rec?.status || "COMPLETED";
+            toast(`${inspNum}: quality result ${qResult}.`, qResult === "FAIL" ? "error" : "success");
             setReloadKey((k) => k + 1);
           }}
         />

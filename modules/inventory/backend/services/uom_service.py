@@ -6,6 +6,20 @@ from apps.products.models import InventoryItem, ProductUnitConversion
 
 
 class UOMConversionService:
+    UOM_ALIASES = {
+        "NOS": "NOS",
+        "NO": "NOS",
+        "NUMBERS": "NOS",
+        "NUMBER": "NOS",
+        "PCS": "EA",
+        "PC": "EA",
+        "PIECE": "EA",
+        "PIECES": "EA",
+        "UNIT": "EA",
+        "UNITS": "EA",
+        "EACH": "EA",
+    }
+
     @classmethod
     def resolve_uom(cls, uom_ref) -> UnitOfMeasure:
         if isinstance(uom_ref, UnitOfMeasure):
@@ -15,7 +29,19 @@ class UOMConversionService:
         if str(uom_ref).isdigit():
             uom = UnitOfMeasure.objects.filter(pk=int(uom_ref)).first()
         else:
-            uom = UnitOfMeasure.objects.filter(code__iexact=str(uom_ref).strip()).first()
+            code_str = str(uom_ref).strip()
+            uom = (
+                UnitOfMeasure.objects.filter(code__iexact=code_str).first()
+                or UnitOfMeasure.objects.filter(symbol__iexact=code_str).first()
+                or UnitOfMeasure.objects.filter(name__iexact=code_str).first()
+            )
+            if not uom:
+                canonical = cls.UOM_ALIASES.get(code_str.upper())
+                if canonical:
+                    uom = (
+                        UnitOfMeasure.objects.filter(code__iexact=canonical).first()
+                        or UnitOfMeasure.objects.filter(code__iexact="EA").first()
+                    )
         if not uom:
             raise ValidationError(f"Unit of Measure not found: '{uom_ref}'.")
         return uom

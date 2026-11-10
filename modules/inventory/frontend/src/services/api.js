@@ -1,6 +1,6 @@
 // Central API Client & Service Layer for Inventory Module
 
-export const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+export const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api/v1";
 
 export function generateEan13() {
   const digits = Array.from({ length: 12 }, () => Math.floor(Math.random() * 10));
@@ -49,20 +49,34 @@ function updateApiStatus(connected) {
 
 }
 
+async function fetchInventoryApi(url, options) {
+  try {
+    return await fetch(url, options);
+  } catch (error) {
+    if (error instanceof TypeError) {
+      const backendUrl = API_BASE.replace(/\/api\/v1\/?$/, "");
+      throw new Error(
+        `Cannot connect to the inventory backend at ${backendUrl}. Start Django with "python manage.py runserver 8000" and try again.`
+      );
+    }
+    throw error;
+  }
+}
+
 
 async function fetchAllPages(url, signal) {
   const records = [];
   let nextUrl = url;
   while (nextUrl) {
-    const res = await fetch(nextUrl, { signal });
-    if (!res.ok) throw new Error(`Request failed (${res.status}).`);
+    const res = await fetchInventoryApi(nextUrl, { signal });
+    if (!res.ok) throw new Error(await readApiError(res, "Request failed"));
     const data = await res.json();
     if (Array.isArray(data)) {
       records.push(...data);
       break;
     }
     records.push(...(data.results || []));
-    nextUrl = data.next;
+    nextUrl = data.next ? data.next.replace(/^https?:\/\/[^/]+/, "") : null;
   }
   return records;
 }
@@ -1912,15 +1926,33 @@ function buildItemRequestBody(payload, categoryId) {
   return body;
 }
 
-// Turn a failed response into a readable message (DRF returns {error}, {detail} or per-field lists).
+function formatApiError(value) {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value.map(formatApiError).filter(Boolean).join("; ");
+  }
+  if (value && typeof value === "object") {
+    return Object.entries(value)
+      .map(([field, messages]) => {
+        const message = formatApiError(messages);
+        return message ? `${field}: ${message}` : "";
+      })
+      .filter(Boolean)
+      .join("; ");
+  }
+  return value == null ? "" : String(value);
+}
+
+// Turn failed DRF responses (including nested field errors) into readable messages.
 async function readApiError(res, fallback) {
   try {
     const data = await res.json();
-    if (typeof data === "string") return data;
-    if (data?.error) return data.error;
-    if (data?.detail) return data.detail;
-    const [field, messages] = Object.entries(data || {})[0] || [];
-    if (field) return `${field}: ${Array.isArray(messages) ? messages[0] : messages}`;
+    const message = formatApiError(
+      typeof data === "object" && data !== null
+        ? data.error || data.detail || data
+        : data
+    );
+    if (message) return message;
   } catch (e) {
     // Non-JSON body (HTML error page)
   }
@@ -2208,6 +2240,34 @@ export async function createCategory(payload) {
 
 }
 
+export async function updateCategory(id, payload) {
+  const res = await fetch(`${API_BASE}/inventory/categories/${id}/`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      code: payload.code.trim().toUpperCase(),
+      name: payload.name.trim(),
+      description: payload.description || "",
+      parent: payload.parent || null,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(await readApiError(res, "Failed to update category."));
+  }
+  updateApiStatus(true);
+  return await res.json();
+}
+
+export async function deleteCategory(id) {
+  const res = await fetch(`${API_BASE}/inventory/categories/${id}/`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    throw new Error(await readApiError(res, "Failed to delete category."));
+  }
+  updateApiStatus(true);
+}
+
 
 
 // ---------------------------------------------------------------------------
@@ -2264,6 +2324,33 @@ export async function createBrand(payload) {
   updateApiStatus(true);
   return await res.json();
 
+}
+
+export async function updateBrand(id, payload) {
+  const res = await fetchInventoryApi(`${API_BASE}/inventory/brands/${id}/`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      code: payload.code.trim().toUpperCase(),
+      name: payload.name.trim(),
+      country: payload.country?.trim() || "Global",
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(await readApiError(res, "Failed to update brand."));
+  }
+  updateApiStatus(true);
+  return await res.json();
+}
+
+export async function deleteBrand(id) {
+  const res = await fetchInventoryApi(`${API_BASE}/inventory/brands/${id}/`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    throw new Error(await readApiError(res, "Failed to delete brand."));
+  }
+  updateApiStatus(true);
 }
 
 
@@ -7434,25 +7521,151 @@ export async function convertPurchaseSuggestion(id) {
 
 
 
-export async function generatePurchaseSuggestions() {
-
+export async function simulatePurchaseSuggestion(id, payload = {}) {
   try {
-
-    const res = await fetch(`${API_BASE}/inventory/planning/purchase-suggestions/generate/`, {
-
+    const res = await fetch(`${API_BASE}/inventory/planning/purchase-suggestions/${id}/simulate/`, {
       method: "POST",
-
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
-
     if (res.ok) return await res.json();
+  } catch (e) {
+    console.error("Simulation API failed", e);
+  }
+  return null;
+}
 
+export async function generatePurchaseSuggestions() {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/purchase-suggestions/generate/`, {
+      method: "POST",
+    });
+    if (res.ok) return await res.json();
   } catch (e) {}
-
   return { message: "Calculated purchase suggestions based on available stock and reorder points." };
+}
 
+export async function fetchMarketOverview() {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/purchase-suggestions/market-overview/`);
+    if (res.ok) return await res.json();
+  } catch (e) {
+    console.error("fetchMarketOverview failed", e);
+  }
+  return null;
+}
+
+export async function fetchIndustries() {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/purchase-suggestions/industries/`);
+    if (res.ok) return await res.json();
+  } catch (e) {
+    console.error("fetchIndustries failed", e);
+  }
+  return [];
+}
+
+export async function fetchMarketDataSources() {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/purchase-suggestions/data-sources/`);
+    if (res.ok) return await res.json();
+  } catch (e) {
+    console.error("fetchMarketDataSources failed", e);
+  }
+  return [];
+}
+
+export async function discoverMarket(industry = "") {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/purchase-suggestions/discover-market/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ industry }),
+    });
+    if (res.ok) return await res.json();
+  } catch (e) {
+    console.error("discoverMarket failed", e);
+  }
+  return null;
+}
+
+export async function onboardDiscoveredProduct(suggestionId, warehouseId = null) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/purchase-suggestions/${suggestionId}/onboard-product/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ warehouse_id: warehouseId }),
+    });
+    if (res.ok) return await res.json();
+    const err = await res.json();
+    return { error: err.error || "Failed to onboard product" };
+  } catch (e) {
+    console.error("onboardDiscoveredProduct failed", e);
+    return { error: e.message };
+  }
+}
+
+export async function fetchBusinessProfile() {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/purchase-suggestions/business-profile/`);
+    if (res.ok) return await res.json();
+  } catch (e) {
+    console.error("fetchBusinessProfile failed", e);
+  }
+  return null;
+}
+
+export async function updateBusinessProfile(payload) {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/purchase-suggestions/business-profile/`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) return await res.json();
+  } catch (e) {
+    console.error("updateBusinessProfile failed", e);
+  }
+  return null;
+}
+
+export async function fetchMarketplaceComparison() {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/purchase-suggestions/marketplace-comparison/`);
+    if (res.ok) return await res.json();
+  } catch (e) {
+    console.error("fetchMarketplaceComparison failed", e);
+  }
+  return null;
 }
 
 
+
+export async function fetchDashboardMetrics() {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/purchase-suggestions/dashboard-metrics/`);
+    if (res.ok) return await res.json();
+  } catch (e) {
+    console.error("fetchDashboardMetrics failed", e);
+  }
+  return null;
+}
+
+export async function modifyPurchaseSuggestionQuantity(id, quantity, notes = "") {
+  try {
+    const res = await fetch(`${API_BASE}/inventory/planning/purchase-suggestions/${id}/modify-quantity/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ suggested_quantity: quantity, notes }),
+    });
+    if (res.ok) return await res.json();
+    const err = await res.json();
+    return { error: err.error || "Failed to update quantity" };
+  } catch (e) {
+    console.error("modifyPurchaseSuggestionQuantity failed", e);
+    return { error: e.message };
+  }
+}
 
 export async function fetchStockForecast(params = {}) {
 
@@ -9424,13 +9637,19 @@ export async function fetchVariants(params = {}) {
 
 export async function fetchVariantsPage(params = {}) {
   const q = new URLSearchParams(params).toString();
-  const res = await fetch(`${API_BASE}/inventory/variants/${q ? "?" + q : ""}`);
+  const res = await fetchInventoryApi(`${API_BASE}/inventory/variants/${q ? "?" + q : ""}`);
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || data.error || "Failed to fetch product variants.");
+    throw new Error(await readApiError(res, "Failed to fetch product variants."));
   }
   updateApiStatus(true);
-  return await res.json();
+  const data = await res.json();
+  if (Array.isArray(data)) {
+    return { results: data, count: data.length, next: null, previous: null };
+  }
+  if (data && Array.isArray(data.results)) return data;
+  throw new Error(
+    `Unexpected response while loading product variants: ${formatApiError(data) || "invalid response format"}`
+  );
 }
 export async function fetchVariantEligibleItems() {
   const data = await fetchAllPages(`${API_BASE}/inventory/items/`);
@@ -10779,8 +10998,25 @@ export async function recordQualityInspection(payload) {
       body: JSON.stringify(payload),
     });
     if (res.ok) return await res.json();
-  } catch (e) {}
-  return { id: Date.now(), ...payload, status: "PASSED" };
+    const errData = await res.json().catch(() => null);
+    if (errData) {
+      const err = new Error(errData.error || errData.detail || "Quality inspection failed");
+      err.errors = errData.errors || errData;
+      throw err;
+    }
+  } catch (e) {
+    if (e.errors || e.status) throw e;
+  }
+  const failedQty = Number(payload.failed_quantity || 0);
+  const sampleQty = Number(payload.sample_quantity || 0);
+  const derivedResult = failedQty > 0 ? (failedQty === sampleQty ? "FAIL" : "CONDITIONAL") : "PASS";
+  return {
+    id: Date.now(),
+    inspection_number: `QIN-${Date.now().toString().slice(-5)}`,
+    ...payload,
+    quality_result: derivedResult,
+    status: derivedResult,
+  };
 }
 
 export async function fetchPutaways(params = {}) {

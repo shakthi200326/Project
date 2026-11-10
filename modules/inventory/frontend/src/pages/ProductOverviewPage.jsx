@@ -79,21 +79,22 @@ export function ProductOverviewPage() {
 
   const sections = [
     {
-      title: "Product Management",
+      title: "Item Master Sub-Module",
       icon: Package,
       links: [
-        { label: "Item Master", path: "/inventory/products", desc: "Manage catalog products & physical specs" },
-        { label: "Product Variants", path: "/inventory/products/variants", desc: "Multi-attribute variant matrix & SKUs" },
+        { label: "Item Master", path: "/inventory/products?tab=items", desc: "Manage catalog products, specs & stock levels" },
+        { label: "Product Variants", path: "/inventory/products?tab=variants", desc: "Multi-attribute variant matrix & SKUs" },
+        { label: "Item Data Management", path: "/inventory/products?tab=data-management", desc: "Attachments, bulk imports, exports & audit history" },
       ],
     },
     {
-      title: "Product Classification",
+      title: "Product Classification Sub-Module",
       icon: Layers,
       links: [
-        { label: "Categories", path: "/inventory/categories", desc: "Taxonomy hierarchies & subcategories" },
-        { label: "Brands", path: "/inventory/brands", desc: "Manufacturers, brands & vendor logos" },
-        { label: "Units of Measure (UOM)", path: "/inventory/units", desc: "Dimension rules & fractional tolerances" },
-        { label: "Product Attributes", path: "/inventory/attributes", desc: "Color, size, specifications & values" },
+        { label: "Categories", path: "/inventory/classification?tab=categories", desc: "Taxonomy hierarchies & subcategories" },
+        { label: "Brands", path: "/inventory/classification?tab=brands", desc: "Manufacturers, brands & vendor logos" },
+        { label: "Units of Measure (UOM)", path: "/inventory/classification?tab=units", desc: "Dimension rules & fractional tolerances" },
+        { label: "Product Attributes", path: "/inventory/classification?tab=attributes", desc: "Color, size, specifications & values" },
       ],
     },
     {
@@ -102,13 +103,6 @@ export function ProductOverviewPage() {
       links: [
         { label: "SKU Management", path: "/inventory/skus", desc: "Registry, code formats & collision checks" },
         { label: "Barcode & QR Management", path: "/inventory/barcodes", desc: "EAN-13, ITF-14 barcode formats & aliases" },
-      ],
-    },
-    {
-      title: "Data & Media Management",
-      icon: Upload,
-      links: [
-        { label: "Item Data Management", path: "/inventory/products/data-management", desc: "Attachments, imports, exports and import history" },
       ],
     },
   ];

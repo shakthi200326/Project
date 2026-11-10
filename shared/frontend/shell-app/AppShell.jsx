@@ -216,19 +216,38 @@ export function AppShell({ children }) {
       "/inventory/locations": [{ label: "Inventory", path: "/inventory" }, { label: "Storage Locations" }],
       "/inventory/locations/utilization": [{ label: "Inventory", path: "/inventory" }, { label: "Capacity Management", path: "/inventory/locations/utilization" }, { label: "Location Utilization" }],
       "/inventory/warehouses/configuration": [{ label: "Inventory", path: "/inventory" }, { label: "Warehouse Configuration", path: "/inventory/warehouses/configuration" }, { label: "Facility Configuration" }],
-      "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Goods Receipt (GRN)" }],
+      "/inventory/goods-receipt/register": [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/register" }, { label: "Receipt Register" }],
+      "/inventory/goods-receipt/inspection": [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/register" }, { label: "Receipt Inspection" }],
+      "/inventory/goods-receipt/discrepancies": [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/register" }, { label: "Receipt Discrepancy" }],
+      "/inventory/goods-receipt/partial": [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/register" }, { label: "Partial Acceptance" }],
+      "/inventory/goods-receipt/quality": [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/quality" }, { label: "Quality Inspection" }],
+      "/inventory/goods-receipt/accepted": [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/quality" }, { label: "Accepted Goods" }],
+      "/inventory/goods-receipt/rejected": [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/quality" }, { label: "Rejected Goods" }],
+      "/inventory/goods-receipt/putaway": [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/register" }, { label: "Putaway Management" }],
+      "/inventory/goods-receipt/history": [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/register" }, { label: "Receipt History" }],
+      "/inventory/operations/stock-in": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock In" }],
       "/inventory/operations/goods-receipt": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Goods Receipt (GRN)" }],
-      "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-out" }, { label: "Stock Issue (GIN)" }],
-      "/inventory/operations/stock-issue": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-out" }, { label: "Stock Issue (GIN)" }],
-      "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/transfers" }, { label: "Stock Transfer" }],
-      "/inventory/operations/stock-transfer": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/transfers" }, { label: "Stock Transfer" }],
-      "/inventory/operations/adjustments": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/adjustments" }, { label: "Stock Adjustment" }],
-      "/inventory/operations/stock-adjustment": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/adjustments" }, { label: "Stock Adjustment" }],
-      "/inventory/operations/returns": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/returns" }, { label: "Stock Returns" }],
-      "/inventory/returns": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/returns" }, { label: "Stock Returns" }],
-      "/inventory/operations/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/reservations" }, { label: "Reservations" }],
+      "/inventory/operations/stock-out": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Out" }],
+      "/inventory/operations/stock-issue": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Issue" }],
+      "/inventory/operations/transfers": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-transfer" }, { label: "Stock Transfer" }],
+      "/inventory/operations/stock-transfer": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-transfer" }, { label: "Stock Transfer" }],
+      "/inventory/operations/inter-warehouse-transfer": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-transfer" }, { label: "Inter-Warehouse Transfer" }],
+      "/inventory/operations/adjustments": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-adjustment" }, { label: "Stock Adjustment" }],
+      "/inventory/operations/stock-adjustment": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-adjustment" }, { label: "Stock Adjustment" }],
+      "/inventory/operations/stock-reclassification": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-adjustment" }, { label: "Stock Reclassification" }],
+      "/inventory/operations/returns": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Returns" }],
+      "/inventory/operations/stock-return": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Returns" }],
+      "/inventory/returns": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Stock Returns" }],
+      "/inventory/operations/reservations": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-reservation" }, { label: "Stock Reservation" }],
+      "/inventory/operations/stock-reservation": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-reservation" }, { label: "Stock Reservation" }],
+      "/inventory/operations/stock-release": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-reservation" }, { label: "Stock Release" }],
       "/inventory/operations/reconciliation": [{ label: "Inventory", path: "/inventory" }, { label: "Operations", path: "/inventory/operations/stock-in" }, { label: "Physical Reconciliation" }],
-      "/inventory/control/balances": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Stock Balances" }],
+      "/inventory/control/overview": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock Overview & Levels" }],
+      "/inventory/control/balances": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock Balances" }],
+      "/inventory/control/transit": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Stock in Transit" }],
+      "/inventory/control/reorder-levels": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/overview" }, { label: "Reorder Level" }],
+      "/inventory/control/aging": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/aging" }, { label: "Stock Aging & History" }],
+      "/inventory/control/history": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/aging" }, { label: "Stock History" }],
       "/inventory/control/ledger": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Immutable Ledger" }],
       "/inventory/control/batches": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Batch Tracking" }],
       "/inventory/control/serials": [{ label: "Inventory", path: "/inventory" }, { label: "Stock Control", path: "/inventory/control/balances" }, { label: "Serial Registry" }],
@@ -242,16 +261,17 @@ export function AppShell({ children }) {
       "/inventory/audit/full-count": [{ label: "Inventory", path: "/inventory" }, { label: "Physical Inventory & Audit", path: "/inventory/audit/stock-count" }, { label: "Full Stock Count" }],
       "/inventory/audit/variance": [{ label: "Inventory", path: "/inventory" }, { label: "Physical Inventory & Audit", path: "/inventory/audit/stock-count" }, { label: "Stock Variance" }],
       "/inventory/audit/history": [{ label: "Inventory", path: "/inventory" }, { label: "Physical Inventory & Audit", path: "/inventory/audit/stock-count" }, { label: "Audit History" }],
-      "/inventory/reports/stock-summary": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/stock-summary" }, { label: "Stock Summary Report" }],
-      "/inventory/reports/stock-movement": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/stock-summary" }, { label: "Stock Movement Report" }],
-      "/inventory/reports/stock-ledger": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/stock-summary" }, { label: "Stock Ledger Report" }],
-      "/inventory/reports/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/stock-summary" }, { label: "Stock Valuation Report" }],
-      "/inventory/reports/low-stock": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/stock-summary" }, { label: "Low Stock Report" }],
-      "/inventory/reports/ageing": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/stock-summary" }, { label: "Stock Ageing Report" }],
-      "/inventory/reports/expiry": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/stock-summary" }, { label: "Expiry Report" }],
-      "/inventory/reports/warehouse": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/stock-summary" }, { label: "Warehouse Report" }],
-      "/inventory/analytics/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/valuation" }, { label: "Stock Valuation Report" }],
-      "/inventory/analytics/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports/stock-summary" }, { label: "Stock Summary Report" }],
+      "/inventory/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports" }, { label: "Reports & Analytics Center" }],
+      "/inventory/reports/stock-summary": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports" }, { label: "Stock Summary Report" }],
+      "/inventory/reports/stock-movement": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports" }, { label: "Stock Movement Report" }],
+      "/inventory/reports/stock-ledger": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports" }, { label: "Stock Ledger Report" }],
+      "/inventory/reports/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports" }, { label: "Stock Valuation Report" }],
+      "/inventory/reports/low-stock": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports" }, { label: "Low Stock Report" }],
+      "/inventory/reports/ageing": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports" }, { label: "Stock Ageing Report" }],
+      "/inventory/reports/expiry": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports" }, { label: "Expiry Report" }],
+      "/inventory/reports/warehouse": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports" }, { label: "Warehouse Report" }],
+      "/inventory/analytics/valuation": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports" }, { label: "Stock Valuation Report" }],
+      "/inventory/analytics/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Reports & Analytics", path: "/inventory/reports" }, { label: "Reports & Analytics Center" }],
       "/inventory/configuration/general": [{ label: "Inventory", path: "/inventory" }, { label: "Inventory Configuration", path: "/inventory/configuration/general" }, { label: "General Settings" }],
       "/inventory/configuration/stock": [{ label: "Inventory", path: "/inventory" }, { label: "Inventory Configuration", path: "/inventory/configuration/general" }, { label: "Stock Settings" }],
       "/inventory/configuration/tracking": [{ label: "Inventory", path: "/inventory" }, { label: "Inventory Configuration", path: "/inventory/configuration/general" }, { label: "Product Tracking Settings" }],
@@ -297,14 +317,9 @@ export function AppShell({ children }) {
       items: [
         { label: "Product Overview", path: "/inventory/products/overview", icon: LayoutDashboard },
         { label: "Item Master", path: "/inventory/products", icon: Package },
-        { label: "Product Variants", path: "/inventory/products/variants", icon: Boxes },
-        { label: "Categories", path: "/inventory/categories", icon: Layers },
-        { label: "Brands", path: "/inventory/brands", icon: Tag },
-        { label: "Units of Measurement (UOM)", path: "/inventory/units", icon: Ruler },
-        { label: "Product Attributes", path: "/inventory/attributes", icon: SlidersHorizontal },
+        { label: "Product Classification", path: "/inventory/classification", icon: Layers },
         { label: "SKU Management", path: "/inventory/skus", icon: Hash },
         { label: "Barcode & QR Management", path: "/inventory/barcodes", icon: Barcode },
-        { label: "Item Data Management", path: "/inventory/products/data-management", icon: Database },
       ],
     },
     {
@@ -323,13 +338,8 @@ export function AppShell({ children }) {
       title: "Goods Receipt & Inspection",
       items: [
         { label: "Receipt Register", path: "/inventory/goods-receipt/register", icon: ClipboardList },
-        { label: "Receipt Inspection", path: "/inventory/goods-receipt/inspection", icon: ScanSearch },
         { label: "Quality Inspection", path: "/inventory/goods-receipt/quality", icon: FlaskConical },
-        { label: "Accepted Goods", path: "/inventory/goods-receipt/accepted", icon: PackageCheck },
-        { label: "Rejected Goods", path: "/inventory/goods-receipt/rejected", icon: PackageX },
-        { label: "Partial Acceptance", path: "/inventory/goods-receipt/partial", icon: Split },
         { label: "Putaway Management", path: "/inventory/goods-receipt/putaway", icon: Layers3 },
-        { label: "Receipt Discrepancy", path: "/inventory/goods-receipt/discrepancies", icon: FileWarning },
         { label: "Receipt History", path: "/inventory/goods-receipt/history", icon: History },
       ],
     },
@@ -338,16 +348,10 @@ export function AppShell({ children }) {
       title: "Stock Operations",
       items: [
         { label: "Stock In", path: "/inventory/operations/stock-in", icon: ArrowDownLeft },
-        { label: "Stock Issue", path: "/inventory/operations/stock-issue", icon: ArrowUpRight },
         { label: "Stock Transfer", path: "/inventory/operations/stock-transfer", icon: ArrowLeftRight },
-        { label: "Inter-Warehouse Transfer", path: "/inventory/operations/inter-warehouse-transfer", icon: Building2 },
         { label: "Stock Adjustment", path: "/inventory/operations/stock-adjustment", icon: SlidersHorizontal },
-        { label: "Stock Return", path: "/inventory/operations/stock-return", icon: RotateCcw },
         { label: "Opening Stock", path: "/inventory/operations/opening-stock", icon: FileSpreadsheet },
         { label: "Stock Reservation", path: "/inventory/operations/stock-reservation", icon: BookmarkCheck },
-        { label: "Stock Release", path: "/inventory/operations/stock-release", icon: CheckCircle2 },
-        { label: "Stock Reclassification", path: "/inventory/operations/stock-reclassification", icon: RefreshCw },
-        { label: "Stock Out", path: "/inventory/operations/stock-out", icon: Upload },
       ],
     },
     {
@@ -355,11 +359,8 @@ export function AppShell({ children }) {
       title: "Stock Control",
       items: [
         { label: "Stock Overview & Levels", path: "/inventory/control/overview", icon: Boxes },
-        { label: "Stock in Transit", path: "/inventory/control/transit", icon: Truck },
-        { label: "Reorder Level", path: "/inventory/control/reorder-levels", icon: AlertTriangle },
-        { label: "Stock Aging", path: "/inventory/control/aging", icon: Clock },
+        { label: "Stock Aging & History", path: "/inventory/control/aging", icon: Clock },
         { label: "Stock Ledger", path: "/inventory/control/ledger", icon: FileSpreadsheet },
-        { label: "Stock History", path: "/inventory/control/history", icon: History },
         { label: "Stock Reconciliation", path: "/inventory/control/reconciliation", icon: Scale },
       ],
     },
@@ -400,14 +401,7 @@ export function AppShell({ children }) {
       key: "analytics",
       title: "Reports & Analytics",
       items: [
-        { label: "Stock Summary Report", path: "/inventory/reports/stock-summary", icon: FileSpreadsheet },
-        { label: "Stock Movement Report", path: "/inventory/reports/stock-movement", icon: ArrowLeftRight },
-        { label: "Stock Ledger Report", path: "/inventory/reports/stock-ledger", icon: BookOpen },
-        { label: "Stock Valuation Report", path: "/inventory/reports/valuation", icon: DollarSign },
-        { label: "Low Stock Report", path: "/inventory/reports/low-stock", icon: AlertTriangle },
-        { label: "Stock Ageing Report", path: "/inventory/reports/ageing", icon: Clock },
-        { label: "Expiry Report", path: "/inventory/reports/expiry", icon: Calendar },
-        { label: "Warehouse Report", path: "/inventory/reports/warehouse", icon: Warehouse },
+        { label: "Reports & Analytics", path: "/inventory/reports", icon: BarChart3 },
       ],
     },
     {
@@ -509,6 +503,43 @@ export function AppShell({ children }) {
       "/inventory/analytics/reports": [{ label: "Inventory", path: "/inventory" }, { label: "Analytics", path: "/inventory/analytics/reports" }, { label: "Analytics Reports" }],
       "/inventory/settings": [{ label: "Inventory", path: "/inventory" }, { label: "Configuration" }, { label: "Inventory Settings" }],
     };
+    if (pathname === "/inventory/products" || pathname.startsWith("/inventory/products/variants") || pathname.startsWith("/inventory/products/data-management")) {
+      const search = location.search;
+      if (search.includes("tab=variants") || pathname.includes("/variants")) {
+        return [{ label: "Inventory", path: "/inventory" }, { label: "Item Master", path: "/inventory/products" }, { label: "Product Variants" }];
+      }
+      if (
+        search.includes("tab=data-management") ||
+        search.includes("tab=attachments") ||
+        search.includes("tab=import") ||
+        search.includes("tab=export") ||
+        search.includes("tab=history") ||
+        pathname.includes("/data-management") ||
+        pathname.includes("/media")
+      ) {
+        return [{ label: "Inventory", path: "/inventory" }, { label: "Item Master", path: "/inventory/products" }, { label: "Item Data Management" }];
+      }
+      return [{ label: "Inventory", path: "/inventory" }, { label: "Catalog", path: "/inventory/products" }, { label: "Item Master" }];
+    }
+    if (
+      pathname === "/inventory/classification" ||
+      pathname.startsWith("/inventory/categories") ||
+      pathname.startsWith("/inventory/brands") ||
+      pathname.startsWith("/inventory/units") ||
+      pathname.startsWith("/inventory/attributes")
+    ) {
+      const search = location.search;
+      if (search.includes("tab=brands") || pathname.includes("/brands")) {
+        return [{ label: "Inventory", path: "/inventory" }, { label: "Product Classification", path: "/inventory/classification" }, { label: "Brands" }];
+      }
+      if (search.includes("tab=units") || pathname.includes("/units")) {
+        return [{ label: "Inventory", path: "/inventory" }, { label: "Product Classification", path: "/inventory/classification" }, { label: "Units of Measurement" }];
+      }
+      if (search.includes("tab=attributes") || pathname.includes("/attributes")) {
+        return [{ label: "Inventory", path: "/inventory" }, { label: "Product Classification", path: "/inventory/classification" }, { label: "Product Attributes" }];
+      }
+      return [{ label: "Inventory", path: "/inventory" }, { label: "Product Classification", path: "/inventory/classification" }, { label: "Categories" }];
+    }
     if (pathname.startsWith("/inventory/goods-receipt")) {
       const grnRoot = [{ label: "Inventory", path: "/inventory" }, { label: "Goods Receipt & Inspection", path: "/inventory/goods-receipt/register" }];
       const leaf = navGroups.find((g) => g.key === "goods_receipt").items.find((i) => pathname === i.path);
@@ -589,7 +620,134 @@ export function AppShell({ children }) {
                 {(isOpen || collapsed) && (
                   <div className="space-y-0.5">
                     {group.items.map((item) => {
-                      const isActive = location.pathname === item.path;
+                      const isItemMaster = item.path === "/inventory/products";
+                      const isItemMasterActive =
+                        isItemMaster &&
+                        (location.pathname === "/inventory/products" ||
+                          location.pathname.startsWith("/inventory/products/variants") ||
+                          location.pathname.startsWith("/inventory/products/data-management") ||
+                          location.pathname.startsWith("/inventory/products/media"));
+
+                      const isClassification = item.path === "/inventory/classification";
+                      const isClassificationActive =
+                        isClassification &&
+                        (location.pathname === "/inventory/classification" ||
+                          location.pathname.startsWith("/inventory/categories") ||
+                          location.pathname.startsWith("/inventory/brands") ||
+                          location.pathname.startsWith("/inventory/units") ||
+                          location.pathname.startsWith("/inventory/attributes"));
+
+                      const isGrnOperations = item.path === "/inventory/goods-receipt/register";
+                      const isGrnOperationsActive =
+                        isGrnOperations &&
+                        (location.pathname === "/inventory/goods-receipt/register" ||
+                          location.pathname.startsWith("/inventory/goods-receipt/inspection") ||
+                          location.pathname.startsWith("/inventory/goods-receipt/discrepancies") ||
+                          location.pathname.startsWith("/inventory/goods-receipt/partial"));
+
+                      const isQualityManagement = item.path === "/inventory/goods-receipt/quality";
+                      const isQualityManagementActive =
+                        isQualityManagement &&
+                        (location.pathname === "/inventory/goods-receipt/quality" ||
+                          location.pathname.startsWith("/inventory/goods-receipt/accepted") ||
+                          location.pathname.startsWith("/inventory/goods-receipt/rejected"));
+
+                      const isStockOperations = item.path === "/inventory/operations/stock-in";
+                      const isStockOperationsActive =
+                        isStockOperations &&
+                        (location.pathname === "/inventory/operations/stock-in" ||
+                          location.pathname.startsWith("/inventory/operations/stock-issue") ||
+                          location.pathname.startsWith("/inventory/operations/stock-out") ||
+                          location.pathname.startsWith("/inventory/operations/stock-return") ||
+                          location.pathname.startsWith("/inventory/operations/returns") ||
+                          location.pathname === "/inventory/returns" ||
+                          location.pathname === "/stock-in" ||
+                          location.pathname === "/stock-issue" ||
+                          location.pathname === "/stock-out" ||
+                          location.pathname === "/stock-return");
+
+                      const isTransferOperations = item.path === "/inventory/operations/stock-transfer";
+                      const isTransferOperationsActive =
+                        isTransferOperations &&
+                        (location.pathname === "/inventory/operations/stock-transfer" ||
+                          location.pathname === "/inventory/operations/transfers" ||
+                          location.pathname.startsWith("/inventory/operations/inter-warehouse-transfer") ||
+                          location.pathname.startsWith("/inventory/operations/inter-location-transfer") ||
+                          location.pathname === "/inventory/transfers" ||
+                          location.pathname.startsWith("/inventory/transfers/inter-warehouse") ||
+                          location.pathname.startsWith("/inventory/transfers/same-city") ||
+                          location.pathname.startsWith("/inventory/transfers/inter-city") ||
+                          location.pathname === "/stock-transfer" ||
+                          location.pathname === "/transfers" ||
+                          location.pathname === "/inter-warehouse-transfer" ||
+                          location.pathname === "/inter-location-transfer");
+
+                      const isAdjustmentOperations = item.path === "/inventory/operations/stock-adjustment";
+                      const isAdjustmentOperationsActive =
+                        isAdjustmentOperations &&
+                        (location.pathname === "/inventory/operations/stock-adjustment" ||
+                          location.pathname === "/inventory/operations/adjustments" ||
+                          location.pathname.startsWith("/inventory/operations/stock-reclassification") ||
+                          location.pathname === "/stock-adjustment" ||
+                          location.pathname === "/adjustments" ||
+                          location.pathname === "/stock-reclassification");
+
+                      const isReservationOperations = item.path === "/inventory/operations/stock-reservation";
+                      const isReservationOperationsActive =
+                        isReservationOperations &&
+                        (location.pathname === "/inventory/operations/stock-reservation" ||
+                          location.pathname === "/inventory/operations/reservations" ||
+                          location.pathname.startsWith("/inventory/operations/stock-release") ||
+                          location.pathname === "/stock-reservation" ||
+                          location.pathname === "/stock-release");
+
+                      const isControlOverview = item.path === "/inventory/control/overview";
+                      const isControlOverviewActive =
+                        isControlOverview &&
+                        (location.pathname === "/inventory/control/overview" ||
+                          location.pathname === "/inventory/control/balances" ||
+                          location.pathname.startsWith("/inventory/control/transit") ||
+                          location.pathname.startsWith("/inventory/control/reorder-levels") ||
+                          location.pathname === "/overview" ||
+                          location.pathname === "/balances" ||
+                          location.pathname === "/transit" ||
+                          location.pathname === "/reorder-levels");
+
+                      const isAgingHistory = item.path === "/inventory/control/aging";
+                      const isAgingHistoryActive =
+                        isAgingHistory &&
+                        (location.pathname === "/inventory/control/aging" ||
+                          location.pathname === "/inventory/control/history" ||
+                          location.pathname === "/inventory/control/stock-in-history" ||
+                          location.pathname === "/inventory/control/stock-out-history" ||
+                          location.pathname === "/stock-aging" ||
+                          location.pathname === "/stock-history" ||
+                          location.pathname === "/aging" ||
+                          location.pathname === "/history");
+
+                      const isAnalyticsReports = item.path === "/inventory/reports";
+                      const isAnalyticsReportsActive =
+                        isAnalyticsReports &&
+                        (location.pathname === "/inventory/reports" ||
+                          location.pathname.startsWith("/inventory/reports/") ||
+                          location.pathname.startsWith("/inventory/analytics/") ||
+                          location.pathname === "/reports" ||
+                          location.pathname.startsWith("/reports/"));
+
+                      const isActive =
+                        location.pathname === item.path ||
+                        (item.path.includes("?") && location.pathname === item.path.split("?")[0]) ||
+                        isItemMasterActive ||
+                        isClassificationActive ||
+                        isGrnOperationsActive ||
+                        isQualityManagementActive ||
+                        isStockOperationsActive ||
+                        isTransferOperationsActive ||
+                        isAdjustmentOperationsActive ||
+                        isReservationOperationsActive ||
+                        isControlOverviewActive ||
+                        isAgingHistoryActive ||
+                        isAnalyticsReportsActive;
                       const Icon = item.icon;
 
                       return (
@@ -729,8 +887,135 @@ export function AppShell({ children }) {
                     {isOpen && (
                       <div className="space-y-0.5">
                         {group.items.map((item) => {
+                          const isItemMaster = item.path === "/inventory/products";
+                          const isItemMasterActive =
+                            isItemMaster &&
+                            (location.pathname === "/inventory/products" ||
+                              location.pathname.startsWith("/inventory/products/variants") ||
+                              location.pathname.startsWith("/inventory/products/data-management") ||
+                              location.pathname.startsWith("/inventory/products/media"));
+
+                          const isClassification = item.path === "/inventory/classification";
+                          const isClassificationActive =
+                            isClassification &&
+                            (location.pathname === "/inventory/classification" ||
+                              location.pathname.startsWith("/inventory/categories") ||
+                              location.pathname.startsWith("/inventory/brands") ||
+                              location.pathname.startsWith("/inventory/units") ||
+                              location.pathname.startsWith("/inventory/attributes"));
+
+                          const isGrnOperations = item.path === "/inventory/goods-receipt/register";
+                          const isGrnOperationsActive =
+                            isGrnOperations &&
+                            (location.pathname === "/inventory/goods-receipt/register" ||
+                              location.pathname.startsWith("/inventory/goods-receipt/inspection") ||
+                              location.pathname.startsWith("/inventory/goods-receipt/discrepancies") ||
+                              location.pathname.startsWith("/inventory/goods-receipt/partial"));
+
+                          const isQualityManagement = item.path === "/inventory/goods-receipt/quality";
+                          const isQualityManagementActive =
+                            isQualityManagement &&
+                            (location.pathname === "/inventory/goods-receipt/quality" ||
+                              location.pathname.startsWith("/inventory/goods-receipt/accepted") ||
+                              location.pathname.startsWith("/inventory/goods-receipt/rejected"));
+
+                          const isStockOperations = item.path === "/inventory/operations/stock-in";
+                          const isStockOperationsActive =
+                            isStockOperations &&
+                            (location.pathname === "/inventory/operations/stock-in" ||
+                              location.pathname.startsWith("/inventory/operations/stock-issue") ||
+                              location.pathname.startsWith("/inventory/operations/stock-out") ||
+                              location.pathname.startsWith("/inventory/operations/stock-return") ||
+                              location.pathname.startsWith("/inventory/operations/returns") ||
+                              location.pathname === "/inventory/returns" ||
+                              location.pathname === "/stock-in" ||
+                              location.pathname === "/stock-issue" ||
+                              location.pathname === "/stock-out" ||
+                              location.pathname === "/stock-return");
+
+                          const isTransferOperations = item.path === "/inventory/operations/stock-transfer";
+                          const isTransferOperationsActive =
+                            isTransferOperations &&
+                            (location.pathname === "/inventory/operations/stock-transfer" ||
+                              location.pathname === "/inventory/operations/transfers" ||
+                              location.pathname.startsWith("/inventory/operations/inter-warehouse-transfer") ||
+                              location.pathname.startsWith("/inventory/operations/inter-location-transfer") ||
+                              location.pathname === "/inventory/transfers" ||
+                              location.pathname.startsWith("/inventory/transfers/inter-warehouse") ||
+                              location.pathname.startsWith("/inventory/transfers/same-city") ||
+                              location.pathname.startsWith("/inventory/transfers/inter-city") ||
+                              location.pathname === "/stock-transfer" ||
+                              location.pathname === "/transfers" ||
+                              location.pathname === "/inter-warehouse-transfer" ||
+                              location.pathname === "/inter-location-transfer");
+
+                          const isAdjustmentOperations = item.path === "/inventory/operations/stock-adjustment";
+                          const isAdjustmentOperationsActive =
+                            isAdjustmentOperations &&
+                            (location.pathname === "/inventory/operations/stock-adjustment" ||
+                              location.pathname === "/inventory/operations/adjustments" ||
+                              location.pathname.startsWith("/inventory/operations/stock-reclassification") ||
+                              location.pathname === "/stock-adjustment" ||
+                              location.pathname === "/adjustments" ||
+                              location.pathname === "/stock-reclassification");
+
+                          const isReservationOperations = item.path === "/inventory/operations/stock-reservation";
+                          const isReservationOperationsActive =
+                            isReservationOperations &&
+                            (location.pathname === "/inventory/operations/stock-reservation" ||
+                              location.pathname === "/inventory/operations/reservations" ||
+                              location.pathname.startsWith("/inventory/operations/stock-release") ||
+                              location.pathname === "/stock-reservation" ||
+                              location.pathname === "/stock-release");
+
+                          const isControlOverview = item.path === "/inventory/control/overview";
+                          const isControlOverviewActive =
+                            isControlOverview &&
+                            (location.pathname === "/inventory/control/overview" ||
+                              location.pathname === "/inventory/control/balances" ||
+                              location.pathname.startsWith("/inventory/control/transit") ||
+                              location.pathname.startsWith("/inventory/control/reorder-levels") ||
+                              location.pathname === "/overview" ||
+                              location.pathname === "/balances" ||
+                              location.pathname === "/transit" ||
+                              location.pathname === "/reorder-levels");
+
+                          const isAgingHistory = item.path === "/inventory/control/aging";
+                          const isAgingHistoryActive =
+                            isAgingHistory &&
+                            (location.pathname === "/inventory/control/aging" ||
+                              location.pathname === "/inventory/control/history" ||
+                              location.pathname === "/inventory/control/stock-in-history" ||
+                              location.pathname === "/inventory/control/stock-out-history" ||
+                              location.pathname === "/stock-aging" ||
+                              location.pathname === "/stock-history" ||
+                              location.pathname === "/aging" ||
+                              location.pathname === "/history");
+
+                          const isAnalyticsReports = item.path === "/inventory/reports";
+                          const isAnalyticsReportsActive =
+                            isAnalyticsReports &&
+                            (location.pathname === "/inventory/reports" ||
+                              location.pathname.startsWith("/inventory/reports/") ||
+                              location.pathname.startsWith("/inventory/analytics/") ||
+                              location.pathname === "/reports" ||
+                              location.pathname.startsWith("/reports/"));
+
+                          const isActive =
+                            location.pathname === item.path ||
+                            (item.path.includes("?") && location.pathname === item.path.split("?")[0]) ||
+                            isItemMasterActive ||
+                            isClassificationActive ||
+                            isGrnOperationsActive ||
+                            isQualityManagementActive ||
+                            isStockOperationsActive ||
+                            isTransferOperationsActive ||
+                            isAdjustmentOperationsActive ||
+                            isReservationOperationsActive ||
+                            isControlOverviewActive ||
+                            isAgingHistoryActive ||
+                            isAnalyticsReportsActive;
                           const Icon = item.icon;
-                          const isActive = location.pathname === item.path;
 
                           return (
                             <Link
